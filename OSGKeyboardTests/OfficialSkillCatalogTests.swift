@@ -128,17 +128,29 @@ final class OfficialSkillCatalogTests: XCTestCase {
 
         let migrated = store.agentSkillLayout
 
+        // What this test is named for: the v2 → current ladder installs the
+        // cached official transform skill, exactly once.
         XCTAssertEqual(
-            migrated.enabledIDs,
-            [
-                AIClipboardSkillCatalog.replyID,
-                AIClipboardSkillCatalog.openLinkID,
-                AIClipboardSkillCatalog.summarizeWebPageID,
-                AIClipboardSkillCatalog.callPhoneID,
-                AIClipboardSkillCatalog.createContactID,
-                "official.rewrite"
-            ]
+            migrated.enabledIDs.filter { $0 == "official.rewrite" }.count,
+            1,
+            "cached official transform skill must be installed exactly once"
         )
+        // A layout the user already had must survive the migration intact.
+        XCTAssertEqual(migrated.enabledIDs.first, AIClipboardSkillCatalog.replyID)
+        XCTAssertEqual(
+            Set(migrated.enabledIDs).count,
+            migrated.enabledIDs.count,
+            "migration must not duplicate any skill"
+        )
+
+        // The "once" half: re-reading adds nothing further now that the stored
+        // migration version has caught up.
+        //
+        // Deliberately NOT asserting the full built-in list here. Which
+        // built-ins each ladder step adds is the ladder's own business (covered
+        // by the version-specific tests above); freezing the whole list in this
+        // test is exactly what rotted it when a later step was appended.
+        XCTAssertEqual(store.agentSkillLayout.enabledIDs, migrated.enabledIDs)
     }
 
     func testValidationRejectsWholeInvalidSnapshot() {

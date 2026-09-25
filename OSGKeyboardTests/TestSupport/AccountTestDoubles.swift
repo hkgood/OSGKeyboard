@@ -7,7 +7,7 @@ import Foundation
 @testable import OSGKeyboardHostSupport
 
 actor InMemoryAccountSecurityStore: AccountSessionVault, AppAttestKeyStateStoring {
-    private(set) var session: AccountSession?
+    private(set) var session: AccountTokenSession?
     private(set) var refreshTransaction: AccountRefreshTransaction?
     private(set) var keyState: AppAttestKeyState?
     private(set) var clearSessionCount = 0
@@ -16,7 +16,7 @@ actor InMemoryAccountSecurityStore: AccountSessionVault, AppAttestKeyStateStorin
     private var remainingSessionClearFailures: Int
 
     init(
-        session: AccountSession? = nil,
+        session: AccountTokenSession? = nil,
         refreshTransaction: AccountRefreshTransaction? = nil,
         keyState: AppAttestKeyState? = nil,
         sessionSaveFailures: Int = 0,
@@ -29,11 +29,11 @@ actor InMemoryAccountSecurityStore: AccountSessionVault, AppAttestKeyStateStorin
         self.remainingSessionClearFailures = sessionClearFailures
     }
 
-    func loadSession() async throws -> AccountSession? {
+    func loadSession() async throws -> AccountTokenSession? {
         session
     }
 
-    func saveSession(_ session: AccountSession) async throws {
+    func saveSession(_ session: AccountTokenSession) async throws {
         if remainingSessionSaveFailures > 0 {
             remainingSessionSaveFailures -= 1
             throw AccountAPIError.secureStorage
@@ -107,13 +107,13 @@ actor QueueAccountTransport: AccountHTTPTransport {
 }
 
 actor RefreshMergingTransport: AccountHTTPTransport {
-    private let replacementSession: AccountSession
+    private let replacementSession: AccountTokenSession
     private let refreshError: QueueAccountTransport.Stub?
     private(set) var requests: [URLRequest] = []
     private(set) var refreshCount = 0
 
     init(
-        replacementSession: AccountSession,
+        replacementSession: AccountTokenSession,
         refreshError: QueueAccountTransport.Stub? = nil
     ) {
         self.replacementSession = replacementSession
@@ -248,7 +248,7 @@ func makeHTTPResponse(request: URLRequest, statusCode: Int) -> HTTPURLResponse {
     )!
 }
 
-func sessionEnvelopeData(_ session: AccountSession) throws -> Data {
+func sessionEnvelopeData(_ session: AccountTokenSession) throws -> Data {
     try JSONEncoder().encode(APIDataEnvelope(data: session))
 }
 
@@ -261,8 +261,8 @@ func makeAccountSession(
     refreshToken: String = "refresh-old",
     accessExpiry: Int64 = 4_000_000_000,
     refreshExpiry: Int64 = 4_100_000_000
-) -> AccountSession {
-    AccountSession(
+) -> AccountTokenSession {
+    AccountTokenSession(
         accountId: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!,
         tokenType: "Bearer",
         accessToken: accessToken,

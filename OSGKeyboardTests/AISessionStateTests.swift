@@ -170,4 +170,97 @@ final class AISessionStateTests: XCTestCase {
         XCTAssertEqual(state.phase, .ready)
         XCTAssertEqual(state.answer?.text, "可用答案")
     }
+
+    func testReplyVariantsBecomeReadyWithoutCreatingInsertableAnswer() {
+        var state = AISessionState()
+        let utteranceID = UUID()
+        let variants = makeReplyVariants()
+        state.enter()
+        state.beginPreparing(utteranceID: utteranceID)
+
+        state.receiveReplyVariants(variants, utteranceID: utteranceID)
+
+        XCTAssertEqual(state.phase, .ready)
+        XCTAssertTrue(state.canSelectReplyVariant)
+        XCTAssertFalse(state.canInsert)
+        XCTAssertNil(state.answer)
+        XCTAssertEqual(state.replyVariants.map(\.kind), [.ordinary, .formal, .playful])
+    }
+
+    func testSelectingReplyVariantExposesSelectionForInsertionAndFeedback() throws {
+        var state = AISessionState()
+        let utteranceID = UUID()
+        let variants = makeReplyVariants()
+        state.enter()
+        state.beginPreparing(utteranceID: utteranceID)
+        state.receiveReplyVariants(variants, utteranceID: utteranceID)
+
+        let answer = try XCTUnwrap(
+            state.selectReplyVariant(id: variants[2].id)
+        )
+
+        XCTAssertEqual(answer.id, variants[2].id)
+        XCTAssertEqual(answer.text, "轻松回复 🎉")
+        XCTAssertEqual(state.selectedReplyVariant, variants[2])
+        XCTAssertTrue(state.canInsert)
+        XCTAssertFalse(state.canSelectReplyVariant)
+
+        state.markAnswerInserted(offersSend: false)
+        XCTAssertEqual(state.phase, .inserted)
+    }
+
+    func testDiscardReplyVariantsClearsAllCandidateState() {
+        var state = AISessionState()
+        let utteranceID = UUID()
+        state.enter()
+        state.beginPreparing(utteranceID: utteranceID)
+        state.receiveReplyVariants(makeReplyVariants(), utteranceID: utteranceID)
+
+        state.discardReadyAnswer()
+
+        XCTAssertEqual(state.phase, .idle)
+        XCTAssertTrue(state.replyVariants.isEmpty)
+        XCTAssertNil(state.selectedReplyVariant)
+    }
+
+    func testSceneReplyVariantsUseLocalRoleOrder() {
+        var state = AISessionState()
+        let utteranceID = UUID()
+        state.enter()
+        state.beginPreparing(utteranceID: utteranceID)
+        state.receiveReplyVariants(
+            [
+                AIReplyVariant(
+                    kind: .invitationTentative,
+                    emotion: .neutral,
+                    text: "我确认一下。"
+                ),
+                AIReplyVariant(
+                    kind: .invitationDecline,
+                    emotion: .grateful,
+                    text: "这次先不去了。"
+                ),
+                AIReplyVariant(
+                    kind: .invitationAccept,
+                    emotion: .warm,
+                    text: "好呀，到时见。"
+                )
+            ],
+            utteranceID: utteranceID
+        )
+
+        XCTAssertTrue(state.canSelectReplyVariant)
+        XCTAssertEqual(
+            state.replyVariants.map(\.kind),
+            AIReplyVariantSet.invitation.kinds
+        )
+    }
+
+    private func makeReplyVariants() -> [AIReplyVariant] {
+        [
+            AIReplyVariant(kind: .ordinary, emotion: .warm, text: "普通回复"),
+            AIReplyVariant(kind: .formal, emotion: .neutral, text: "正式回复"),
+            AIReplyVariant(kind: .playful, emotion: .celebratory, text: "轻松回复 🎉")
+        ]
+    }
 }

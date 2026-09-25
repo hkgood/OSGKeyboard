@@ -1,0 +1,25 @@
+{
+  "applied": false,
+  "applyRequested": true,
+  "deployedClassifierCountPreserved": 10,
+  "eligibleVerifierCount": 0,
+  "generatedAt": "2026-08-27T09:29:34.125641+00:00",
+  "policy": "Only acceptance-gated automatic candidates may be copied, and their first deployed mode is forced to shadow. If none pass, the deployed manifest and current binary models remain untouched.",
+  "schemaVersion": 1,
+  "verifiers": [
+    {
+      "candidateDeploymentMode": "shadow",
+      "candidateSHA256": "543504af40c65a3fa944c2d19541f9131aba3128ce1d395520d1a28155fb3d1e",
+      "decision": "retain-current-models",
+      "eligible": false,
+      "id": "action"
+    },
+    {
+      "candidateDeploymentMode": "shadow",
+      "candidateSHA256": "3cd1ab8c0a19dded830f859baf70a201047dacefd081d89e9c8658009f3cdfbe",
+      "decision": "retain-current-models",
+      "eligible": false,
+      "id": "coordination"
+    }
+  ]
+}

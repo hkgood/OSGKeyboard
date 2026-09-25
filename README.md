@@ -7,10 +7,10 @@ OSGKeyboard 是面向 iPhone、iPad 与 Mac 的语音输入工具。iOS 键盘�
 ![Platform](https://img.shields.io/badge/iOS%20%2F%20iPadOS-26%2B-0078D4?logo=apple)
 ![Platform](https://img.shields.io/badge/macOS-15%2B-555?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-6.0-FA7343?logo=swift)
-![Version](https://img.shields.io/badge/version-2.0.3-3aa05a)
+![Version](https://img.shields.io/badge/version-2.1.0-3aa05a)
 ![License](https://img.shields.io/badge/license-Source%20Available-blue)
 
-[官网](https://hkgood.github.io/OSGKeyboard/) · [English](./README.en.md) · [隐私政策](https://hkgood.github.io/OSGKeyboard/privacy/) · [更新记录](./CHANGELOG.md)
+[官网](https://hkgood.github.io/OSGKeyboard/) · [TestFlight 公测](https://testflight.apple.com/join/c2Bz4qK9) · [English](./README.en.md) · [隐私政策](https://hkgood.github.io/OSGKeyboard/privacy/) · [更新记录](./CHANGELOG.md)
 
 <p align="center">
   <a href="https://apps.apple.com/cn/app/osgkeyboard/id6781553267">
@@ -78,7 +78,6 @@ iOS / iPadOS 账号中心支持：
 - 服务端核验购买结果并维护积分账本
 - 键盘扩展只接收短时、限权的托管服务凭证
 
-自愿打赏 `ByRockyACoffee` 与积分包彼此独立，不解锁核心功能。
 
 ## 历史、统计与同步
 

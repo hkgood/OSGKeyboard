@@ -19,17 +19,17 @@ public enum RimeResourceError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .appGroupUnavailable:
-            return "App Group 不可用"
+            return SharedL10n.string("error.rime.appGroupUnavailable")
         case .bundledResourceMissing(let name):
-            return "缺少输入法资源：\(name)"
+            return SharedL10n.format("error.rime.bundledResourceMissing", name)
         case .lockUnavailable:
-            return "输入法资源正在被其他进程更新"
+            return SharedL10n.string("error.rime.lockUnavailable")
         case .deploymentFailed:
-            return "输入法资源部署失败"
+            return SharedL10n.string("error.rime.deploymentFailed")
         case .resourcesNotInstalled:
-            return "请先打开 OSGKeyboard 完成输入法初始化"
+            return SharedL10n.string("error.rime.resourcesNotInstalled")
         case .hostAppRequired:
-            return "输入法资源只能由 OSGKeyboard 主应用部署"
+            return SharedL10n.string("error.rime.hostAppRequired")
         }
     }
 

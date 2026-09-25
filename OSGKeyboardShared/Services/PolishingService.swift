@@ -63,6 +63,7 @@ public actor PolishingService {
         let raw: String
         let mode: PolishMode
         let systemPrompt: String?
+        let options: LLMGenerationOptions?
         let providerIdOverride: String?
         let taskKind: ManagedGatewayTaskKind?
         let requestPurpose: ManagedGatewayRequestPurpose?
@@ -92,6 +93,7 @@ public actor PolishingService {
 
     private let store: any ConfigurationStore
     private let timeout: TimeInterval
+    private let maximumTimeout: TimeInterval
     private let analyticsClient: any AnalyticsClient
     /// Optional injected client (mostly for testing). When nil we build
     /// one from `store.makeClient()` per call.
@@ -102,15 +104,19 @@ public actor PolishingService {
     /// shared `LLMClient.requestTimeout`. The safety-net timer adds its
     /// own slack on top of the length-scaled budget in `polishRemote`, so
     /// no `+1` is baked in here.
+    /// `maximumTimeout` defaults to the keyboard watchdog-compatible 35 s;
+    /// explicit host workflows may raise it together with their baseline.
     public init(
         store: any ConfigurationStore = AppGroupStore(),
         client: LLMClient? = nil,
         timeout: TimeInterval? = nil,
+        maximumTimeout: TimeInterval = FlowSessionKeys.maxPolishTimeout,
         analyticsClient: any AnalyticsClient = NoopAnalyticsClient()
     ) {
         self.store = store
         self.injectedClient = client
         self.timeout = timeout ?? LLMClientFactory.defaultRequestTimeout
+        self.maximumTimeout = maximumTimeout
         self.analyticsClient = analyticsClient
     }
 
@@ -124,6 +130,7 @@ public actor PolishingService {
         _ raw: String,
         mode: PolishMode = .polish,
         systemPrompt: String? = nil,
+        options: LLMGenerationOptions? = nil,
         providerIdOverride: String? = nil,
         taskKind: ManagedGatewayTaskKind? = nil,
         requestPurpose: ManagedGatewayRequestPurpose? = nil,
@@ -135,6 +142,7 @@ public actor PolishingService {
                 raw: raw,
                 mode: mode,
                 systemPrompt: systemPrompt,
+                options: options,
                 providerIdOverride: providerIdOverride,
                 taskKind: taskKind,
                 requestPurpose: requestPurpose,
@@ -150,6 +158,7 @@ public actor PolishingService {
         _ raw: String,
         mode: PolishMode = .polish,
         systemPrompt: String? = nil,
+        options: LLMGenerationOptions? = nil,
         providerIdOverride: String? = nil,
         taskKind: ManagedGatewayTaskKind? = nil,
         requestPurpose: ManagedGatewayRequestPurpose? = nil,
@@ -161,6 +170,7 @@ public actor PolishingService {
                 raw: raw,
                 mode: mode,
                 systemPrompt: systemPrompt,
+                options: options,
                 providerIdOverride: providerIdOverride,
                 taskKind: taskKind,
                 requestPurpose: requestPurpose,
@@ -230,6 +240,7 @@ public actor PolishingService {
                 trimmed,
                 mode: mode,
                 systemPrompt: systemPrompt,
+                options: request.options,
                 providerIdOverride: providerIdOverride,
                 taskKind: taskKind,
                 requestPurpose: requestPurpose,
@@ -303,6 +314,8 @@ public actor PolishingService {
             switch error {
             case .cancelled:
                 return .cancelled
+            case .timeout:
+                return .timeout
             case .transport, .rateLimited:
                 return .network
             case .invalidURL, .noAPIKey, .decoding:
@@ -327,6 +340,7 @@ public actor PolishingService {
         _ trimmed: String,
         mode: PolishMode,
         systemPrompt: String? = nil,
+        options: LLMGenerationOptions? = nil,
         providerIdOverride: String? = nil,
         taskKind: ManagedGatewayTaskKind? = nil,
         requestPurpose: ManagedGatewayRequestPurpose? = nil,
@@ -397,9 +411,8 @@ public actor PolishingService {
                 id: activeStyle.id,
                 intensity: store.polishIntensity
             )
-        let firstOptions: LLMGenerationOptions = usesHeavyFunPersonality
-            ? .funCreative
-            : .polishDefault
+        let firstOptions = options
+            ?? (usesHeavyFunPersonality ? .funCreative : .polishDefault)
         logPolishConfiguration(
             prompt: prompt,
             mode: mode,
@@ -471,7 +484,7 @@ public actor PolishingService {
                     options: options
                 )
             }
-        } catch is CancellationError {
+        } catch HardTimeoutError.timedOut {
             throw PolishError.timeout
         }
     }
@@ -581,7 +594,7 @@ public actor PolishingService {
     /// the *actual* value handed to `LLMClient.polish(timeout:)`, so long
     /// dictations (which generate long, listified, multi-paragraph output)
     /// are not cut off mid-generation by a fixed 15 s ceiling. Grows by
-    /// ~10 s per 100 characters, capped at 120 s.
+    /// ~10 s per 100 characters, capped by `maximumTimeout`.
     ///
     /// Previously this value was computed but only used for the safety-net
     /// timer while the URLRequest stayed pinned at 15 s — the scaling was
@@ -589,14 +602,17 @@ public actor PolishingService {
     /// (unpolished, unsegmented) ASR text.
     internal func effectiveTimeout(for text: String) -> TimeInterval {
         if timeout == LLMClientFactory.defaultRequestTimeout {
-            return FlowSessionKeys.polishTimeout(forCharacterCount: text.count)
+            return min(
+                FlowSessionKeys.polishTimeout(forCharacterCount: text.count),
+                maximumTimeout
+            )
         }
         let scaled = timeout + (Double(text.count) / 100.0) * 10.0
         // The cap participates in the keyboard-watchdog budget — see
         // `FlowSessionKeys.keyboardResultTimeout`. Raising it here without
         // going through that constant would silently break the invariant
         // "keyboard timeout > host worst case".
-        return min(max(scaled, timeout), FlowSessionKeys.maxPolishTimeout)
+        return min(max(scaled, timeout), maximumTimeout)
     }
 
     internal static func resolvedProviderId(
@@ -644,13 +660,13 @@ extension PolishingService.PolishError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .noTranscript:
-            return "No transcript to polish."
+            return SharedL10n.string("error.polish.noTranscript")
         case .timeout:
-            return "LLM polish timed out."
+            return SharedL10n.string("error.polish.timeout")
         case .missingAPIKey:
-            return "Missing API key — fill it in Settings before polish can run."
+            return SharedL10n.string("error.polish.missingAPIKey")
         case .keychainLocked:
-            return "API key unavailable while the device is locked — will work after unlock."
+            return SharedL10n.string("error.polish.keychainLocked")
         }
     }
 }

@@ -86,10 +86,53 @@ enum AppPermissions {
         }
     }
 
+    /// Undocumented Settings deep link that lands on General → Keyboard, the
+    /// page where the user adds the keyboard and grants Full Access.
+    ///
+    /// `prefs:`-family URLs are private. App Review generally rejects them,
+    /// with custom-keyboard extensions using this specific keyboard path as
+    /// the long-standing exception — it is what shipping third-party keyboards
+    /// rely on. Apple can break or start rejecting it at any time, so every
+    /// call falls back to the public `openSettingsURLString`, and setting this
+    /// to `false` removes the private scheme from the binary's behaviour
+    /// entirely without touching any call site.
+    static let usesPrivateKeyboardSettingsDeepLink = false
+
+    private static let keyboardSettingsDeepLink = "App-Prefs:root=General&path=Keyboard"
+
+    /// Opens the keyboard section of Settings when iOS honours the deep link,
+    /// otherwise the app's own Settings page. `completion` reports whether any
+    /// of the attempts was accepted, so the caller can fall back to written
+    /// steps when none was.
     @MainActor
-    static func openSystemSettings() {
-        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
-        UIApplication.shared.open(url)
+    static func openKeyboardSettings(completion: ((Bool) -> Void)? = nil) {
+        guard usesPrivateKeyboardSettingsDeepLink,
+              let deepLink = URL(string: keyboardSettingsDeepLink) else {
+            openSystemSettings(completion: completion)
+            return
+        }
+        UIApplication.shared.open(deepLink) { opened in
+            guard opened else {
+                openSystemSettings(completion: completion)
+                return
+            }
+            completion?(true)
+        }
+    }
+
+    /// Opens the app's own page in Settings. iOS exposes no *public* URL that
+    /// reaches General → Keyboard → Keyboards, so callers must still guide the
+    /// user through the remaining taps. `completion` reports whether iOS
+    /// actually accepted the open so the caller can fall back to written steps.
+    @MainActor
+    static func openSystemSettings(completion: ((Bool) -> Void)? = nil) {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else {
+            completion?(false)
+            return
+        }
+        UIApplication.shared.open(url) { opened in
+            completion?(opened)
+        }
     }
 
     /// Performs an explicit direct read so iOS can present paste authorization

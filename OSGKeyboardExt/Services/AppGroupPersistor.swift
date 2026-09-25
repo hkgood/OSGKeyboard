@@ -42,9 +42,16 @@ public struct AppGroupPersistor {
         state.handednessPreference = store.handednessPreference
         state.clipboardHistoryEnabled = store.clipboardHistoryEnabled
         state.clipboardCandidateBarEnabled = store.clipboardCandidateBarEnabled
+        state.clipboardAutoModeEnabled = store.clipboardAutoModeEnabled
+        state.clipboardAutoTranslateEnabled = store.clipboardAutoTranslateEnabled
+        state.clipboardAutoEmailReplyEnabled = store.clipboardAutoEmailReplyEnabled
         applySkillSnapshot(store: store, into: state)
         state.keyboardHapticIntensity = store.keyboardHapticIntensity
-        applyAPIKeyAvailability(store: store, into: state)
+        // Credential availability is intentionally NOT resolved here: it needs
+        // synchronous Keychain reads, which are a RunningBoard 0xdead10cc kill
+        // vector on the extension's main thread inside the appear/suspend
+        // window. KeyboardState's optimistic defaults stand until
+        // `KeyboardConfigSync.refreshCredentialsFromKeychain()` lands.
 
         #if DEBUG
         // Log only credential availability and the base URL origin. Never put
@@ -98,9 +105,12 @@ public struct AppGroupPersistor {
         state.handednessPreference = store.handednessPreference
         state.clipboardHistoryEnabled = store.clipboardHistoryEnabled
         state.clipboardCandidateBarEnabled = store.clipboardCandidateBarEnabled
+        state.clipboardAutoModeEnabled = store.clipboardAutoModeEnabled
+        state.clipboardAutoTranslateEnabled = store.clipboardAutoTranslateEnabled
+        state.clipboardAutoEmailReplyEnabled = store.clipboardAutoEmailReplyEnabled
         applySkillSnapshot(store: store, into: state)
         state.keyboardHapticIntensity = store.keyboardHapticIntensity
-        applyAPIKeyAvailability(store: store, into: state)
+        // Credential availability is refreshed asynchronously — see load(into:).
     }
 
     /// Resolve once outside SwiftUI body evaluation. Assigning the complete
@@ -112,38 +122,58 @@ public struct AppGroupPersistor {
         let layout = store.agentSkillLayout
         let language = store.uiLanguage
         state.uiLanguage = language
-        state.enabledClipboardSkillIDs = layout.enabledIDs
+        let personalReplyStyle = store.personalReplyStyle
+        let hasPersonalReplyStyle = personalReplyStyle != nil
+        let enabledIDs = AIClipboardSkillCatalog.availableEnabledIDs(
+            layout.enabledIDs,
+            layout: layout,
+            hasPersonalReplyStyle: hasPersonalReplyStyle
+        )
+        state.enabledClipboardSkillIDs = enabledIDs
         state.confirmedClipboardShortcutIDs = layout.confirmedShortcutIDs
         state.enabledClipboardSkills = AIClipboardSkillCatalog.visible(
-            enabledIDs: layout.enabledIDs,
+            enabledIDs: enabledIDs,
             officialCatalog: store.officialSkillCatalog,
             userCatalog: store.agentUserSkillCatalog,
             uiLanguage: language
         )
-        state.clipboardSkillCatalog = AIClipboardSkillCatalog.all(
-            officialCatalog: store.officialSkillCatalog,
-            userCatalog: store.agentUserSkillCatalog,
-            uiLanguage: language
+        // The keyboard's chips are ranked from this full catalog, not from the
+        // enabled list, so an unavailable skill has to be removed here or it
+        // still reaches the surface (and `AIKeyboardCoordinator` could run it).
+        state.clipboardSkillCatalog = AIClipboardSkillCatalog.availableForKeyboard(
+            AIClipboardSkillCatalog.all(
+                officialCatalog: store.officialSkillCatalog,
+                userCatalog: store.agentUserSkillCatalog,
+                uiLanguage: language
+            ),
+            layout: layout,
+            hasPersonalReplyStyle: hasPersonalReplyStyle
         )
-        let activeStyle = store.activePolishStyle
-        // Built-in formal/corporate personalities must not make ordinary
-        // clipboard replies sound less like the user.
+        // Independent of the voice-polish selection: the Styles page shapes
+        // dictation, this shapes AI replies. Sharing one selector previously
+        // made "clean dictation" and "replies that sound like me" mutually
+        // exclusive.
         state.clipboardReplyStyle = AIClipboardReplyStyleContext.resolve(
-            activeStyle: activeStyle
+            personalReplyStyle: personalReplyStyle
         )
     }
 
+    /// Applies a credential snapshot that was resolved OFF the main actor
+    /// (see `KeyboardConfigSync.refreshCredentialsFromKeychain`). This method
+    /// itself performs no Keychain access.
+    ///
     /// Cloud without ASR/LLM keys blocks the mic. Local ASR still works when
     /// the polish key is missing — show a soft tip above the mic instead.
-    private func applyAPIKeyAvailability(
-        store: AppGroupStore,
+    public func applyCredentialAvailability(
+        isPolishKeyMissing: Bool,
+        isCloudAPIKeyMissingForVoiceInput: Bool,
         into state: KeyboardViewController.State
     ) {
-        state.aiServiceAvailable = !store.isPolishKeyMissing
-        if store.isCloudAPIKeyMissingForVoiceInput {
+        state.aiServiceAvailable = !isPolishKeyMissing
+        if isCloudAPIKeyMissingForVoiceInput {
             state.micDisabled = true
             state.micDisabledHint = ExtL10n.string("keyboard.mic.disabled.missingApiKey")
-        } else if store.isPolishKeyMissing {
+        } else if isPolishKeyMissing {
             state.micDisabled = false
             state.micDisabledHint = ExtL10n.string("keyboard.mic.hint.missingPolishApiKey")
         } else {

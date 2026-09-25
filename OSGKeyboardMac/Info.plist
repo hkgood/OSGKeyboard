@@ -46,5 +46,7 @@
 	<string>OSGKeyboard uses the microphone to transcribe your voice via your configured cloud speech provider.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>OSGKeyboard uses on-device speech recognition for local dictation mode.</string>
+	<key>OSGPrivateKeychainAccessGroup</key>
+	<string>$(AppIdentifierPrefix)com.osgkeyboard.mac</string>
 </dict>
 </plist>

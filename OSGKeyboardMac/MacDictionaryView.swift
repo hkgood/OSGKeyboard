@@ -341,7 +341,7 @@ private struct MacDictionaryRow: View {
             Spacer(minLength: Spacing.sm)
             Button(action: delete) {
                 Image(systemName: "trash")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(TypeStyle.footnote.weight(.medium))
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.borderless)

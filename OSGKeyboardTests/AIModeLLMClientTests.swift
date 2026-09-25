@@ -113,7 +113,7 @@ final class AIModeLLMClientTests: XCTestCase {
         XCTAssertEqual(LLMProvider.provider(id: "minimax").defaultModel, "MiniMax-M2.7")
         XCTAssertEqual(LLMProvider.provider(id: "anthropic").defaultModel, "claude-sonnet-4-6")
         XCTAssertEqual(LLMProvider.provider(id: "siliconflow").defaultModel, "Qwen/Qwen3-8B-Instruct")
-        XCTAssertEqual(LLMProvider.provider(id: "openrouter").defaultModel, "qwen/qwen3-8b:free")
+        XCTAssertEqual(LLMProvider.provider(id: "openrouter").defaultModel, "qwen/qwen3-8b")
         XCTAssertEqual(LLMProvider.provider(id: "cometapi").defaultModel, "gpt-5.4-mini")
         XCTAssertEqual(LLMProvider.provider(id: "codingPlanX").defaultModel, "gpt-5.4-mini")
     }

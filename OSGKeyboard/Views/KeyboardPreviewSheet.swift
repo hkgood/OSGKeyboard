@@ -29,10 +29,10 @@ struct KeyboardPreviewSheet: View {
             palette.background.ignoresSafeArea()
             VStack(spacing: Spacing.md) {
                 VStack(spacing: Spacing.md) {
-                    Text("preview.title")
+                    Text(AppL10n.string("preview.title"))
                         .font(TypeStyle.title2)
                         .foregroundStyle(palette.textPrimary)
-                    Text("preview.subtitle")
+                    Text(AppL10n.string("preview.subtitle"))
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                         .multilineTextAlignment(.center)
@@ -85,7 +85,7 @@ struct KeyboardPreviewSheet: View {
                             .foregroundStyle(palette.textTertiary)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("preview.clear")
+                    .accessibilityLabel(AppL10n.string("preview.clear"))
                 }
             }
             TextEditor(text: $typedText)
@@ -119,7 +119,7 @@ struct KeyboardPreviewSheet: View {
                     showSettings = true
                 } label: {
                     Label {
-                        Text("preview.openSettings")
+                        Text(AppL10n.string("preview.openSettings"))
                     } icon: {
                         Image(systemName: "gearshape")
                     }

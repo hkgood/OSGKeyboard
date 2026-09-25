@@ -1,9 +1,15 @@
 // KeyboardExtensionMemoryTelemetry.swift
 // OSGKeyboard · Shared
 //
-// Observes keyboard-extension memory without changing runtime behavior.
+// Observes keyboard-extension memory AND sheds load before the system does.
 // The host process never starts this monitor, so shared typing code can emit
 // extension-only milestones without duplicating host telemetry.
+//
+// Observation alone was not enough: `didReceiveMemoryWarning` is the only
+// system signal an extension gets, and jetsam frequently kills a keyboard at
+// the ~60 MiB boundary without ever delivering one. `reliefHandler` lets the
+// extension drop its heavy caches on OUR thresholds (40 / 48 MiB), which are
+// deliberately below that boundary.
 
 import Darwin
 import Foundation
@@ -48,10 +54,33 @@ public enum KeyboardExtensionMemoryTelemetry {
     private static var highestLevel = KeyboardExtensionMemoryBudget.Level.normal
     private static var startedAt: TimeInterval = 0
     private static var samplingTask: Task<Void, Never>?
+    /// Highest level already relieved in the current pressure episode. Reset only
+    /// when the footprint falls back below `warningMB` — see `requestReliefIfNeeded`.
+    private static var lastReliefLevel = KeyboardExtensionMemoryBudget.Level.normal
+    /// True while `reliefHandler` is running, so relief can never be requested
+    /// from inside relief — see `requestReliefIfNeeded`.
+    private static var isRelieving = false
+
+    /// Poll interval once the startup burst is over. Sustained sampling is what
+    /// catches growth *between* milestones (a long clipboard session, a big
+    /// candidate list) — milestone-only sampling misses it entirely.
+    private static let sustainedSampleInterval = Duration.seconds(1)
+    /// Invoked on the main actor when the footprint crosses `.high` or
+    /// `.critical`. The keyboard extension installs this to release the Rime
+    /// engine, the English lexicon and any in-flight pipeline work. Nothing
+    /// else in the process is allowed to set it.
+    ///
+    /// Returns whether relief was actually performed. `false` means the host
+    /// declined *this* attempt (it is mid-composition and will not yank the
+    /// typing surface out from under the user), and the level stays armed so the
+    /// next poll asks again — a declined attempt must not be mistaken for a
+    /// completed one, or the keyboard would sit at 48 MiB having shed nothing.
+    public static var reliefHandler: (@MainActor @Sendable (KeyboardExtensionMemoryBudget.Level) -> Bool)?
 
     public static func begin(context initialContext: String) {
         samplingTask?.cancel()
         samplingTask = nil
+        lastReliefLevel = .normal
         isActive = true
         processID = getpid()
         context = initialContext
@@ -81,7 +110,9 @@ public enum KeyboardExtensionMemoryTelemetry {
         )
     }
 
-    /// Samples short-lived startup spikes that milestone-only logging can miss.
+    /// Samples short-lived startup spikes that milestone-only logging can miss,
+    /// then keeps polling at a low rate for the rest of the presentation so
+    /// pressure that builds up mid-session still reaches `reliefHandler`.
     /// Poll samples log only on a new budget band or each additional 4 MiB peak.
     public static func startBootSampling() {
         guard isActive else { return }
@@ -98,8 +129,39 @@ public enum KeyboardExtensionMemoryTelemetry {
                     alwaysLog: false
                 )
             }
-            samplingTask = nil
+            guard !Task.isCancelled else { return }
             record("boot.sample.complete")
+            await pollPressure()
+        }
+    }
+
+    /// Resumes low-rate sampling for a re-presented keyboard without replaying
+    /// the startup burst. No-ops while the boot burst is still running.
+    public static func startSustainedSamplingIfIdle() {
+        guard isActive, samplingTask == nil else { return }
+        samplingTask = Task { @MainActor in
+            await pollPressure()
+        }
+    }
+
+    /// Stops sampling (keyboard dismissed). The extension process survives
+    /// between presentations, so an uncancelled poll would keep waking a hidden
+    /// keyboard forever.
+    public static func stopSampling() {
+        samplingTask?.cancel()
+        samplingTask = nil
+    }
+
+    private static func pollPressure() async {
+        while !Task.isCancelled {
+            try? await Task.sleep(for: sustainedSampleInterval)
+            guard !Task.isCancelled else { return }
+            emit(
+                stage: "pressure.sample",
+                snapshot: OSGDiag.memorySnapshot(),
+                eventContext: context,
+                alwaysLog: false
+            )
         }
     }
 
@@ -118,6 +180,12 @@ public enum KeyboardExtensionMemoryTelemetry {
         if crossedLevel {
             highestLevel = level
         }
+        #if DEBUG
+        MemoryDeviceProbe.log("emit.\(stage).\(level.rawValue)")
+        #endif
+        // Shed BEFORE logging: at `.critical` we are ~12 MiB from the observed
+        // jetsam boundary and the log line is the less important half.
+        requestReliefIfNeeded(level: level, stage: stage)
         let peakAdvanced = peakFootprintMB >= 0
             && (lastLoggedPeakMB < 0 || peakFootprintMB - lastLoggedPeakMB >= peakLogStepMB)
         guard alwaysLog || crossedLevel || peakAdvanced else { return }
@@ -154,6 +222,64 @@ public enum KeyboardExtensionMemoryTelemetry {
         )
     }
 
+    /// Asks the host to release heavy resources, at most once per level per
+    /// pressure episode. Escalation (`.high` → `.critical`) still fires: the
+    /// harder shed must not be swallowed by the soft one that preceded it.
+    private static func requestReliefIfNeeded(
+        level: KeyboardExtensionMemoryBudget.Level,
+        stage: String
+    ) {
+        // Hysteresis, not a cooldown. A timed gap re-sheds every few seconds
+        // while the footprint sits above the threshold, which reads to the user
+        // as the keyboard repeatedly resetting itself. Re-arm only once pressure
+        // has genuinely receded — back under `warningMB`, a full band below the
+        // level that triggered the shed. `.warning` itself neither sheds nor
+        // re-arms: it is the band the keyboard lands in right after shedding.
+        if level == .normal {
+            lastReliefLevel = .normal
+        }
+        guard level == .high || level == .critical, let handler = reliefHandler else { return }
+        guard levelRank(level) > levelRank(lastReliefLevel) else { return }
+        // Shedding records a milestone at every teardown step, and recording
+        // samples the footprint again — which asks the same handler to shed
+        // from inside itself. `lastReliefLevel` cannot stop that, because it is
+        // only assigned once the handler returns. The nesting is unbounded and
+        // overflowed the main thread's stack instead of relieving anything.
+        guard !isRelieving else { return }
+        #if DEBUG
+        MemoryDeviceProbe.log("relief.fire.\(level.rawValue).\(stage)")
+        #endif
+        OSGDiag.log(
+            "extMemory relief level=\(level.rawValue) stage=\(stage) \(OSGDiag.memoryTag())",
+            category: "memory"
+        )
+        isRelieving = true
+        let relieved = handler(level)
+        isRelieving = false
+        #if DEBUG
+        MemoryDeviceProbe.log("relief.done.\(level.rawValue).relieved=\(relieved ? 1 : 0)")
+        #endif
+        guard relieved else {
+            OSGDiag.log(
+                "extMemory relief declined level=\(level.rawValue) stage=\(stage)",
+                category: "memory"
+            )
+            return
+        }
+        lastReliefLevel = level
+    }
+
+    #if DEBUG
+    /// Test seam: drives the threshold + hysteresis logic without needing the
+    /// test process's real footprint to cross 48 MiB.
+    static func simulateFootprintForTesting(_ footprintMB: Double, stage: String = "test") {
+        requestReliefIfNeeded(
+            level: KeyboardExtensionMemoryBudget.level(forPhysFootprintMB: footprintMB),
+            stage: stage
+        )
+    }
+    #endif
+
     private static func levelRank(_ level: KeyboardExtensionMemoryBudget.Level) -> Int {
         switch level {
         case .unavailable:
@@ -169,3 +295,55 @@ public enum KeyboardExtensionMemoryTelemetry {
         }
     }
 }
+
+#if DEBUG
+/// DEBUG-only device probe. `log stream --device` is unavailable on this Mac and
+/// tool-hosted tests can't run on a physical device, so the extension's real
+/// jetsam footprint can't be read from the console. Instead we append every
+/// memory sample to an App Group file and pull it back to the Mac:
+///
+/// ```
+/// xcrun devicectl device copy from --device <udid> \
+///   --domain-type appGroupDataContainer \
+///   --domain-identifier group.com.osgkeyboard.shared \
+///   --source memory-probe.log --destination /tmp/
+/// ```
+///
+/// Each line: `<uptime>s <tag> foot=<MB> rss=<MB>`. Temporary — remove once the
+/// footprint budget is re-baselined.
+public enum MemoryDeviceProbe {
+    public static let fileName = "memory-probe.log"
+
+    /// devicectl can only pull from the container's Library/Documents/tmp, so
+    /// the probe lives under Library rather than the container root.
+    private static var fileURL: URL? {
+        guard let base = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: AppGroup.identifier)?
+            .appendingPathComponent("Library", isDirectory: true)
+        else { return nil }
+        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        return base.appendingPathComponent(fileName, isDirectory: false)
+    }
+
+    /// Appends one sample. Cheap enough for a short DEBUG run; not for shipping.
+    public static func log(_ tag: String) {
+        guard let url = fileURL else { return }
+        let snap = OSGDiag.memorySnapshot()
+        let line = String(
+            format: "%.2f %@ foot=%.1f rss=%.1f\n",
+            ProcessInfo.processInfo.systemUptime,
+            tag,
+            snap.physFootprintMB,
+            snap.rssMB
+        )
+        guard let data = line.data(using: .utf8) else { return }
+        if let handle = try? FileHandle(forWritingTo: url) {
+            handle.seekToEndOfFile()
+            handle.write(data)
+            try? handle.close()
+        } else {
+            try? data.write(to: url, options: .atomic)
+        }
+    }
+}
+#endif

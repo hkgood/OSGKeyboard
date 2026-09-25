@@ -6,6 +6,11 @@
 
 import SwiftUI
 
+private struct MacPolishStyleErrorAlert {
+    let title: String
+    let message: String
+}
+
 struct MacPolishStylesView: View {
     @ObservedObject var viewModel: MacDictationViewModel
     @ObservedObject private var history = SpeechHistoryStore.shared
@@ -13,7 +18,7 @@ struct MacPolishStylesView: View {
 
     @State private var editingPack: PolishStylePack?
     @State private var viewingPack: PolishStylePack?
-    @State private var errorMessage: String?
+    @State private var errorAlert: MacPolishStyleErrorAlert?
     @State private var isGeneratingLearnedStyle = false
 
     private var lang: AppUILanguage { viewModel.config.uiLanguage }
@@ -70,10 +75,10 @@ struct MacPolishStylesView: View {
                         title: MacL10n.string("mac.styles.fun", language: lang),
                         packs: PolishStylePackCatalog.BuiltinStyleGroup.fun.packs
                     )
-                    if !catalog.entries.isEmpty {
+                    if !handWrittenPacks.isEmpty {
                         styleSection(
                             title: MacL10n.string("mac.styles.custom", language: lang),
-                            packs: catalog.entries
+                            packs: handWrittenPacks
                         )
                     }
                 }
@@ -95,15 +100,15 @@ struct MacPolishStylesView: View {
             MacPolishStylePromptDetailSheet(pack: pack, language: lang)
         }
         .alert(
-            MacL10n.string("mac.styles.error", language: lang),
+            errorAlert?.title ?? "",
             isPresented: Binding(
-                get: { errorMessage != nil },
-                set: { if !$0 { errorMessage = nil } }
+                get: { errorAlert != nil },
+                set: { if !$0 { errorAlert = nil } }
             )
         ) {
-            Button(MacL10n.string("mac.done", language: lang)) { errorMessage = nil }
+            Button(MacL10n.string("mac.done", language: lang)) { errorAlert = nil }
         } message: {
-            Text(errorMessage ?? "")
+            Text(errorAlert?.message ?? "")
         }
         .task {
             await MacICloudSyncBootstrap.polishStyleSync.pullAndMergeIfEnabled()
@@ -121,6 +126,13 @@ struct MacPolishStylesView: View {
         PolishStyleLearningCorpusBuilder.build(from: history.snapshot())
     }
 
+    /// Distilled personal styles drive AI replies, never dictation, so they are
+    /// not selectable here. macOS has no reply skills of its own — the pack is
+    /// generated from Mac dictation and takes effect on iPhone through iCloud.
+    private var handWrittenPacks: [PolishStylePack] {
+        catalog.entries.filter { !PolishStylePackCatalog.isPersonalReplyStyle($0) }
+    }
+
     private var styleLearningCard: some View {
         let corpus = styleLearningCorpus
         let required = PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount
@@ -129,7 +141,7 @@ struct MacPolishStylesView: View {
         return VStack(alignment: .leading, spacing: Spacing.md) {
             HStack(alignment: .top, spacing: Spacing.md) {
                 Image(systemName: "waveform")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(TypeStyle.title3)
                     .foregroundStyle(palette.accent)
                     .frame(width: 42, height: 42)
                     .background(
@@ -267,12 +279,22 @@ struct MacPolishStylesView: View {
             defer { isGeneratingLearnedStyle = false }
             do {
                 let generated = try await PolishStyleLearningService(store: store)
-                    .generateStyle(from: corpus, outputLanguage: lang)
+                    .generateStyle(
+                        from: corpus,
+                        replyExamples: ClipboardReplyFeedbackStore.shared.learningExamples(),
+                        outputLanguage: lang
+                    )
                 // Review is mandatory before the learned prompt enters sync or
                 // becomes the active dictation personality.
                 editingPack = generated
             } catch {
-                errorMessage = localizedLearningError(error)
+                errorAlert = MacPolishStyleErrorAlert(
+                    title: MacL10n.string(
+                        "mac.styles.learn.error.title",
+                        language: lang
+                    ),
+                    message: localizedLearningError(error)
+                )
             }
         }
     }
@@ -288,7 +310,10 @@ struct MacPolishStylesView: View {
         case .requestTooLarge:
             return MacL10n.string("mac.styles.learn.error.requestTooLarge", language: lang)
         case nil:
-            return MacL10n.string("mac.styles.learn.error.request", language: lang)
+            return PolishStyleLearningFailureMessage.localized(
+                for: error,
+                language: lang
+            ) ?? MacL10n.string("mac.styles.learn.error.request", language: lang)
         }
     }
 
@@ -312,14 +337,21 @@ struct MacPolishStylesView: View {
         do {
             try updated.upsert(pack)
             store.setPolishStyleCatalog(updated)
-            store.setActivePolishStyleId(pack.id)
+            if PolishStylePackCatalog.isPersonalReplyStyle(pack) {
+                store.setPersonalReplyStyleId(pack.id)
+            } else {
+                store.setActivePolishStyleId(pack.id)
+            }
             viewModel.refreshPolishStyles()
             Task {
                 try? await MacICloudSyncBootstrap.polishStyleSync.pushLocalIfEnabled(updated)
                 try? await MacICloudSyncBootstrap.settingsSync.pushLocalIfEnabled()
             }
         } catch {
-            errorMessage = MacL10n.string("mac.styles.validation", language: lang)
+            errorAlert = MacPolishStyleErrorAlert(
+                title: MacL10n.string("mac.styles.error", language: lang),
+                message: MacL10n.string("mac.styles.validation", language: lang)
+            )
         }
     }
 
@@ -381,7 +413,7 @@ private struct MacPolishStyleCard: View {
             // Pencil opens the prompt (built-in, read-only) or the editor (custom).
             Button(action: primaryAction) {
                 Image(systemName: "pencil")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(TypeStyle.body.weight(.semibold))
                     .foregroundStyle(palette.textSecondary)
                     .frame(width: 30, height: 30)
                     .background(palette.background.opacity(isHovering ? 0.9 : 0.72), in: Circle())

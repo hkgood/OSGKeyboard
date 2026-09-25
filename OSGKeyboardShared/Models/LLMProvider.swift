@@ -12,8 +12,6 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
     public let defaultBaseURL: String
     public let defaultModel: String
     public let apiKeyURL: URL?
-    /// Optional short blurb shown under the provider name in the picker.
-    public let blurb: String?
     /// Whether this preset should appear in user-facing provider pickers
     /// (settings / onboarding). Defaults to `true` so the existing
     /// `presets` array keeps its public surface area; future passes can
@@ -27,7 +25,6 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
         defaultBaseURL: String,
         defaultModel: String,
         apiKeyURL: URL? = nil,
-        blurb: String? = nil,
         isUserSelectable: Bool = true
     ) {
         self.id = id
@@ -35,7 +32,6 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
         self.defaultBaseURL = defaultBaseURL
         self.defaultModel = defaultModel
         self.apiKeyURL = apiKeyURL
-        self.blurb = blurb
         self.isUserSelectable = isUserSelectable
     }
 
@@ -45,144 +41,126 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             name: "OpenAI",
             defaultBaseURL: "https://api.openai.com/v1",
             defaultModel: "gpt-5.4-mini",
-            apiKeyURL: URL(string: "https://platform.openai.com/api-keys"),
-            blurb: "gpt-5.4-mini · Responses web_search · AI 模式可联网"
+            apiKeyURL: URL(string: "https://platform.openai.com/api-keys")
         ),
         .init(
             id: "ark",
             name: "火山方舟 Ark",
             defaultBaseURL: "https://ark.cn-beijing.volces.com/api/v3",
             defaultModel: "deepseek-v3-2-251201",
-            apiKeyURL: URL(string: "https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey"),
-            blurb: "豆包 / DeepSeek · 接入点 ID 需在控制台确认"
+            apiKeyURL: URL(string: "https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey")
         ),
         .init(
             id: "deepseek",
             name: "DeepSeek",
             defaultBaseURL: "https://api.deepseek.com/v1",
             defaultModel: "deepseek-v4-flash",
-            apiKeyURL: URL(string: "https://platform.deepseek.com/api_keys"),
-            blurb: "deepseek-v4-flash · Responses 联网 · 润色/AI 共用"
+            apiKeyURL: URL(string: "https://platform.deepseek.com/api_keys")
         ),
         .init(
             id: "qwen",
             name: "Qwen (DashScope)",
             defaultBaseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
             defaultModel: "qwen-plus-latest",
-            apiKeyURL: URL(string: "https://dashscope.console.aliyun.com/apiKey"),
-            blurb: "qwen-plus-latest · enable_search · 滚动最新 Plus"
+            apiKeyURL: URL(string: "https://dashscope.console.aliyun.com/apiKey")
         ),
         .init(
             id: "zhipu",
             name: "智谱 GLM · Zhipu",
             defaultBaseURL: "https://open.bigmodel.cn/api/paas/v4",
             defaultModel: "glm-4.7-flash",
-            apiKeyURL: URL(string: "https://bigmodel.cn/usercenter/apikeys"),
-            blurb: "GLM-4.7-Flash · 快 · 可 web_search"
+            apiKeyURL: URL(string: "https://bigmodel.cn/usercenter/apikeys")
         ),
         .init(
             id: "moonshot",
             name: "月之暗面 Moonshot",
             defaultBaseURL: "https://api.moonshot.cn/v1",
             defaultModel: "kimi-k2.5",
-            apiKeyURL: URL(string: "https://platform.moonshot.cn/console/api-keys"),
-            blurb: "kimi-k2.5 · 长上下文 · AI 可尝试联网"
+            apiKeyURL: URL(string: "https://platform.moonshot.cn/console/api-keys")
         ),
         .init(
             id: "siliconflow",
             name: "硅基流动 SiliconFlow",
             defaultBaseURL: "https://api.siliconflow.cn/v1",
             defaultModel: "Qwen/Qwen3-8B-Instruct",
-            apiKeyURL: URL(string: "https://cloud.siliconflow.cn/account/ak"),
-            blurb: "Qwen3-8B · 多模型聚合 · OpenAI 兼容"
+            apiKeyURL: URL(string: "https://cloud.siliconflow.cn/account/ak")
         ),
         .init(
             id: "groq",
             name: "Groq",
             defaultBaseURL: "https://api.groq.com/openai/v1",
             defaultModel: "llama-3.3-70b-versatile",
-            apiKeyURL: URL(string: "https://console.groq.com/keys"),
-            blurb: "Llama 3.3 70B · 超低延迟 LPU"
+            apiKeyURL: URL(string: "https://console.groq.com/keys")
         ),
         .init(
             id: "minimax",
             name: "MiniMax",
             defaultBaseURL: "https://api.minimaxi.com/v1",
             defaultModel: "MiniMax-M2.7",
-            apiKeyURL: URL(string: "https://platform.minimaxi.com/user-center/basic-information"),
-            blurb: "MiniMax-M2.7 · 中文优化"
+            apiKeyURL: URL(string: "https://platform.minimaxi.com/user-center/basic-information")
         ),
         .init(
             id: "mimo",
             name: "小米 MiMo",
             defaultBaseURL: "https://api.xiaomimimo.com/v1",
             defaultModel: "mimo-v2.5",
-            apiKeyURL: URL(string: "https://platform.xiaomimimo.com"),
-            blurb: "mimo-v2.5 · 中文优化"
+            apiKeyURL: URL(string: "https://platform.xiaomimimo.com")
         ),
         .init(
             id: "openrouter",
             name: "OpenRouter",
             defaultBaseURL: "https://openrouter.ai/api/v1",
-            defaultModel: "qwen/qwen3-8b:free",
-            apiKeyURL: URL(string: "https://openrouter.ai/keys"),
-            blurb: "qwen3-8b:free · 通用润色/问答（非 coder）"
+            defaultModel: "qwen/qwen3-8b",
+            apiKeyURL: URL(string: "https://openrouter.ai/keys")
         ),
         .init(
             id: "gemini",
             name: "Google Gemini",
             defaultBaseURL: "https://generativelanguage.googleapis.com/v1beta/openai",
             defaultModel: "gemini-3.1-flash-lite",
-            apiKeyURL: URL(string: "https://aistudio.google.com/apikey"),
-            blurb: "gemini-3.1-flash-lite · 低延迟 · OpenAI 兼容端点"
+            apiKeyURL: URL(string: "https://aistudio.google.com/apikey")
         ),
         .init(
             id: "anthropic",
             name: "Anthropic Claude",
             defaultBaseURL: "https://api.anthropic.com/v1",
             defaultModel: "claude-sonnet-4-6",
-            apiKeyURL: URL(string: "https://console.anthropic.com/settings/keys"),
-            blurb: "Claude Sonnet 4.6 · Messages · AI 可联网"
+            apiKeyURL: URL(string: "https://console.anthropic.com/settings/keys")
         ),
         .init(
             id: "xai",
             name: "xAI Grok",
             defaultBaseURL: "https://api.x.ai/v1",
             defaultModel: "grok-4-fast-reasoning",
-            apiKeyURL: URL(string: "https://console.x.ai"),
-            blurb: "grok-4-fast-reasoning · Responses web_search"
+            apiKeyURL: URL(string: "https://console.x.ai")
         ),
         .init(
             id: "mistral",
             name: "Mistral AI",
             defaultBaseURL: "https://api.mistral.ai/v1",
             defaultModel: "mistral-small-latest",
-            apiKeyURL: URL(string: "https://console.mistral.ai/api-keys"),
-            blurb: "Mistral Small · 欧洲托管 · -latest 滚动"
+            apiKeyURL: URL(string: "https://console.mistral.ai/api-keys")
         ),
         .init(
             id: "cometapi",
             name: "CometAPI",
             defaultBaseURL: "https://api.cometapi.com/v1",
             defaultModel: "gpt-5.4-mini",
-            apiKeyURL: URL(string: "https://api.cometapi.com"),
-            blurb: "gpt-5.4-mini · 多模型聚合"
+            apiKeyURL: URL(string: "https://api.cometapi.com")
         ),
         .init(
             id: "alibabaCoding",
             name: "阿里 Coding Plan",
             defaultBaseURL: "https://coding-intl.dashscope.aliyuncs.com/v1",
             defaultModel: "qwen3-coder-plus",
-            apiKeyURL: URL(string: "https://dashscope.console.aliyun.com/apiKey"),
-            blurb: "通义 Coder · 代码润色"
+            apiKeyURL: URL(string: "https://dashscope.console.aliyun.com/apiKey")
         ),
         .init(
             id: "codingPlanX",
             name: "CodingPlanX",
             defaultBaseURL: "https://api.codingplanx.ai/v1",
             defaultModel: "gpt-5.4-mini",
-            apiKeyURL: URL(string: "https://codingplanx.ai"),
-            blurb: "gpt-5.4-mini · OpenAI 兼容"
+            apiKeyURL: URL(string: "https://codingplanx.ai")
         ),
         // MARK: - ASR-only presets (hidden from polish picker)
         .init(
@@ -191,7 +169,6 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             defaultBaseURL: "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async",
             defaultModel: "volc.seedasr.sauc.duration",
             apiKeyURL: URL(string: "https://console.volcengine.com/speech"),
-            blurb: "流式大模型 ASR · 旧版 AppID+Token / 新版 API Key",
             isUserSelectable: false
         ),
         .init(
@@ -200,7 +177,6 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             defaultBaseURL: "wss://dashscope.aliyuncs.com/api-ws/v1/inference/",
             defaultModel: "fun-asr-realtime",
             apiKeyURL: URL(string: "https://dashscope.console.aliyun.com/apiKey"),
-            blurb: "Fun-ASR Realtime · 百炼词表",
             isUserSelectable: false
         ),
         .init(
@@ -209,7 +185,6 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             defaultBaseURL: "https://api.openai.com/v1",
             defaultModel: "whisper-1",
             apiKeyURL: URL(string: "https://platform.openai.com/api-keys"),
-            blurb: "whisper-1 · 经典 Whisper 端点",
             isUserSelectable: false
         ),
         .init(
@@ -217,15 +192,13 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             name: "Codex OAuth",
             defaultBaseURL: "",
             defaultModel: "gpt-5.3-codex-spark",
-            blurb: "ChatGPT Codex OAuth · 暂不支持",
             isUserSelectable: false
         ),
         .init(
             id: "custom",
             name: "Custom · 自定义",
             defaultBaseURL: "",
-            defaultModel: "",
-            blurb: "自建 / 任意 OpenAI 兼容端点 · Any OpenAI-compatible endpoint"
+            defaultModel: ""
         )
     ]
 

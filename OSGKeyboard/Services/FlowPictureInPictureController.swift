@@ -672,7 +672,7 @@ final class FlowPictureInPictureController: NSObject, FlowPictureInPictureContro
     }
 
     private func drawLogoCard(in context: CGContext, rect: CGRect, tuckProgress: CGFloat) {
-        let cardPath = UIBezierPath(roundedRect: rect, cornerRadius: 16)
+        let cardPath = UIBezierPath(roundedRect: rect, cornerRadius: Radius.large)
 
         context.setFillColor(UIColor(OSGColor.pictureInPictureAccent).cgColor)
         context.addPath(cardPath.cgPath)

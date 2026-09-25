@@ -8,6 +8,7 @@
 import OSGKeyboardHostSupport
 import OSGKeyboardShared
 import SwiftUI
+import UIKit
 
 enum AnalyticsFirstOpenAttribution {
     static let ordinaryLaunch: AnalyticsAcquisitionChannel = .appStoreOrganic
@@ -15,6 +16,20 @@ enum AnalyticsFirstOpenAttribution {
     static func trustedChannel(for url: URL) -> AnalyticsAcquisitionChannel? {
         ReferralUniversalLink.code(from: url) == nil ? nil : .referral
     }
+}
+
+/// One native Reminders export handed off from the keyboard. Identifiable so a
+/// repeated skill run with the same titles still re-triggers the writer.
+struct ReminderDraft: Identifiable, Equatable {
+    let id = UUID()
+    let titles: [String]
+}
+
+/// One native Calendar export handed off from the keyboard. `lines` are the
+/// canonical `start|end|title|location` entries `AIEventExporter` decodes.
+struct EventDraft: Identifiable, Equatable {
+    let id = UUID()
+    let lines: [String]
 }
 
 struct MainAppRoot: View {
@@ -33,6 +48,10 @@ struct MainAppRoot: View {
     @State private var firstOpenAcquisitionChannel =
         AnalyticsFirstOpenAttribution.ordinaryLaunch
     @State private var newContactDraft: NewContactDraft?
+    @State private var reminderDraft: ReminderDraft?
+    @State private var reminderOutcome: AIReminderExporter.Outcome?
+    @State private var eventDraft: EventDraft?
+    @State private var eventOutcome: AIEventExporter.Outcome?
 
     init(accountDependencies: AccountDependencies? = nil) {
         let resolvedDependencies = accountDependencies ?? LiveAccountDependencyFactory.make()
@@ -75,15 +94,15 @@ struct MainAppRoot: View {
         .environmentObject(accountSession)
         .environmentObject(analytics)
         .alert(
-            "account.error.title",
+            AppL10n.string("account.error.title"),
             isPresented: accountOperationErrorBinding
         ) {
-            Button("common.done") {
+            Button(AppL10n.string("common.done")) {
                 accountSession.dismissOperationError()
             }
         } message: {
             if let key = accountSession.operationErrorKey {
-                Text(LocalizedStringKey(key))
+                Text(AppL10n.string(key))
             }
         }
         .background {
@@ -108,6 +127,58 @@ struct MainAppRoot: View {
             NewContactSheet(phoneNumber: draft.phoneNumber) {
                 newContactDraft = nil
             }
+        }
+        .task(id: reminderDraft?.id) {
+            guard let draft = reminderDraft else { return }
+            let outcome = await AIReminderExporter.add(titles: draft.titles)
+            reminderDraft = nil
+            reminderOutcome = outcome
+        }
+        .alert(
+            AppL10n.string("skills.reminders.resultTitle"),
+            isPresented: reminderOutcomeBinding
+        ) {
+            if reminderOutcome == .accessDenied {
+                Button(AppL10n.string("skills.reminders.openSettings")) {
+                    reminderOutcome = nil
+                    openSystemSettings()
+                }
+                Button(AppL10n.string("common.done"), role: .cancel) {
+                    reminderOutcome = nil
+                }
+            } else {
+                Button(AppL10n.string("common.done")) {
+                    reminderOutcome = nil
+                }
+            }
+        } message: {
+            Text(AppL10n.string(reminderOutcomeMessage))
+        }
+        .task(id: eventDraft?.id) {
+            guard let draft = eventDraft else { return }
+            let outcome = await AIEventExporter.add(lines: draft.lines)
+            eventDraft = nil
+            eventOutcome = outcome
+        }
+        .alert(
+            AppL10n.string("skills.events.resultTitle"),
+            isPresented: eventOutcomeBinding
+        ) {
+            if eventOutcome == .accessDenied {
+                Button(AppL10n.string("skills.events.openSettings")) {
+                    eventOutcome = nil
+                    openSystemSettings()
+                }
+                Button(AppL10n.string("common.done"), role: .cancel) {
+                    eventOutcome = nil
+                }
+            } else {
+                Button(AppL10n.string("common.done")) {
+                    eventOutcome = nil
+                }
+            }
+        } message: {
+            Text(AppL10n.string(eventOutcomeMessage))
         }
         .onAppear {
             flowManager.setAppForeground(scenePhase == .active)
@@ -170,9 +241,22 @@ struct MainAppRoot: View {
                 await accountSession.validateAppleCredentialState()
             }
             config.reloadFromPersistedStorage()
+            // Sweep after the session is restored so the upload carries a
+            // bearer token. No-op outside internal builds. This is the retry
+            // path: MetricKit itself triggers an upload the moment a payload
+            // arrives, but a send that failed then only gets another chance
+            // here, on a later launch.
+            await InternalDiagnosticsUploader.shared.uploadPendingReports()
         }
         .onReceive(NotificationCenter.default.publisher(for: .settingsDidSyncFromCloud)) { _ in
             config.reloadFromPersistedStorage()
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(for: .managedCreditsMayHaveChanged)
+        ) { _ in
+            Task {
+                await accountSession.refreshAccountData(force: true)
+            }
         }
         .onChange(of: config.hasCompletedOnboarding) { _, done in
             if done {
@@ -248,6 +332,51 @@ struct MainAppRoot: View {
         )
     }
 
+    private var reminderOutcomeBinding: Binding<Bool> {
+        Binding(
+            get: { reminderOutcome != nil },
+            set: { isPresented in
+                if !isPresented { reminderOutcome = nil }
+            }
+        )
+    }
+
+    private var reminderOutcomeMessage: String {
+        switch reminderOutcome {
+        case .created:
+            return "skills.reminders.resultSuccess"
+        case .accessDenied:
+            return "skills.reminders.resultDenied"
+        case .failed, .none:
+            return "skills.reminders.resultFailed"
+        }
+    }
+
+    private var eventOutcomeBinding: Binding<Bool> {
+        Binding(
+            get: { eventOutcome != nil },
+            set: { isPresented in
+                if !isPresented { eventOutcome = nil }
+            }
+        )
+    }
+
+    private var eventOutcomeMessage: String {
+        switch eventOutcome {
+        case .created:
+            return "skills.events.resultSuccess"
+        case .accessDenied:
+            return "skills.events.resultDenied"
+        case .failed, .none:
+            return "skills.events.resultFailed"
+        }
+    }
+
+    private func openSystemSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
+    }
+
     private func refreshOfficialSkillCatalog(reason: String) {
         Task {
             let outcome = await OfficialSkillCatalogRefreshService.shared.refreshIfNeeded(
@@ -262,6 +391,13 @@ struct MainAppRoot: View {
     /// Starts foreground-only services once per active transition. Rime yields
     /// the first frame; Flow and CLM keep their existing lazy-heavy-work rules.
     private func activateForegroundServices(reason: String) {
+        // Clipboard history is a whole-array blob shared with the keyboard, and
+        // a suspended app receives no Darwin notifications — so everything the
+        // keyboard captured or deleted while we were backgrounded is visible
+        // only after this reload. Skipping it leaves every host view holding a
+        // stale array that silently reverts those writes on its next delete.
+        ClipboardHistoryStore.shared.startObservingCrossProcessChanges()
+        ClipboardHistoryStore.shared.reload()
         scheduleRimeDeployment(reason: reason)
         // Automatically arm the low-profile PiP on every host open.
         // Capture/ASR remain lazy and start only on an actual mic press.
@@ -305,13 +441,28 @@ struct MainAppRoot: View {
 
     @ViewBuilder
     private var mainContent: some View {
-        if config.hasCompletedOnboarding {
+        if config.hasCompletedOnboarding, !Self.forcesOnboarding {
             MainTabView()
-                .id("main")
+                .id("main-\(config.uiLanguage.rawValue)")
         } else {
             OnboardingExperienceView(config: config)
-                .id("onboarding")
+                .id("onboarding-\(config.uiLanguage.rawValue)")
         }
+    }
+
+    /// DEBUG-only: replay the first-run experience without wiping data — used to
+    /// preview onboarding on a device that already finished setup. Pass
+    /// `--force-onboarding` to start from the top, or `--oobe-preview=reply`
+    /// (voice / translate / reply / ask-ai / login / complete) to jump straight
+    /// to a specific step. Both are set in the Xcode scheme's launch arguments.
+    private static var forcesOnboarding: Bool {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        return arguments.contains("--force-onboarding")
+            || arguments.contains(where: { $0.hasPrefix("--oobe-preview=") })
+        #else
+        return false
+        #endif
     }
 
     /// Delayed host CLM warmup. Never parallel with ASR.
@@ -370,7 +521,14 @@ struct MainAppRoot: View {
             if url.path.contains("shortcut-result") {
                 AIAgentShortcutRunner.logShortcutCallback(url)
             } else if url.path.contains("run") {
-                AIAgentShortcutRunner.runPendingIfNeeded()
+                AIAgentShortcutRunner.runPendingIfNeeded(
+                    onReminders: { titles in
+                        reminderDraft = ReminderDraft(titles: titles)
+                    },
+                    onEvents: { lines in
+                        eventDraft = EventDraft(lines: lines)
+                    }
+                )
             }
         case "deployrime":
             // The keyboard sends the user here precisely because typing

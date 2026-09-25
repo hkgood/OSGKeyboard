@@ -3,6 +3,8 @@
 //
 // Host-only analytics lifecycle. The shared module owns the wire contract,
 // SQLite queue and uploader; this type only connects iOS lifecycle signals.
+// The keyboard extension must never open these databases — an open WAL
+// connection survives hide and is killed as RunningBoard `0xdead10cc`.
 
 import BackgroundTasks
 import Foundation
@@ -11,72 +13,6 @@ import OSGKeyboardHostSupport
 import OSGKeyboardShared
 import OSLog
 import UIKit
-
-final class HostAnalyticsBearerBridge: AnalyticsBearerProviding, @unchecked Sendable {
-    static let shared = HostAnalyticsBearerBridge()
-
-    private let lock = NSLock()
-    private var provider: (any AnalyticsBearerProviding)?
-
-    func install(_ provider: any AnalyticsBearerProviding) {
-        lock.lock()
-        self.provider = provider
-        lock.unlock()
-    }
-
-    func bearerToken() async throws -> String? {
-        try await currentProvider()?.bearerToken()
-    }
-
-    func refreshBearerToken(
-        afterUnauthorizedAccessToken failedToken: String?
-    ) async throws -> String? {
-        try await currentProvider()?.refreshBearerToken(
-            afterUnauthorizedAccessToken: failedToken
-        )
-    }
-
-    private func currentProvider() -> (any AnalyticsBearerProviding)? {
-        lock.lock()
-        defer { lock.unlock() }
-        return provider
-    }
-}
-
-struct AccountAnalyticsBearerProvider: AnalyticsBearerProviding {
-    let apiClient: AccountAPIClient
-
-    func bearerToken() async throws -> String? {
-        guard try await apiClient.currentSession() != nil else { return nil }
-        do {
-            return try await apiClient.accessTokenForAuthorizedRequest()
-        } catch let error as AccountAPIError where Self.isInvalidSession(error) {
-            return nil
-        }
-    }
-
-    func refreshBearerToken(
-        afterUnauthorizedAccessToken failedToken: String?
-    ) async throws -> String? {
-        guard let failedToken, !failedToken.isEmpty else { return nil }
-        do {
-            return try await apiClient.refreshAccessToken(
-                afterUnauthorizedAccessToken: failedToken
-            )
-        } catch let error as AccountAPIError where Self.isInvalidSession(error) {
-            return nil
-        }
-    }
-
-    private static func isInvalidSession(_ error: AccountAPIError) -> Bool {
-        switch error {
-        case .sessionUnavailable, .unauthorized, .refreshTokenReuse:
-            return true
-        default:
-            return false
-        }
-    }
-}
 
 struct HostAnalyticsLogger: AnalyticsLogging {
     private let logger = Logger(
@@ -236,6 +172,17 @@ final class AnalyticsHostService: ObservableObject {
                 await uploadSignal.requestActivationUpload()
             }
         }
+    }
+
+    /// Installation identifier shared with the analytics pipeline, or `nil`
+    /// when analytics are switched off.
+    ///
+    /// Diagnostics upload deliberately reuses it instead of minting a second
+    /// device identifier: a tester who turned analytics off has said they do
+    /// not want a stable id leaving the device, and that answer should hold
+    /// here too. `nil` simply means the crash report stays on device.
+    func installationIdentifierIfEnabled() async -> UUID? {
+        await runtime.repository.installationIdentifierIfEnabled()
     }
 
     func refreshEnabledState() {

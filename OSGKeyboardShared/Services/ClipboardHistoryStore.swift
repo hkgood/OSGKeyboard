@@ -15,21 +15,63 @@ public final class ClipboardHistoryStore: ObservableObject {
         public static let lastChangeCount = "clipboard.history.lastChangeCount"
         public static let suggestionDismissedChangeCount =
             "clipboard.history.suggestionDismissedChangeCount"
+        public static let lastAutoRepliedChangeCount =
+            "clipboard.history.lastAutoRepliedChangeCount"
+        public static let lastAutoRepliedTextHash =
+            "clipboard.history.lastAutoRepliedTextHash"
+        public static let lastAutoRepliedAt =
+            "clipboard.history.lastAutoRepliedAt"
+        /// Bumped on every `persist()`. Lets an instance tell the notification
+        /// its own write just posted from one a peer process posted.
+        public static let revision = "clipboard.history.revision"
     }
 
     @Published public private(set) var entries: [ClipboardHistoryEntry] = []
 
     private let defaults: UserDefaults
+    /// Installed by `startObservingCrossProcessChanges()`. Stays nil in the
+    /// transient readers that construct a store just to read the newest entry.
+    private var crossProcessObserver: FlowSessionDarwinObserver?
+    /// Revision this instance last wrote or read, so the observer can ignore
+    /// the notification its own `persist()` posted.
+    private var lastSeenRevision: Int
 
     public init(defaults: UserDefaults? = nil) {
+        let resolved: UserDefaults
         if let defaults {
-            self.defaults = defaults
+            resolved = defaults
         } else if let suite = AppGroup.defaultsIfAvailable {
-            self.defaults = suite
+            resolved = suite
         } else {
-            self.defaults = .standard
+            resolved = .standard
         }
-        entries = Self.loadEntries(from: self.defaults)
+        self.defaults = resolved
+        lastSeenRevision = resolved.integer(forKey: Keys.revision)
+        entries = Self.loadEntries(from: resolved)
+    }
+
+    /// Reloads whenever the peer process writes history.
+    ///
+    /// Idempotent. Call it from the long-lived owners only — the keyboard's
+    /// capture coordinator and the host's foreground activation — never from a
+    /// transient reader, which would register and tear down an observer per read.
+    ///
+    /// This does **not** replace reloading when the host returns to the
+    /// foreground: Darwin notifications are dropped for a suspended process, so
+    /// everything the keyboard wrote while the host was backgrounded arrives
+    /// only through that reload.
+    public func startObservingCrossProcessChanges() {
+        guard crossProcessObserver == nil else { return }
+        crossProcessObserver = FlowSessionDarwinObserver(
+            notificationName: ClipboardHistoryDarwin.notificationName
+        ) { [weak self] in
+            self?.reloadIfPeerWrote()
+        }
+    }
+
+    private func reloadIfPeerWrote() {
+        guard defaults.integer(forKey: Keys.revision) != lastSeenRevision else { return }
+        reload()
     }
 
     public var lastObservedChangeCount: Int {
@@ -51,6 +93,68 @@ public final class ClipboardHistoryStore: ObservableObject {
                 defaults.removeObject(forKey: Keys.suggestionDismissedChangeCount)
             }
         }
+    }
+
+    /// Pasteboard generation whose replyable text auto mode already routed into
+    /// the Reply flow. App Group–backed so a single copy triggers auto-reply at
+    /// most once, even across keyboard close/reopen.
+    public var lastAutoRepliedChangeCount: Int? {
+        get {
+            guard defaults.object(forKey: Keys.lastAutoRepliedChangeCount) != nil else {
+                return nil
+            }
+            return defaults.integer(forKey: Keys.lastAutoRepliedChangeCount)
+        }
+        set {
+            if let newValue {
+                defaults.set(newValue, forKey: Keys.lastAutoRepliedChangeCount)
+            } else {
+                defaults.removeObject(forKey: Keys.lastAutoRepliedChangeCount)
+            }
+        }
+    }
+
+    /// Fingerprint of the content auto mode last routed. Universal Clipboard
+    /// re-announces one copy under several changeCounts, so changeCount alone
+    /// cannot stop repeat triggers for identical content.
+    public var lastAutoRepliedTextHash: String? {
+        get { defaults.string(forKey: Keys.lastAutoRepliedTextHash) }
+        set {
+            if let newValue {
+                defaults.set(newValue, forKey: Keys.lastAutoRepliedTextHash)
+            } else {
+                defaults.removeObject(forKey: Keys.lastAutoRepliedTextHash)
+            }
+        }
+    }
+
+    /// When the last auto action fired. Combined with the text fingerprint this
+    /// bounds repeat triggers: identical content re-fires only after the window.
+    public var lastAutoRepliedAt: Date? {
+        get { defaults.object(forKey: Keys.lastAutoRepliedAt) as? Date }
+        set {
+            if let newValue {
+                defaults.set(newValue, forKey: Keys.lastAutoRepliedAt)
+            } else {
+                defaults.removeObject(forKey: Keys.lastAutoRepliedAt)
+            }
+        }
+    }
+
+    /// Records that auto mode routed `text` (pasteboard generation
+    /// `changeCount`) into a flow at `at`.
+    public func markAutoReplied(text: String, changeCount: Int, at: Date = Date()) {
+        lastAutoRepliedChangeCount = changeCount
+        lastAutoRepliedTextHash = ClipboardHistoryPolicy.contentFingerprint(for: text)
+        lastAutoRepliedAt = at
+    }
+
+    /// Whether identical content already fired inside the suppression window.
+    public func recentlyAutoReplied(text: String, now: Date = Date()) -> Bool {
+        guard let firedAt = lastAutoRepliedAt,
+              ClipboardHistoryPolicy.isRepeatSuppressed(firedAt: firedAt, now: now)
+        else { return false }
+        return lastAutoRepliedTextHash == ClipboardHistoryPolicy.contentFingerprint(for: text)
     }
 
     /// Inserts accepted text (dedupe + pin). Returns the new head when stored.
@@ -96,6 +200,7 @@ public final class ClipboardHistoryStore: ObservableObject {
     }
 
     public func reload() {
+        lastSeenRevision = defaults.integer(forKey: Keys.revision)
         entries = Self.loadEntries(from: defaults)
     }
 
@@ -137,6 +242,11 @@ public final class ClipboardHistoryStore: ObservableObject {
         do {
             let data = try JSONEncoder().encode(entries)
             defaults.set(data, forKey: Keys.entries)
+            // Tell the peer before it can overwrite this blob from a stale copy.
+            let revision = defaults.integer(forKey: Keys.revision) &+ 1
+            defaults.set(revision, forKey: Keys.revision)
+            lastSeenRevision = revision
+            ClipboardHistoryDarwin.postHistoryChanged()
         } catch {
             OSGLog.config.warning(
                 "clipboard history encode failed: \(error.localizedDescription, privacy: .public)"

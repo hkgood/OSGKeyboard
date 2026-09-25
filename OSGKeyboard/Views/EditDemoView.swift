@@ -21,6 +21,8 @@ struct EditDemoView: View {
 
     @StateObject private var state = KeyboardState()
     @State private var scene: Scene = .hint
+    /// Mirrors the host document for `--preview-fullscreen` recordings.
+    @State private var hostText: String = EditDemoView.originalText
 
     private var source: EditSessionSource {
         let reference = EditableInputReference(
@@ -36,9 +38,25 @@ struct EditDemoView: View {
 
     var body: some View {
         ZStack {
-            OSGColor.demoBackground.ignoresSafeArea()
+            if FeaturePreviewFlags.isFullscreen {
+                Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+            } else {
+                OSGColor.demoBackground.ignoresSafeArea()
+            }
             VStack(spacing: 0) {
-                Spacer(minLength: 0)
+                if FeaturePreviewFlags.isFullscreen {
+                    // Chinese-only recording: the sample text below has no
+                    // English variant, so the host chrome is pinned to match
+                    // (see the `zh-Hans` locale pin on this view's body).
+                    FeaturePreviewHostDocument(
+                        kind: .notes,
+                        title: "备忘录",
+                        language: .zh,
+                        text: hostText
+                    )
+                } else {
+                    Spacer(minLength: 0)
+                }
                 Group {
                     switch scene {
                     case .hint:
@@ -144,6 +162,8 @@ struct EditDemoView: View {
         withAnimation(.easeInOut(duration: 0.2)) {
             state.editSession = .applying(review)
             state.lastTranscript = ExtL10n.string("keyboard.edit.status.applying")
+            // Close the loop: the host document shows the polished result.
+            hostText = Self.editedText
         }
         // Stay on applying so the last captured frames are still the real UI.
         try? await sleep(2.0)

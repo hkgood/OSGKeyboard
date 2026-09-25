@@ -177,10 +177,29 @@ final class FlowReliabilityTests: XCTestCase {
             }
             XCTFail("Expected timeout")
         } catch {
-            XCTAssertTrue(error is CancellationError)
+            XCTAssertEqual(error as? HardTimeoutError, .timedOut)
         }
 
         XCTAssertLessThan(Date().timeIntervalSince(started), 0.2)
+    }
+
+    func testHardTimeoutPreservesCallerCancellation() async {
+        let task = Task {
+            try await HardTimeout.run(seconds: 5) {
+                try await Task.sleep(nanoseconds: 5_000_000_000)
+                return "late"
+            }
+        }
+        await Task.yield()
+        task.cancel()
+
+        do {
+            _ = try await task.value
+            XCTFail("Expected caller cancellation")
+        } catch {
+            XCTAssertTrue(error is CancellationError, "Unexpected error: \(error)")
+            XCTAssertNil(error as? HardTimeoutError)
+        }
     }
 
     func testAudioRoutePolicyRebuildsHFPTransitions() {

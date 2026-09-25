@@ -1,0 +1,162 @@
+{
+  "classifiers" : [
+    {
+      "acceptedForAutomaticRouting" : false,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.91,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.92,
+        "zh-Hans" : 0.91
+      },
+      "id" : "task",
+      "labels" : [
+        "notTask",
+        "task"
+      ],
+      "modelFile" : "TaskIntentClassifier.mlmodel",
+      "positiveLabel" : "task"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.99,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.99,
+        "zh-Hans" : 0.99
+      },
+      "id" : "question",
+      "labels" : [
+        "notQuestion",
+        "question"
+      ],
+      "modelFile" : "QuestionIntentClassifier.mlmodel",
+      "positiveLabel" : "question"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.74,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.76,
+        "zh-Hans" : 0.78
+      },
+      "id" : "invitation",
+      "labels" : [
+        "notInvitation",
+        "invitation"
+      ],
+      "modelFile" : "InvitationIntentClassifier.mlmodel",
+      "positiveLabel" : "invitation"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.7,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.81,
+        "zh-Hans" : 0.75
+      },
+      "id" : "complaint",
+      "labels" : [
+        "notComplaint",
+        "complaint"
+      ],
+      "modelFile" : "ComplaintIntentClassifier.mlmodel",
+      "positiveLabel" : "complaint"
+    },
+    {
+      "acceptedForAutomaticRouting" : false,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.5,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.5,
+        "zh-Hans" : 0.5
+      },
+      "id" : "scheduleNegotiation",
+      "labels" : [
+        "notScheduleNegotiation",
+        "scheduleNegotiation"
+      ],
+      "modelFile" : "ScheduleNegotiationIntentClassifier.mlmodel",
+      "positiveLabel" : "scheduleNegotiation"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.99,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.99,
+        "zh-Hans" : 0.99
+      },
+      "id" : "confirmationDecision",
+      "labels" : [
+        "notConfirmationDecision",
+        "confirmationDecision"
+      ],
+      "modelFile" : "ConfirmationDecisionIntentClassifier.mlmodel",
+      "positiveLabel" : "confirmationDecision"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.95,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.95,
+        "zh-Hans" : 0.96
+      },
+      "id" : "followUpReminder",
+      "labels" : [
+        "notFollowUpReminder",
+        "followUpReminder"
+      ],
+      "modelFile" : "FollowUpReminderIntentClassifier.mlmodel",
+      "positiveLabel" : "followUpReminder"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.69,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.69,
+        "zh-Hans" : 0.77
+      },
+      "id" : "blessing",
+      "labels" : [
+        "notBlessing",
+        "blessing"
+      ],
+      "modelFile" : "BlessingIntentClassifier.mlmodel",
+      "positiveLabel" : "blessing"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.64,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.64,
+        "zh-Hans" : 0.74
+      },
+      "id" : "replyableMessage",
+      "labels" : [
+        "notReplyableMessage",
+        "replyableMessage"
+      ],
+      "modelFile" : "ConversationalReplyIntentClassifier.mlmodel",
+      "positiveLabel" : "replyableMessage"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "id" : "sentiment",
+      "labels" : [
+        "negative",
+        "neutral",
+        "positive"
+      ],
+      "modelFile" : "SentimentClassifier.mlmodel"
+    }
+  ],
+  "corpusRecordCount" : 23918,
+  "generatedAt" : "2026-08-27T05:29:04Z",
+  "schemaVersion" : 2
+}

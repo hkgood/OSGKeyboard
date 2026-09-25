@@ -14,6 +14,8 @@ enum MacSection: String, CaseIterable, Identifiable {
     case history
     case dictionary
     case styles
+    // No `account` case: on Mac the account lives in Settings as its first
+    // card (iOS keeps a dedicated tab). One sign-in surface, one page.
     case settings
 
     var id: String { rawValue }
@@ -183,10 +185,6 @@ final class MacDictationViewModel: ObservableObject {
         LLMProvider.asrSelectablePresets
     }
 
-    var selectableProviders: [LLMProvider] {
-        asrSelectableProviders
-    }
-
     var dictionaryTermCount: Int {
         _ = dictionaryRevision
         return AppGroupStore(defaults: defaults).personalDictionary.entries.count
@@ -266,6 +264,15 @@ final class MacDictationViewModel: ObservableObject {
         defaults.set(enabled, forKey: StoredKeys.hotkey)
         hotkeyService.setEnabled(enabled)
         if enabled { hotkeyService.start() } else { hotkeyService.stop() }
+    }
+
+    /// Called when Accessibility flips to trusted (see `MacPermissionMonitor`).
+    /// Granting the permission does not retro-attach the global event monitor,
+    /// so the hotkey has to be re-armed or Option-hold keeps doing nothing
+    /// until the app is relaunched.
+    func reattachHotkeyIfNeeded() {
+        guard hotkeyEnabled else { return }
+        hotkeyService.restartIfGlobalMonitorMissing()
     }
 
     func setHotkeyTrigger(_ trigger: MacHotkeyTrigger) {

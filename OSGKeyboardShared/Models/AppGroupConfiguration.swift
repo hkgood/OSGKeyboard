@@ -20,6 +20,10 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let baseURL = "config.baseURL"
         /// Legacy plaintext slot — migrated to Keychain on first read.
         public static let apiKeyLegacy = "config.apiKey"
+        /// Marks that the one-shot legacy credential probe already ran for this
+        /// install, so steady-state `load()` never touches the Keychain.
+        public static let legacyCredentialMigrationAttempted =
+            "config.legacyCredentialMigrationAttempted"
         public static let model = "config.model"
         /// Cloud ASR provider — independent from polish `providerId`.
         public static let asrProviderId = "config.asrProviderId"
@@ -44,17 +48,33 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let keyboardHapticIntensity = "config.keyboardHapticIntensity"
         public static let polishIntensity = "config.polishIntensity"
         public static let aiResponseLength = "config.aiResponseLength"
+        public static let multipleReplyVariantsEnabled = "config.multipleReplyVariantsEnabled"
         public static let llmThinkingEnabled = "config.llmThinkingEnabled"
         /// When true, the keyboard records system clipboard text into local history.
         public static let clipboardHistoryEnabled = "config.clipboardHistoryEnabled"
         /// When true (and history is on), show the newest clipboard item as a suggestion strip.
         public static let clipboardCandidateBarEnabled = "config.clipboardCandidateBarEnabled"
+        /// When true (and history is on), auto-route a freshly copied, replyable
+        /// message into the Reply flow when the keyboard opens. Device-local.
+        public static let clipboardAutoModeEnabled = "config.clipboardAutoModeEnabled"
+        /// When true (and history is on), auto-translate a freshly copied,
+        /// non-system-language paste on open. Device-local.
+        public static let clipboardAutoTranslateEnabled = "config.clipboardAutoTranslateEnabled"
+        /// When true (and history is on), auto-draft a reply when a freshly
+        /// copied paste is detected as an email. Device-local.
+        public static let clipboardAutoEmailReplyEnabled = "config.clipboardAutoEmailReplyEnabled"
         public static let detectedAppContext = "config.detectedAppContext"
         public static let detectedAppContextAt = "config.detectedAppContextAt"
         public static let personalDictionary = "config.personalDictionary.v1"
         public static let polishStyleCatalog = "config.polishStyles.v1"
         public static let activePolishStyleId = "config.activePolishStyleId"
         public static let polishStylesMigrated = "config.polishStyles.migrated"
+        /// Distilled personal style used for AI replies. Empty means disabled.
+        /// Deliberately separate from `activePolishStyleId`: voice input and AI
+        /// replies must not share one selection.
+        public static let personalReplyStyleId = "config.personalReplyStyleId"
+        /// One-shot: split the personal style out of the voice-polish selection.
+        public static let personalReplyStyleMigrated = "config.personalReplyStyle.migrated"
         /// Legacy keys from the removed manual scenario implementation.
         public static let legacyPolishScenarioId = "config.polishScenarioId"
         public static let legacySystemPrompt = "config.systemPrompt"
@@ -113,15 +133,29 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     public var polishIntensity: PolishIntensity
     /// Soft AI-mode answer length preference (medium by default).
     public var aiResponseLength: AIResponseLength
+    /// When true, Reply may provide several sendable variants.
+    public var multipleReplyVariantsEnabled: Bool
     /// Enables provider-specific reasoning / thinking controls for polish LLM requests.
     public var llmThinkingEnabled: Bool
     /// Opt-in clipboard history capture in the keyboard extension.
     public var clipboardHistoryEnabled: Bool
     /// Opt-in clipboard suggestion strip above the key surfaces.
     public var clipboardCandidateBarEnabled: Bool
+    /// Opt-in: auto-route a freshly copied replyable message into the Reply
+    /// flow when the keyboard opens. Off by default; never syncs via iCloud.
+    public var clipboardAutoModeEnabled: Bool
+    /// Opt-in: auto-translate a freshly copied non-system-language paste on
+    /// open. Off by default; never syncs via iCloud.
+    public var clipboardAutoTranslateEnabled: Bool
+    /// Opt-in: auto-draft a reply when a freshly copied paste is an email.
+    /// Off by default; never syncs via iCloud.
+    public var clipboardAutoEmailReplyEnabled: Bool
     public var personalDictionary: PersonalDictionary
     public var polishStyleCatalog: PolishStyleCatalog
+    /// Voice-input polish style. Never a distilled personal style.
     public var activePolishStyleId: String
+    /// Distilled personal style applied to AI replies; empty when disabled.
+    public var personalReplyStyleId: String
     /// Opt-in iCloud KVS sync for the personal dictionary (main app only).
     public var personalDictionaryICloudSyncEnabled: Bool
     /// Opt-in iCloud KVS sync for user settings (main app only).
@@ -210,7 +244,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     ) -> LLMClient {
         if credentialSource == .managed || requestPurpose == .oobe {
             return ManagedLLMClient(
-                capability: .polish,
+                capability: .resolve(taskKind: taskKind),
                 taskKind: taskKind,
                 requestPurpose: requestPurpose,
                 oobeFeature: oobeFeature,
@@ -314,13 +348,25 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             aiResponseLength: AIResponseLength.resolve(
                 storedRawValue: defaults.string(forKey: Keys.aiResponseLength)
             ),
+            multipleReplyVariantsEnabled: {
+                if defaults.object(forKey: Keys.multipleReplyVariantsEnabled) == nil {
+                    return true
+                }
+                return defaults.bool(forKey: Keys.multipleReplyVariantsEnabled)
+            }(),
             llmThinkingEnabled: defaults.bool(forKey: Keys.llmThinkingEnabled),
             clipboardHistoryEnabled: defaults.bool(forKey: Keys.clipboardHistoryEnabled),
-            clipboardCandidateBarEnabled: defaults.bool(forKey: Keys.clipboardCandidateBarEnabled),
+            // Paste capsule is always on now (its opt-in toggle was removed), so
+            // default to true when the key was never written.
+            clipboardCandidateBarEnabled: defaults.object(forKey: Keys.clipboardCandidateBarEnabled) as? Bool ?? true,
+            clipboardAutoModeEnabled: defaults.bool(forKey: Keys.clipboardAutoModeEnabled),
+            clipboardAutoTranslateEnabled: defaults.bool(forKey: Keys.clipboardAutoTranslateEnabled),
+            clipboardAutoEmailReplyEnabled: defaults.bool(forKey: Keys.clipboardAutoEmailReplyEnabled),
             personalDictionary: decodePersonalDictionary(from: defaults),
             polishStyleCatalog: decodePolishStyleCatalog(from: defaults),
             activePolishStyleId: defaults.string(forKey: Keys.activePolishStyleId)
                 ?? PolishStylePackCatalog.defaultID,
+            personalReplyStyleId: defaults.string(forKey: Keys.personalReplyStyleId) ?? "",
             personalDictionaryICloudSyncEnabled: {
                 if defaults.object(forKey: Keys.personalDictionaryICloudSyncEnabled) == nil {
                     return true
@@ -393,11 +439,21 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         }
 
         // One-shot legacy migration: plaintext apiKey in UserDefaults → Keychain.
-        _ = resolveAPIKey(
-            defaults: defaults,
-            providerId: config.providerId,
-            preferICloudSync: config.settingsICloudSyncEnabled
-        )
+        // Gated to a single eager attempt per install: the keyboard extension
+        // runs load() on every config read, and a synchronous
+        // SecItemCopyMatching inside the appear/suspend window is a
+        // RunningBoard 0xdead10cc kill vector. A deferred attempt still happens
+        // lazily via `apiKey` / `asrApiKey` on first real use, so a migration
+        // skipped here (e.g. Keychain unavailable) is not lost.
+        let hasLegacyPlaintextKey = defaults.string(forKey: Keys.apiKeyLegacy)?.isEmpty == false
+        if hasLegacyPlaintextKey || !defaults.bool(forKey: Keys.legacyCredentialMigrationAttempted) {
+            defaults.set(true, forKey: Keys.legacyCredentialMigrationAttempted)
+            _ = resolveAPIKey(
+                defaults: defaults,
+                providerId: config.providerId,
+                preferICloudSync: config.settingsICloudSyncEnabled
+            )
+        }
 
         // One-shot defaults for installs that predate explicit settings.
         // Preserve the legacy engine choice, but use the current privacy-safe
@@ -434,6 +490,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             defaults.set("polish", forKey: Keys.modeId)
         }
         migrateLegacyPolishStyleIfNeeded(configuration: &config, defaults: defaults)
+        migratePersonalReplyStyleIfNeeded(configuration: &config, defaults: defaults)
         return config
     }
 
@@ -458,10 +515,15 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         defaults.set(keyboardHapticIntensity.rawValue, forKey: Keys.keyboardHapticIntensity)
         defaults.set(polishIntensity.rawValue, forKey: Keys.polishIntensity)
         defaults.set(aiResponseLength.rawValue, forKey: Keys.aiResponseLength)
+        defaults.set(multipleReplyVariantsEnabled, forKey: Keys.multipleReplyVariantsEnabled)
         defaults.set(llmThinkingEnabled, forKey: Keys.llmThinkingEnabled)
         defaults.set(clipboardHistoryEnabled, forKey: Keys.clipboardHistoryEnabled)
         defaults.set(clipboardCandidateBarEnabled, forKey: Keys.clipboardCandidateBarEnabled)
+        defaults.set(clipboardAutoModeEnabled, forKey: Keys.clipboardAutoModeEnabled)
+        defaults.set(clipboardAutoTranslateEnabled, forKey: Keys.clipboardAutoTranslateEnabled)
+        defaults.set(clipboardAutoEmailReplyEnabled, forKey: Keys.clipboardAutoEmailReplyEnabled)
         defaults.set(activePolishStyleId, forKey: Keys.activePolishStyleId)
+        defaults.set(personalReplyStyleId, forKey: Keys.personalReplyStyleId)
         defaults.set(flowSkipAppSwitch, forKey: Keys.flowSkipAppSwitch)
         defaults.set(flowInactivityDuration.rawValue, forKey: Keys.flowInactivityDuration)
         defaults.set(localASRCustomLanguageModelEnabled, forKey: Keys.localASRCustomLanguageModelEnabled)
@@ -539,6 +601,11 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             key: Keys.aiResponseLength
         )
         set(
+            multipleReplyVariantsEnabled,
+            previous: baseline.multipleReplyVariantsEnabled,
+            key: Keys.multipleReplyVariantsEnabled
+        )
+        set(
             llmThinkingEnabled,
             previous: baseline.llmThinkingEnabled,
             key: Keys.llmThinkingEnabled
@@ -554,9 +621,29 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             key: Keys.clipboardCandidateBarEnabled
         )
         set(
+            clipboardAutoModeEnabled,
+            previous: baseline.clipboardAutoModeEnabled,
+            key: Keys.clipboardAutoModeEnabled
+        )
+        set(
+            clipboardAutoTranslateEnabled,
+            previous: baseline.clipboardAutoTranslateEnabled,
+            key: Keys.clipboardAutoTranslateEnabled
+        )
+        set(
+            clipboardAutoEmailReplyEnabled,
+            previous: baseline.clipboardAutoEmailReplyEnabled,
+            key: Keys.clipboardAutoEmailReplyEnabled
+        )
+        set(
             activePolishStyleId,
             previous: baseline.activePolishStyleId,
             key: Keys.activePolishStyleId
+        )
+        set(
+            personalReplyStyleId,
+            previous: baseline.personalReplyStyleId,
+            key: Keys.personalReplyStyleId
         )
         set(flowSkipAppSwitch, previous: baseline.flowSkipAppSwitch, key: Keys.flowSkipAppSwitch)
         set(
@@ -627,6 +714,40 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         } catch {
             OSGLog.config.warning("polishStyleCatalog encode failed: \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    /// Splits the distilled personal style out of the voice-polish selection.
+    ///
+    /// Before this migration one `activePolishStyleId` drove both pipelines, so
+    /// selecting a learned pack let it outrank the core filler cleanup, and
+    /// selecting a built-in silently disabled personalization for AI replies —
+    /// "clean voice input" and "replies that sound like me" were mutually
+    /// exclusive. Runs after `migrateLegacyPolishStyleIfNeeded`, which may
+    /// itself rewrite `activePolishStyleId`.
+    private static func migratePersonalReplyStyleIfNeeded(
+        configuration: inout AppGroupConfiguration,
+        defaults: UserDefaults
+    ) {
+        guard !defaults.bool(forKey: Keys.personalReplyStyleMigrated) else { return }
+        defer { defaults.set(true, forKey: Keys.personalReplyStyleMigrated) }
+
+        let catalog = configuration.polishStyleCatalog
+        let active = catalog.entries.first { $0.id == configuration.activePolishStyleId }
+        if let active, PolishStylePackCatalog.isPersonalReplyStyle(active) {
+            // Keep the personal style working where it now belongs, and give
+            // voice input its cleanup back.
+            configuration.personalReplyStyleId = active.id
+            configuration.activePolishStyleId = PolishStylePackCatalog.defaultID
+        } else if let latest = PolishStylePackCatalog.latestPersonalReplyStyle(userCatalog: catalog) {
+            // These users generated a personal style but were not using it: the
+            // single selector forced them to pick voice cleanup instead. Turning
+            // it on for replies restores the intent behind generating it.
+            configuration.personalReplyStyleId = latest.id
+        } else {
+            configuration.personalReplyStyleId = ""
+        }
+        defaults.set(configuration.activePolishStyleId, forKey: Keys.activePolishStyleId)
+        defaults.set(configuration.personalReplyStyleId, forKey: Keys.personalReplyStyleId)
     }
 
     private static func migrateLegacyPolishStyleIfNeeded(

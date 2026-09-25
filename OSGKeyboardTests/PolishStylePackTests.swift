@@ -164,6 +164,101 @@ final class PolishStylePackTests: XCTestCase {
         }
     }
 
+    // MARK: - Personal reply style split
+
+    static func learningMetadata(generatedAt: Date = Date()) -> PolishStylePack.LearningMetadata {
+        PolishStylePack.LearningMetadata(
+            schemaVersion: 2,
+            evidenceStatus: "sufficient",
+            confidence: 0.7,
+            asrExampleCount: 8,
+            asrEffectiveCharacterCount: 2_600,
+            replyExampleCount: 3,
+            replyFinalEditCount: 1,
+            generatedAt: generatedAt
+        )
+    }
+
+    static func distilledPack(
+        id: String = "user.learned",
+        name: String = "我的风格",
+        updatedAt: Date = Date()
+    ) -> PolishStylePack {
+        PolishStylePack(
+            id: id,
+            name: name,
+            prompt: "保留我的表达习惯",
+            learningMetadata: learningMetadata(),
+            createdAt: updatedAt,
+            updatedAt: updatedAt
+        )
+    }
+
+    /// The hard gate: a distilled pack injected into voice polish would outrank
+    /// the core T1/T2 cleanup and put the speaker's fillers back.
+    func testDistilledPersonalStyleIsNotAValidVoicePolishSelection() throws {
+        var catalog = PolishStyleCatalog()
+        let distilled = Self.distilledPack()
+        let handWritten = PolishStylePack(id: "user.handwritten", name: "手写", prompt: "长句")
+        try catalog.upsert(distilled)
+        try catalog.upsert(handWritten)
+
+        XCTAssertFalse(PolishStylePackCatalog.isValidActiveID(distilled.id, userCatalog: catalog))
+        XCTAssertTrue(PolishStylePackCatalog.isValidActiveID(handWritten.id, userCatalog: catalog))
+        XCTAssertTrue(
+            PolishStylePackCatalog.isValidActiveID(
+                PolishStylePackCatalog.defaultID,
+                userCatalog: catalog
+            )
+        )
+    }
+
+    func testPersonalReplyStyleResolvesOnlyDistilledPacks() throws {
+        var catalog = PolishStyleCatalog()
+        let distilled = Self.distilledPack()
+        let handWritten = PolishStylePack(id: "user.handwritten", name: "手写", prompt: "长句")
+        try catalog.upsert(distilled)
+        try catalog.upsert(handWritten)
+
+        XCTAssertEqual(
+            PolishStylePackCatalog.resolvePersonalReplyStyle(
+                id: distilled.id,
+                userCatalog: catalog
+            )?.id,
+            distilled.id
+        )
+        XCTAssertNil(
+            PolishStylePackCatalog.resolvePersonalReplyStyle(
+                id: handWritten.id,
+                userCatalog: catalog
+            )
+        )
+        // Empty means disabled, and a built-in must never drive replies.
+        XCTAssertNil(PolishStylePackCatalog.resolvePersonalReplyStyle(id: "", userCatalog: catalog))
+        XCTAssertNil(
+            PolishStylePackCatalog.resolvePersonalReplyStyle(
+                id: PolishStylePackCatalog.defaultID,
+                userCatalog: catalog
+            )
+        )
+    }
+
+    func testLatestPersonalReplyStylePicksNewestDistilledPack() throws {
+        var catalog = PolishStyleCatalog()
+        let now = Date()
+        try catalog.upsert(
+            Self.distilledPack(id: "user.old", updatedAt: now.addingTimeInterval(-500))
+        )
+        try catalog.upsert(Self.distilledPack(id: "user.new", updatedAt: now))
+        try catalog.upsert(PolishStylePack(id: "user.handwritten", name: "手写", prompt: "长句"))
+
+        XCTAssertEqual(
+            PolishStylePackCatalog.latestPersonalReplyStyle(userCatalog: catalog)?.id,
+            "user.new"
+        )
+        XCTAssertNil(PolishStylePackCatalog.latestPersonalReplyStyle(userCatalog: .empty))
+    }
+
     func testDeletionTombstonePreventsRemoteResurrection() {
         let now = Date()
         let pack = PolishStylePack(
@@ -273,6 +368,43 @@ final class PolishStylePackTests: XCTestCase {
         decoder.dateDecodingStrategy = .secondsSince1970
         let pack = try decoder.decode(PolishStylePack.self, from: Data(legacyJSON.utf8))
         XCTAssertFalse(pack.allowsAddedEmoji)
+        XCTAssertNil(pack.learningMetadata)
+    }
+
+    func testLearningMetadataRoundTripsWithoutChangingRuntimePrompt() throws {
+        let generatedAt = Date(timeIntervalSince1970: 1_700_000_000)
+        let pack = PolishStylePack(
+            id: "user.learned-v2",
+            name: "Learned",
+            prompt: "# 角色\n自然表达\n# 风格边界\n保持原意\n# 示例\n输入 → 输出",
+            allowsAddedEmoji: true,
+            learningMetadata: PolishStylePack.LearningMetadata(
+                schemaVersion: 2,
+                evidenceStatus: "sufficient",
+                confidence: 0.88,
+                asrExampleCount: 4,
+                asrEffectiveCharacterCount: 2_650,
+                replyExampleCount: 3,
+                replyFinalEditCount: 1,
+                generatedAt: generatedAt
+            ),
+            createdAt: generatedAt
+        )
+
+        let data = try JSONEncoder().encode(pack)
+        let decoded = try JSONDecoder().decode(PolishStylePack.self, from: data)
+
+        XCTAssertEqual(decoded, pack)
+        XCTAssertEqual(decoded.learningMetadata?.schemaVersion, 2)
+        XCTAssertEqual(decoded.learningMetadata?.confidence, 0.88)
+        XCTAssertEqual(
+            PolishStylePackCatalog.runtimePersonality(for: decoded),
+            PolishStylePackCatalog.runtimePersonality(for: pack)
+        )
+        XCTAssertFalse(
+            PolishStylePackCatalog.runtimePersonality(for: decoded)
+                .contains("learningMetadata")
+        )
     }
 
     func testUpsertPreservesAllowsAddedEmoji() throws {

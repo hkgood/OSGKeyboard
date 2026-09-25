@@ -101,7 +101,7 @@ struct ManagedCloudConsentUITestHarness: View {
                         .environmentObject(coordinator)
                         .padding()
                 }
-                .navigationTitle("settings.aiService.title")
+                .navigationTitle(AppL10n.string("settings.aiService.title"))
             }
         }
         .task {

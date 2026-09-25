@@ -34,7 +34,7 @@ struct LocalModelsGroup: View {
 
     private var speechRow: some View {
         HStack(spacing: Spacing.xs) {
-            Text("settings.localModels.speechRole")
+            Text(AppL10n.string("settings.localModels.speechRole"))
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textPrimary)
             Spacer(minLength: Spacing.xs)
@@ -48,7 +48,7 @@ struct LocalModelsGroup: View {
     /// Local ASR still works without a key; polish requires the Settings LLM key.
     private var polishRow: some View {
         HStack(spacing: Spacing.xs) {
-            Text("settings.localModels.polishRole")
+            Text(AppL10n.string("settings.localModels.polishRole"))
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textPrimary)
             Spacer(minLength: Spacing.xs)
@@ -57,7 +57,7 @@ struct LocalModelsGroup: View {
                     Text(LLMProvider.provider(id: config.providerId).name)
                 )
             } else {
-                Text("settings.localModels.polishNeedsKey")
+                Text(AppL10n.string("settings.localModels.polishNeedsKey"))
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.warning)
             }
@@ -71,10 +71,10 @@ struct LocalModelsGroup: View {
     private var customLanguageModelDiagnosticRow: some View {
         Toggle(isOn: $config.localASRCustomLanguageModelEnabled) {
             VStack(alignment: .leading, spacing: Spacing.xxs) {
-                Text("settings.localModels.customLM.title")
+                Text(AppL10n.string("settings.localModels.customLM.title"))
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
-                Text("settings.localModels.customLM.subtitle")
+                Text(AppL10n.string("settings.localModels.customLM.subtitle"))
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textTertiary)
             }
@@ -88,14 +88,14 @@ struct LocalModelsGroup: View {
 
     /// Accent badge naming the engine that backs each local-mode row
     /// (e.g. "Apple iOS Speech" for ASR).
-    private func engineBadge(_ labelKey: LocalizedStringKey) -> some View {
-        engineBadge(Text(labelKey))
+    private func engineBadge(_ labelKey: String) -> some View {
+        engineBadge(Text(AppL10n.string(labelKey)))
     }
 
     private func engineBadge(_ label: Text) -> some View {
         HStack(spacing: 4) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 12, weight: .semibold))
+                .font(TypeStyle.caption.weight(.semibold))
             label
                 .font(TypeStyle.caption)
         }

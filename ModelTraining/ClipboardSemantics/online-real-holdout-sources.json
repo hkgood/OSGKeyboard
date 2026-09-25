@@ -1,0 +1,42 @@
+{
+  "containsProjectUserClipboardData": false,
+  "corpusSHA256": "33d5fdfb3dc2d3f758cc9f0b1878c90a4a01203a7d8ce77c0082969bfdb5c4c3",
+  "generatedFromOnlineSources": true,
+  "labelCorrection": {
+    "reason": "Replaced generic MASSIVE device-control commands with attributed GitHub work requests.",
+    "supersededCorpusSHA256": "2962b6d28fe0ef551ae46f62accbde93c9da7f0fad93451c06c2e226350aad33"
+  },
+  "labelDefinition": {
+    "complaint": "A user reports a negative experience, failure, or grievance.",
+    "task": "An actionable work request suitable for todo extraction; device-control commands are excluded."
+  },
+  "recordCount": 200,
+  "seed": 20260831,
+  "sources": [
+    {
+      "dataset": "CFPB via hpe-ai/customer-complaints",
+      "license": "CC0-1.0 source / Apache-2.0 mirror",
+      "records": 40,
+      "url": "https://huggingface.co/datasets/hpe-ai/customer-complaints"
+    },
+    {
+      "dataset": "Meituan-Dianping/ASAP",
+      "license": "Apache-2.0",
+      "records": 40,
+      "revision": "975122a60065240124df62cb4d5dbfd19ed9ef2c",
+      "url": "https://github.com/Meituan-Dianping/asap"
+    },
+    {
+      "dataset": "AmazonScience/MASSIVE",
+      "license": "CC-BY-4.0",
+      "records": 80,
+      "url": "https://huggingface.co/datasets/AmazonScience/massive"
+    },
+    {
+      "dataset": "Sulak2020 GitHub issues multi-repo dataset",
+      "license": "CC-BY-4.0 with per-record attribution",
+      "records": 40,
+      "url": "https://huggingface.co/datasets/Sulak2020/github-issues-multirepo-datasets-Sulakshana"
+    }
+  ]
+}

@@ -12,6 +12,7 @@ public enum LLMError: Error, LocalizedError, Sendable, Equatable {
     case http(status: Int)
     case decoding(String)
     case transport(String)
+    case timeout
     case cancelled
     case rateLimited
 
@@ -27,6 +28,8 @@ public enum LLMError: Error, LocalizedError, Sendable, Equatable {
             return SharedL10n.string("error.llm.decoding")
         case .transport:
             return SharedL10n.string("error.llm.transport")
+        case .timeout:
+            return SharedL10n.string("error.llm.timeout")
         case .rateLimited:
             return SharedL10n.string("error.llm.rateLimited")
         case .cancelled:
@@ -291,6 +294,8 @@ public struct OpenAICompatibleClient: LLMClient {
             throw LLMError.cancelled
         } catch let urlError as URLError where urlError.code == .cancelled {
             throw LLMError.cancelled
+        } catch let urlError as URLError where urlError.code == .timedOut {
+            throw LLMError.timeout
         } catch {
             throw LLMError.transport(String(describing: error))
         }

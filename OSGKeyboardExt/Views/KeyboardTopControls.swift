@@ -322,7 +322,7 @@ struct KeyboardTranslationMenuButton: View, Equatable {
             ZStack {
                 Color.clear
                 Image(systemName: isEnabled ? "character.bubble.fill" : "character.bubble")
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(TypeStyle.headline)
                     .foregroundStyle(
                         isEnabled
                             ? palette.accent

@@ -1,13 +1,17 @@
 // AccountCreditPurchaseManager.swift
 // OSGKeyboard · Main App
 //
-// StoreKit credit purchases are isolated from the voluntary tip product.
+// StoreKit credit purchases for the optional managed account.
 // Transactions finish only after the account server verifies and records them.
 
 import Combine
 import Foundation
+#if canImport(OSGKeyboardHostSupport)
 import OSGKeyboardHostSupport
+#endif
+#if canImport(OSGKeyboardShared)
 import OSGKeyboardShared
+#endif
 
 struct AccountCreditPurchaseOption: Identifiable, Equatable {
     var id: String { productID }

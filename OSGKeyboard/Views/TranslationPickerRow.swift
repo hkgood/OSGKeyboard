@@ -33,7 +33,7 @@ struct TranslationPickerRow: View {
     var body: some View {
         if isVisible {
             HStack {
-                Text("settings.translation.afterPolish")
+                Text(AppL10n.string("settings.translation.afterPolish"))
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
                 Spacer()

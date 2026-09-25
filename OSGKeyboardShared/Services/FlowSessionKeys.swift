@@ -38,6 +38,11 @@ public enum FlowSessionKeys {
     public static let lastPiPArmAttemptAt = "flow.lastPiPArmAttemptAt.v1"
     /// Minimum gap between repeated proactive `startflow` jumps.
     public static let pipArmCooldown: TimeInterval = 45
+    /// Keyboard→host request for a companion Flow diagnostics snapshot. The
+    /// keyboard is the process that observes "the session never came up", but
+    /// only the host knows why it never published ready — this asks the host to
+    /// dump its own breadcrumb window alongside the keyboard's report.
+    public static let flowDiagnosticsDumpRequest = "flow.diagnosticsDumpRequest.v1"
     /// Wall-clock timestamp of the last utterance completion or session start.
     public static let lastActivityAt = "flow.lastActivityAt"
     /// One-shot token rotated by every host-process launch. State written by
@@ -77,7 +82,29 @@ public enum FlowSessionKeys {
     /// Maximum duration for a single keyboard utterance (3.5 minutes).
     public static let maxUtteranceDuration: TimeInterval = 210
     /// User action → proven audio. Shared by normal dictation and edit mode.
+    /// Correct for a host that is already alive (warm handoff); a cold-start
+    /// jump uses the launch budget below instead.
     public static let utteranceStartBudget: TimeInterval = 8
+
+    /// Cold-start `startflow` jump: soft budget anchored at the jump itself
+    /// (not the mic press) so it covers host foreground + PiP arm + first ready
+    /// publish. Anchoring at the press charged app-launch latency against the
+    /// recording budget and timed out legitimate cold starts.
+    public static let coldStartHostLaunchBudget: TimeInterval = 12
+
+    /// Absolute cap for a cold-start jump, even while the host keeps
+    /// acknowledging that it is warming. Bounds the wait when the host is stuck
+    /// in the background and the user never brings it forward.
+    public static let coldStartHostLaunchHardCap: TimeInterval = 20
+
+    /// Each fresh host start-acknowledgement pushes the soft cold-start budget
+    /// out to `now + this` (capped by the hard cap).
+    public static let hostStartAckExtension: TimeInterval = 6
+
+    /// A ready snapshot whose `heartbeatAt` is within this window counts as a
+    /// live "host is warming" acknowledgement. Kept short so a stale snapshot
+    /// from a dead/suspended host cannot keep extending the budget.
+    public static let hostStartAckFreshInterval: TimeInterval = 4
     /// Edit stop → reviewed result delivered to the keyboard.
     public static let editLastInputProcessingBudget: TimeInterval = 45
     /// Host work budget leaves five seconds for serialization and delivery.

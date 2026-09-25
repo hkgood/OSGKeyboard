@@ -34,6 +34,29 @@ final class CloudASRTests: XCTestCase {
         XCTAssertEqual(CloudASRModelCatalog.defaultModel(for: "volcengine"), "volc.seedasr.sauc.duration")
     }
 
+    func testInsufficientBalanceErrorMessageForHTTP402() {
+        // SiliconFlow gates some ¥0-priced ASR models (e.g. XingChenASR V3.2)
+        // behind a positive balance and returns 402 "account balance is
+        // insufficient". The probe must surface an actionable balance hint,
+        // not a bare "HTTP 402" that looks like a bad key. (issue #43)
+        let error = CloudASRError.http(
+            status: 402,
+            message: "Sorry, your account balance is insufficient"
+        )
+        XCTAssertEqual(
+            error.errorDescription,
+            SharedL10n.string("error.cloudASR.insufficientBalance")
+        )
+    }
+
+    func testInsufficientBalanceDetectionByMessageAndStatus() {
+        XCTAssertTrue(CloudASRError.isInsufficientBalance(status: 402, message: nil))
+        XCTAssertTrue(CloudASRError.isInsufficientBalance(status: 400, message: "余额不足"))
+        XCTAssertTrue(CloudASRError.isInsufficientBalance(status: 403, message: "insufficient balance"))
+        XCTAssertFalse(CloudASRError.isInsufficientBalance(status: 401, message: "Invalid API key"))
+        XCTAssertFalse(CloudASRError.isInsufficientBalance(status: 500, message: nil))
+    }
+
     func testAsrSelectablePresetsAllowlist() {
         let ids = Set(LLMProvider.asrSelectablePresets.map(\.id))
         XCTAssertTrue(ids.contains("groq"))

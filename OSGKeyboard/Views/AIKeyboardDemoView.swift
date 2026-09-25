@@ -22,6 +22,9 @@ struct AIKeyboardDemoView: View {
 
     @State private var scene: Scene = .settings
     @State private var levelTick = 0.35
+    /// Mirrors the chat host for `--preview-fullscreen` recordings.
+    @State private var hostDraft: String = ""
+    @State private var hostSent = false
 
     init() {
         AIKeyboardView.debugSkipsLongPressCoach = true
@@ -29,10 +32,25 @@ struct AIKeyboardDemoView: View {
 
     var body: some View {
         ZStack {
-            OSGColor.demoBackground.ignoresSafeArea()
+            if FeaturePreviewFlags.isFullscreen {
+                Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+            } else {
+                OSGColor.demoBackground.ignoresSafeArea()
+            }
             // Both scenes sit on the bottom band so what's-new crop matches Ext chrome.
             VStack(spacing: 0) {
-                Spacer(minLength: 0)
+                if FeaturePreviewFlags.isFullscreen {
+                    FeaturePreviewHostDocument(
+                        kind: .messages,
+                        title: language == .en ? "Messages" : "信息",
+                        language: language,
+                        text: hostDraft,
+                        incoming: incoming,
+                        isSent: hostSent
+                    )
+                } else {
+                    Spacer(minLength: 0)
+                }
                 switch scene {
                 case .settings:
                     ThemedRoot {
@@ -44,7 +62,7 @@ struct AIKeyboardDemoView: View {
                     .frame(maxWidth: .infinity)
                     // Keep under what's-new crop (~327 pt visible at 3x).
                     .frame(height: 300)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
                     .padding(.horizontal, 8)
                     .padding(.bottom, 24)
                     .transition(.opacity)
@@ -116,8 +134,10 @@ struct AIKeyboardDemoView: View {
         try? await sleep(3.0)
 
         state.aiSession.markAnswerInserted(offersSend: true)
+        hostDraft = answer
         try? await sleep(1.1)
         state.aiSession.markAnswerSent()
+        hostSent = true
         try? await sleep(1.6)
     }
 
@@ -147,6 +167,13 @@ struct AIKeyboardDemoView: View {
         language == .en
             ? "Where should I go this weekend?"
             : "周末去哪儿玩比较合适？"
+    }
+
+    /// The message being replied to — same seed the extension host uses.
+    private var incoming: String {
+        language == .en
+            ? "Looking for a place to relax this weekend"
+            : "周末想找个地方放松一下"
     }
 
     private var answer: String {

@@ -5,10 +5,15 @@
 // a synthetic ⌘V (SayIt / Typeless-style). Requires Accessibility trust.
 // Re-activates the app the user was dictating into (the popover steals
 // focus) and restores the original clipboard once the paste has landed.
+//
+// Also hosts `MacPermissionMonitor` — the live Accessibility / microphone
+// authorization watcher shared by onboarding and Settings.
 
+import AVFoundation
 import AppKit
 @preconcurrency import ApplicationServices
 import Carbon
+import Combine
 import Foundation
 
 enum MacTextInsertionService {
@@ -204,5 +209,102 @@ private final class FrontmostAppTracker: NSObject {
             app.processIdentifier != NSRunningApplication.current.processIdentifier
         else { return }
         lastExternalApp = app
+    }
+}
+
+// MARK: - Live permission monitoring
+
+/// Publishes Accessibility / microphone authorization while a permission UI is
+/// on screen.
+///
+/// Both grants are made *outside* the app — in System Settings — and macOS
+/// sends no notification when they flip. `AXIsProcessTrusted()` also keeps
+/// returning the value captured when the process was launched for a short
+/// while after the toggle, so a single delayed re-check (what onboarding and
+/// Settings used to do) reads stale far more often than not. Polling on a
+/// short timer plus re-reading on app activation is the only reliable way to
+/// see the change without asking the user to relaunch.
+@MainActor
+final class MacPermissionMonitor: ObservableObject {
+    @Published private(set) var isAccessibilityTrusted = MacTextInsertionService.isAccessibilityTrusted
+    @Published private(set) var microphoneStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+
+    /// Fast enough that returning from System Settings feels instantaneous,
+    /// slow enough to be free — `AXIsProcessTrusted` is a cheap XPC-free read.
+    private static let pollInterval: TimeInterval = 0.6
+
+    private var pollTask: Task<Void, Never>?
+    /// Observed as an `AsyncSequence` rather than a block observer so the
+    /// registration is owned by the task and torn down by cancelling it —
+    /// a nonisolated `deinit` cannot hand a block observer back safely.
+    private var activationTask: Task<Void, Never>?
+
+    deinit {
+        pollTask?.cancel()
+        activationTask?.cancel()
+    }
+
+    /// Begins polling. Safe to call repeatedly — extra calls are ignored.
+    func start() {
+        refresh()
+        guard pollTask == nil else { return }
+
+        // Returning from System Settings usually means the grant just changed;
+        // refresh immediately instead of waiting out the poll interval.
+        activationTask = Task { [weak self] in
+            let activations = NotificationCenter.default.notifications(
+                named: NSApplication.didBecomeActiveNotification
+            )
+            for await _ in activations {
+                guard !Task.isCancelled else { return }
+                await MainActor.run { self?.refresh() }
+            }
+        }
+
+        pollTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(
+                    nanoseconds: UInt64(Self.pollInterval * 1_000_000_000)
+                )
+                guard !Task.isCancelled else { return }
+                self?.refresh()
+            }
+        }
+    }
+
+    func stop() {
+        pollTask?.cancel()
+        pollTask = nil
+        activationTask?.cancel()
+        activationTask = nil
+    }
+
+    func refresh() {
+        let trusted = MacTextInsertionService.isAccessibilityTrusted
+        if trusted != isAccessibilityTrusted {
+            isAccessibilityTrusted = trusted
+            // Showing a green checkmark is only half the grant: the global
+            // hotkey monitor was refused at launch and has to be re-attached.
+            if trusted { MacDictationViewModel.shared.reattachHotkeyIfNeeded() }
+        }
+        let mic = AVCaptureDevice.authorizationStatus(for: .audio)
+        if mic != microphoneStatus { microphoneStatus = mic }
+    }
+
+    /// Prompts, then opens the Accessibility pane. Polling picks the grant up.
+    func openAccessibilitySettings() {
+        _ = MacTextInsertionService.requestAccessibilityIfNeeded()
+        if let url = URL(
+            string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+        ) {
+            NSWorkspace.shared.open(url)
+        }
+        refresh()
+    }
+
+    func requestMicrophone() {
+        AVCaptureDevice.requestAccess(for: .audio) { [weak self] _ in
+            Task { @MainActor in self?.refresh() }
+        }
     }
 }

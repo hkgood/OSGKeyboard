@@ -1,0 +1,65 @@
+{
+  "acceptedCount": 313,
+  "actionLabelCounts": {
+    "both": 1,
+    "complaintOnly": 80,
+    "neither": 9,
+    "questionRequest": 87,
+    "taskOnly": 136
+  },
+  "conflictCount": 47,
+  "conflictRate": 0.1306,
+  "coordinationLabelCounts": {
+    "confirmationDecision": 15,
+    "followUpReminder": 6,
+    "neither": 287,
+    "scheduleNegotiation": 5
+  },
+  "duplicateTextRate": 0.0,
+  "fleissKappa": 0.5942,
+  "fullAgreementCount": 26,
+  "intentPositiveCounts": {
+    "blessing": 3,
+    "complaint": 81,
+    "confirmationDecision": 15,
+    "followUpReminder": 6,
+    "invitation": 0,
+    "question": 163,
+    "replyableMessage": 7,
+    "scheduleNegotiation": 5,
+    "task": 137
+  },
+  "labelers": [
+    "cursor-grok-4.6-xhigh",
+    "gpt-5.6-luna-medium",
+    "composer-2.5-fast"
+  ],
+  "languageCounts": {
+    "en": 200,
+    "zh-Hans": 113
+  },
+  "overlapChecks": {
+    "exactTextAcrossSplits": 0,
+    "nearDuplicateClusterAcrossSplits": 0
+  },
+  "promptSHA256": "4bd3dbc01202f2a0c69c77ee30c66904889a31485fed3bc1944b286f9ab74cff",
+  "promptVersion": "clipboard-consensus-v1",
+  "queueCount": 360,
+  "schemaVersion": 1,
+  "sourceCounts": {
+    "AmazonScience/MASSIVE en-US": 38,
+    "AmazonScience/MASSIVE zh-CN": 33,
+    "CFPB via hpe-ai/customer-complaints": 40,
+    "CLINC150 UCI": 37,
+    "CrossWOZ": 40,
+    "Google Research GoEmotions": 11,
+    "Google Taskmaster-1": 40,
+    "Meituan-Dianping/ASAP": 40,
+    "MultiDoGO": 34
+  },
+  "splitCounts": {
+    "silverAcceptance": 40,
+    "silverCalibration": 50,
+    "silverTrain": 223
+  }
+}

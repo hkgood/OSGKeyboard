@@ -1,0 +1,152 @@
+{
+  "classifiers" : [
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : true,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 5760,
+          "balancedValidationCount" : 1440,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.8903,
+              "f1" : 0.7311,
+              "falseNegative" : 152,
+              "falsePositive" : 1,
+              "precision" : 0.9952,
+              "recall" : 0.5778,
+              "total" : 1395,
+              "trueNegative" : 1034,
+              "truePositive" : 208
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9527,
+              "f1" : 0.8991,
+              "falseNegative" : 66,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.8167,
+              "total" : 1395,
+              "trueNegative" : 1035,
+              "truePositive" : 294
+            }
+          },
+          "confidenceThresholdsByLanguage" : {
+            "en" : 0.91,
+            "zh-Hans" : 0.9
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9434,
+            "f1" : 0.7273,
+            "falseNegative" : 12,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.5714,
+            "total" : 212,
+            "trueNegative" : 184,
+            "truePositive" : 16
+          },
+          "goldenBinaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9528,
+              "f1" : 0.7826,
+              "falseNegative" : 5,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.6429,
+              "total" : 106,
+              "trueNegative" : 92,
+              "truePositive" : 9
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.934,
+              "f1" : 0.6667,
+              "falseNegative" : 7,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.5,
+              "total" : 106,
+              "trueNegative" : 92,
+              "truePositive" : 7
+            }
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] Do not forget to check whether the refund arrives on Friday. (score=0.899)",
+            "[en] After the meeting, summarize the three decisions in the project channel. (score=0.7019)",
+            "[en] When approval arrives, contact the applicant and explain the reason. (score=0.4227)",
+            "[en] Follow up with the vendor about the delivery date next Monday. (score=0.9017)",
+            "[en] Next action: create the release tag after the tests pass. (score=0.5645)",
+            "[zh-Hans] 小王负责整理会议纪要，今天发到项目群。 (score=0.5646)",
+            "[zh-Hans] 方便帮我约一下周三下午的会议室吗？ (score=0.0988)",
+            "[zh-Hans] 这些材料可以在月底前准备好吗？ (score=0.575)",
+            "[zh-Hans] 别忘了周五检查退款有没有到账。 (score=0.6978)",
+            "[zh-Hans] 会后需要整理三个决定并发到项目群。 (score=0.129)",
+            "[zh-Hans] 等审批结果出来，请联系申请人说明原因。 (score=0.7829)",
+            "[zh-Hans] 下周一跟进供应商的交货日期。 (score=0.0068)"
+          ],
+          "goldenFalsePositiveExamples" : [
+
+          ],
+          "modelBytes" : 27275,
+          "runtimeAssetIndependent" : true,
+          "testBinary" : {
+            "accuracy" : 0.9215,
+            "f1" : 0.8209,
+            "falseNegative" : 218,
+            "falsePositive" : 1,
+            "precision" : 0.998,
+            "recall" : 0.6972,
+            "total" : 2790,
+            "trueNegative" : 2069,
+            "truePositive" : 502
+          },
+          "testFalseNegativeExamples" : [
+            "[en] Also, Reminder: call the client back before the next meeting. (score=0.7217)",
+            "[en] One more thing: Reminder: book the follow-up visit by Friday. (score=0.6472)",
+            "[en] Reminder: check the invoice status by the end of the month. (score=0.8201)",
+            "[en] Reminder: call the client back by the end of the month. (score=0.8283)",
+            "[en] A quick note: Reminder: call the client back before the end of today. (score=0.7477)",
+            "[en] One more thing: Reminder: create the release tag before 3 PM. (score=0.6731)",
+            "[en] Reminder: contact the applicant by the end of the month. (score=0.7488)",
+            "[en] Also, Make review the approval result the next action and do it by the end of the month. (score=0.8723)",
+            "[en] A quick note: Make check the vendor delivery date the next action and do it by the end of the month. (score=0.8494)",
+            "[en] Reminder: contact the applicant after you receive this message. (score=0.754)",
+            "[en] A quick note: Reminder: verify the refund status before the next meeting. (score=0.7248)",
+            "[en] A quick note: Reminder: record my temperature tomorrow morning. (score=0.5867)"
+          ],
+          "testFalsePositiveExamples" : [
+            "[en] Todo visible only to me: prepare the presentation deck. (score=0.9134)"
+          ],
+          "threshold" : 0.9,
+          "validationBinary" : {
+            "accuracy" : 0.9258,
+            "f1" : 0.8358,
+            "falseNegative" : 193,
+            "falsePositive" : 14,
+            "precision" : 0.9741,
+            "recall" : 0.7319,
+            "total" : 2790,
+            "trueNegative" : 2056,
+            "truePositive" : 527
+          }
+        }
+      ],
+      "id" : "task",
+      "labels" : [
+        "notTask",
+        "task"
+      ],
+      "positiveLabel" : "task",
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "TaskIntentClassifier.mlmodel"
+    }
+  ],
+  "corpusCount" : 16572,
+  "corpusPath" : "ModelTraining/ClipboardSemantics/clipboard_semantic_corpus.jsonl",
+  "generatedAt" : "2026-08-27T01:11:10Z",
+  "goldenCount" : 212,
+  "selectionPolicy" : "Validation only: global and per-language binary thresholds require precision >= 0.97, then maximize recall; languages with fewer than 20 examples per class fall back to the global threshold. sentiment prioritizes macro-F1. Automatic routing also requires a self-contained maxEnt model because BERT embedding assets are not guaranteed in extensions. Test and golden data gate deployment but never tune model weights.",
+  "testCount" : 2790,
+  "trainingCount" : 10780,
+  "validationCount" : 2790
+}

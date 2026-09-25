@@ -8,6 +8,12 @@ public struct FlowReadySnapshot: Codable, Equatable, Sendable {
         case ready
         case noSession
         case starting
+        /// Host received the `startflow` request but is not in the foreground
+        /// yet, so PiP (the keep-alive that gates readiness) cannot arm. Proof
+        /// the host is alive and warming — distinct from `noSession` (no host)
+        /// — so the keyboard can hold its start budget and prompt the user to
+        /// bring the app forward instead of silently timing out.
+        case waitingForForeground
         case audioEngineNotLive
         case waitingForAudioProof
         case recording

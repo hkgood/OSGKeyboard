@@ -31,7 +31,7 @@ struct NotesHostDemoView: View {
                 .ignoresSafeArea()
             VStack(alignment: .leading, spacing: 10) {
                 Text(title)
-                    .font(.system(size: 13, weight: .regular))
+                    .font(TypeStyle.footnote)
                     .foregroundStyle(Color(uiColor: .secondaryLabel))
                     .padding(.horizontal, 4)
 

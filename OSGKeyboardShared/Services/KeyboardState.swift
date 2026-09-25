@@ -21,6 +21,9 @@ public final class KeyboardState: ObservableObject {
         case none
         case enableGuide
         case historyPanel
+        /// One-time "try AI auto-reply" nudge, shown as a clean full-keyboard
+        /// layer for users who never turned auto mode on.
+        case autoReplyGuide
     }
 
     /// Pipeline phase. Errors are structured so the UI layer can choose
@@ -89,6 +92,9 @@ public final class KeyboardState: ObservableObject {
     @Published public var phase: Phase = .idle
     /// Active chrome. Forced to `.voice` while recording / processing.
     @Published public var surface: Surface = .voice
+    /// Surface the user was on when auto mode switched them to `.voice` to show
+    /// an auto-reply. Restored when the reply is closed; nil when not auto-routed.
+    public var autoReplyReturnSurface: Surface?
     @Published public var level: Double = 0
     @Published public var mode: InputMode = .polish
     @Published public var localeId: String = "auto"
@@ -150,6 +156,24 @@ public final class KeyboardState: ObservableObject {
     }
     /// Opt-in clipboard suggestion strip (requires history enabled).
     @Published public var clipboardCandidateBarEnabled: Bool = false
+    /// Opt-in auto mode: a freshly copied replyable message is auto-routed into
+    /// the Reply flow when the keyboard opens (requires history enabled).
+    @Published public var clipboardAutoModeEnabled: Bool = false
+    /// Opt-in: auto-translate a freshly copied non-system-language paste on open.
+    @Published public var clipboardAutoTranslateEnabled: Bool = false
+    /// Opt-in: auto-draft a reply when a freshly copied paste is an email.
+    @Published public var clipboardAutoEmailReplyEnabled: Bool = false
+    /// When true, the current AI result is a *staged* auto result (auto-translate
+    /// or auto-email-reply): shown on the keyboard and inserted only when the
+    /// user taps the glass Insert button — never dropped straight into the field.
+    @Published public var autoResultReadOnly: Bool = false
+    /// Localization key for the staged auto result's glass Insert button, so the
+    /// label matches the action (e.g. "Insert translation" vs "Insert reply").
+    @Published public var autoResultInsertLabelKey: String = "keyboard.assistant.insertTranslation"
+    /// Clipboard skill that produced the currently shown result (reply / translate
+    /// / …). The result panel's top bar offers the *other* applicable skills, so
+    /// this one is excluded from that row. Nil when no clipboard result is active.
+    @Published public var activeClipboardSkillID: String?
     /// Skills-tab order for clipboard chips. Empty → hint carousel.
     @Published public var enabledClipboardSkillIDs: [String] = AIAgentSkillLayout.defaultEnabledIDs
     /// Fully resolved enabled skills. Mirroring value-semantic content here
@@ -163,6 +187,8 @@ public final class KeyboardState: ObservableObject {
     /// User-owned speaking style injected only into conversational reply skills.
     /// Built-in polish personalities intentionally leave this nil.
     @Published public var clipboardReplyStyle: AIClipboardReplyStyleContext?
+    /// App Group setting: one Reply request should return three selectable tones.
+    @Published public var multipleReplyVariantsEnabled: Bool = false
     /// Export skills whose companion Shortcut setup the user confirmed.
     @Published public var confirmedClipboardShortcutIDs: [String] = []
     /// App language captured with the same App Group snapshot as skill copy.
@@ -186,6 +212,12 @@ public final class KeyboardState: ObservableObject {
     @Published public var clipboardSuggestionText: String?
     /// Pasteboard changeCount associated with the current suggestion (for dismiss).
     @Published public var clipboardSuggestionChangeCount: Int?
+    /// Newest clipboard entry the user dismissed from the AI skill top bar.
+    /// Shared (not view-local) so the dismissal survives surface switches —
+    /// otherwise recreating `AIKeyboardView` would resurrect the skill bar
+    /// while the paste suggestion stays suppressed. Reset when a new entry
+    /// arrives so a fresh copy re-shows the skills.
+    @Published public var dismissedClipboardSkillEntryID: UUID?
     /// Typing-grid haptic strength (off / light / strong).
     @Published public var keyboardHapticIntensity: KeyboardHapticIntensity = .default
     /// Single source of truth for selecting iPad-scale keyboard metrics.
@@ -352,13 +384,16 @@ public final class KeyboardState: ObservableObject {
     public var cancelAIInput: () -> Void = {}
     /// Explicitly inserts a retained AI result after target validation failed.
     public var confirmPendingAIAnswer: () -> Void = {}
+    /// Inserts the complete tapped reply card. The UUID remains available on
+    /// `aiSession.selectedReplyVariant` for a future feedback store.
+    public var selectAIReplyVariant: (UUID) -> Void = { _ in }
     public var discardPendingAIAnswer: () -> Void = {}
     /// Performs the focused field's semantic Return action.
     public var performAssistantFieldAction: () -> Void = {}
     /// Sends a tapped idle hint card as the AI question (skip microphone).
     public var submitAIHint: (AIHintCard) -> Void = { _ in }
-    /// Sends a clipboard skill (reply / summarize / translate / export).
-    public var submitAIClipboardSkill: (AIClipboardSkill) -> Void = { _ in }
+    /// Sends a clipboard skill plus any source-bound Reply scene modifier.
+    public var submitAIClipboardSkill: (AIClipboardSkill, AIClipboardReplyScene?) -> Void = { _, _ in }
     /// Writes extract-todos titles and opens the host to run the Shortcut.
     public var runClipboardExportSkill: (String, [String]) -> Void = { _, _ in }
     public var openSettings: () -> Void = {}
@@ -367,6 +402,9 @@ public final class KeyboardState: ObservableObject {
     public var openInputMethodSetup: () -> Void = {}
     /// Opens the host app Settings → Clipboard page (enable history toggle).
     public var openClipboardSettings: () -> Void = {}
+    /// Confirms the full-keyboard "try AI auto-reply" guide: turns auto mode on
+    /// (persisted), dismisses the layer, and drafts a reply for the current copy.
+    public var tryAutoReplyFromGuide: () -> Void = {}
     /// Top-bar clipboard button: guide when history off, else history panel.
     public var openClipboardPanel: () -> Void = {}
     public var dismissClipboardOverlay: () -> Void = {}

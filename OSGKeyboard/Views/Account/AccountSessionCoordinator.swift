@@ -7,7 +7,9 @@
 import AuthenticationServices
 import Combine
 import Foundation
+#if canImport(OSGKeyboardShared)
 import OSGKeyboardShared
+#endif
 
 @MainActor
 final class AccountSessionCoordinator: ObservableObject {
@@ -37,6 +39,10 @@ final class AccountSessionCoordinator: ObservableObject {
     @Published private(set) var snapshotPhase: SnapshotPhase = .idle
     @Published private(set) var operation: Operation?
     @Published private(set) var operationErrorKey: String?
+    /// Machine-readable code for `operationErrorKey` (see `AccountDiagnostic`).
+    /// The localized key alone says "sign-in failed"; this says *why*, which is
+    /// the difference between a bug report we can act on and one we cannot.
+    @Published private(set) var operationErrorDetail: String?
     @Published private(set) var pendingReferralCode: String?
     @Published private(set) var shouldPresentAccountCenter = false
     @Published private(set) var lastAccountRefreshAt: Date?
@@ -48,6 +54,11 @@ final class AccountSessionCoordinator: ObservableObject {
 
     private let sessionService: any AccountSessionServicing
     private let centerService: any AccountCenterServicing
+    /// False on macOS: a Developer ID build cannot use StoreKit, so starting a
+    /// purchase session there would fetch a product catalog and open a
+    /// `Transaction` listener for a store that can never complete a purchase.
+    /// Credits are still spent normally — only buying is unavailable.
+    private let arePurchasesAvailable: Bool
     private let pendingReferralStore: any PendingReferralCodeStoring
     private let analyticsClient: any AnalyticsClient
     private let onAccountAuthenticated: (UUID) async -> Void
@@ -71,6 +82,7 @@ final class AccountSessionCoordinator: ObservableObject {
         referralProfileStore: any ReferralProfileStoring =
             UserDefaultsReferralProfileStore(),
         accountRefreshInterval: TimeInterval = 10 * 60,
+        arePurchasesAvailable: Bool = true,
         now: @escaping () -> Date = Date.init,
         notificationCenter: NotificationCenter = .default,
         analyticsClient: any AnalyticsClient = NoopAnalyticsClient(),
@@ -95,6 +107,7 @@ final class AccountSessionCoordinator: ObservableObject {
         self.onAccountSignedOut = onAccountSignedOut
         self.onAccountDeleted = onAccountDeleted
         self.accountRefreshInterval = accountRefreshInterval
+        self.arePurchasesAvailable = arePurchasesAvailable
         self.now = now
         pendingReferralCode = pendingReferralStore.code
         let sessionEventSource = dependencies.sessionEventSource
@@ -138,6 +151,7 @@ final class AccountSessionCoordinator: ObservableObject {
         didAttemptRestore = true
         sessionPhase = .restoring
         operationErrorKey = nil
+        operationErrorDetail = nil
 
         do {
             guard let session = try await sessionService.restoreSession() else {
@@ -149,7 +163,9 @@ final class AccountSessionCoordinator: ObservableObject {
             await onAccountAuthenticated(session.accountID)
             advanceSessionRevision()
             sessionPhase = .signedIn(session)
-            creditPurchases.startSession(accountID: session.accountID)
+            if arePurchasesAvailable {
+                creditPurchases.startSession(accountID: session.accountID)
+            }
             referralProfile.startSession(accountID: session.accountID)
             await redeemPendingReferralIfNeeded()
             await refreshAccountData(force: true)
@@ -196,6 +212,7 @@ final class AccountSessionCoordinator: ObservableObject {
         pendingReferralCode = code
         shouldPresentAccountCenter = true
         operationErrorKey = nil
+        operationErrorDetail = nil
         analyticsClient.recordInviteOpened()
 
         if isSignedIn {
@@ -217,6 +234,7 @@ final class AccountSessionCoordinator: ObservableObject {
         guard operation == nil else { return }
         operation = .signingIn
         operationErrorKey = nil
+        operationErrorDetail = nil
         defer { operation = nil }
 
         do {
@@ -224,7 +242,9 @@ final class AccountSessionCoordinator: ObservableObject {
             await onAccountAuthenticated(session.accountID)
             advanceSessionRevision()
             sessionPhase = .signedIn(session)
-            creditPurchases.startSession(accountID: session.accountID)
+            if arePurchasesAvailable {
+                creditPurchases.startSession(accountID: session.accountID)
+            }
             referralProfile.startSession(accountID: session.accountID)
             await redeemPendingReferralIfNeeded()
             await refreshAccountData(force: true)
@@ -233,6 +253,7 @@ final class AccountSessionCoordinator: ObservableObject {
                 for: error,
                 fallback: "account.error.signIn"
             )
+            operationErrorDetail = AccountDiagnostic.code(for: error)
         }
     }
 
@@ -287,6 +308,7 @@ final class AccountSessionCoordinator: ObservableObject {
         let expectedRevision = sessionRevision
         operation = .updatingProfile
         operationErrorKey = nil
+        operationErrorDetail = nil
         defer { operation = nil }
 
         do {
@@ -325,6 +347,7 @@ final class AccountSessionCoordinator: ObservableObject {
         let expectedRevision = sessionRevision
         operation = .preparingManagedGateway
         operationErrorKey = nil
+        operationErrorDetail = nil
         defer { operation = nil }
         do {
             try await sessionService.prepareManagedGateway()
@@ -355,6 +378,7 @@ final class AccountSessionCoordinator: ObservableObject {
         guard operation == nil, isSignedIn else { return }
         operation = .signingOut
         operationErrorKey = nil
+        operationErrorDetail = nil
         defer { operation = nil }
         referralProfile.cancelRefresh()
 
@@ -379,6 +403,7 @@ final class AccountSessionCoordinator: ObservableObject {
         guard operation == nil, isSignedIn else { return }
         operation = .deletingAccount
         operationErrorKey = nil
+        operationErrorDetail = nil
         defer { operation = nil }
         referralProfile.cancelRefresh()
 
@@ -402,12 +427,14 @@ final class AccountSessionCoordinator: ObservableObject {
         }
     }
 
-    func recordAppleAuthorizationFailure() {
+    func recordAppleAuthorizationFailure(detail: String = "apple-authorization") {
         operationErrorKey = "account.error.appleAuthorization"
+        operationErrorDetail = detail
     }
 
     func dismissOperationError() {
         operationErrorKey = nil
+        operationErrorDetail = nil
     }
 
     private func performAccountRefresh(for accountID: UUID, requestID: UUID) async {

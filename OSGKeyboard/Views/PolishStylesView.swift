@@ -7,6 +7,17 @@
 import OSGKeyboardShared
 import SwiftUI
 
+typealias LearnedStyleGenerator = @MainActor @Sendable (
+    PolishStyleLearningCorpus,
+    [PolishStyleReplyLearningExample],
+    AppUILanguage
+) async throws -> PolishStylePack
+
+private struct PolishStyleErrorAlert {
+    let title: String
+    let message: String
+}
+
 @MainActor
 struct PolishStylesView: View {
     @Environment(\.themePalette) private var palette
@@ -20,20 +31,27 @@ struct PolishStylesView: View {
     /// receives a concrete pack (avoids `isPresented` + nil race showing defaults).
     @State private var editingPack: PolishStylePack?
     @State private var viewingPack: PolishStylePack?
-    @State private var errorMessage: String?
-    @State private var isGeneratingLearnedStyle = false
+    @State private var errorAlert: PolishStyleErrorAlert?
 
     private let store = AppGroupStore()
+    private let pullsCloudStylesOnAppear: Bool
     private let columns = [
         GridItem(.flexible(), spacing: CardLayoutMetrics.compactItemSpacing),
         GridItem(.flexible(), spacing: CardLayoutMetrics.compactItemSpacing)
     ]
 
+    init(
+        initialEditingPack: PolishStylePack? = nil,
+        pullsCloudStylesOnAppear: Bool = true
+    ) {
+        _editingPack = State(initialValue: initialEditingPack)
+        self.pullsCloudStylesOnAppear = pullsCloudStylesOnAppear
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 CardPageContent {
-                    styleLearningCard
                     packGridSection(
                         title: "polishStyles.builtin.section",
                         packs: PolishStylePackCatalog.BuiltinStyleGroup.practical.packs
@@ -42,11 +60,10 @@ struct PolishStylesView: View {
                         title: "polishStyles.fun.section",
                         packs: PolishStylePackCatalog.BuiltinStyleGroup.fun.packs
                     )
-                    if !catalog.entries.isEmpty {
+                    if !remainingUserPacks.isEmpty {
                         packGridSection(
                             title: "polishStyles.custom.section",
-                            packs: PolishStylePackCatalog.all(userCatalog: catalog)
-                                .filter { $0.kind == .user }
+                            packs: remainingUserPacks
                         )
                     }
                 }
@@ -54,7 +71,7 @@ struct PolishStylesView: View {
             }
             .scrollClipDisabled()
             .background(palette.background)
-            .navigationTitle("polishStyles.title")
+            .navigationTitle(AppL10n.string("polishStyles.title"))
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -65,7 +82,7 @@ struct PolishStylesView: View {
                     }
                     .tint(palette.textPrimary)
                     .disabled(catalog.entries.count >= PolishStyleLimits.maximumUserPacks)
-                    .accessibilityLabel(Text("polishStyles.add"))
+                    .accessibilityLabel(Text(AppL10n.string("polishStyles.add")))
                 }
             }
         }
@@ -81,18 +98,19 @@ struct PolishStylesView: View {
             PolishStylePromptDetailSheet(pack: pack, language: config.uiLanguage)
         }
         .alert(
-            Text("polishStyles.error.title"),
+            Text(errorAlert?.title ?? ""),
             isPresented: Binding(
-                get: { errorMessage != nil },
-                set: { if !$0 { errorMessage = nil } }
+                get: { errorAlert != nil },
+                set: { if !$0 { errorAlert = nil } }
             )
         ) {
-            Button("common.done") { errorMessage = nil }
+            Button(AppL10n.string("common.done")) { errorAlert = nil }
         } message: {
-            Text(errorMessage ?? "")
+            Text(errorAlert?.message ?? "")
         }
         .task {
             reload()
+            guard pullsCloudStylesOnAppear else { return }
             await PolishStyleCloudSync.shared.pullAndMergeIfEnabled()
             reload()
         }
@@ -104,127 +122,20 @@ struct PolishStylesView: View {
         }
     }
 
-    private var styleLearningCorpus: PolishStyleLearningCorpus {
-        PolishStyleLearningCorpusBuilder.build(from: history.snapshot())
-    }
-
-    private var styleLearningCard: some View {
-        let corpus = styleLearningCorpus
-        let required = PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount
-        let reachedLimit = catalog.entries.count >= PolishStyleLimits.maximumUserPacks
-        let isActionAvailable = corpus.isReady && !reachedLimit
-        let canGenerate = isActionAvailable && !isGeneratingLearnedStyle
-        let completedCharacterCount = min(corpus.effectiveCharacterCount, required)
-        let learnedFraction = required > 0
-            ? Double(completedCharacterCount) / Double(required)
-            : 0
-        let progressDescription = AppL10n.format(
-            "polishStyles.learn.progress",
-            Int64(corpus.effectiveCharacterCount),
-            Int64(required)
-        )
-
-        return VStack(alignment: .leading, spacing: Spacing.md) {
-            HStack(alignment: .top, spacing: Spacing.md) {
-                Image(systemName: "brain")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(palette.textPrimary)
-                    .frame(width: 38, height: 38)
-                    .background(
-                        palette.textPrimary.opacity(0.08),
-                        in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-                    )
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("polishStyles.learn.title")
-                        .font(TypeStyle.bodyEmph)
-                        .foregroundStyle(palette.textPrimary)
-                    Text("polishStyles.learn.body")
-                        .font(TypeStyle.caption2)
-                        .foregroundStyle(palette.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-
-            ProgressTrack(
-                segments: [
-                    ProgressTrackSegment(
-                        fraction: learnedFraction,
-                        color: palette.accent
-                    )
-                ]
-            )
-            .accessibilityLabel(Text("polishStyles.learn.title"))
-            .accessibilityValue(Text(progressDescription))
-
-            HStack {
-                Text(progressDescription)
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textTertiary)
-
-                Spacer()
-
-                Text(
-                    corpus.isReady
-                        ? AppL10n.string("polishStyles.learn.ready")
-                        : AppL10n.format(
-                            "polishStyles.learn.remaining",
-                            Int64(corpus.remainingCharacterCount)
-                        )
-                )
-                .font(TypeStyle.caption2)
-                .foregroundStyle(corpus.isReady ? palette.accent : palette.textTertiary)
-            }
-
-            Button {
-                generateLearnedStyle(from: corpus)
-            } label: {
-                HStack(spacing: Spacing.sm) {
-                    if isGeneratingLearnedStyle {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(isActionAvailable ? palette.textOnAccent : palette.textSecondary)
-                    } else {
-                        Image(systemName: "sparkles")
-                    }
-                    Text(
-                        isGeneratingLearnedStyle
-                            ? AppL10n.string("polishStyles.learn.generating")
-                            : AppL10n.string("polishStyles.learn.action")
-                    )
-                }
-                .font(TypeStyle.bodyEmph)
-                .foregroundStyle(
-                    isActionAvailable ? palette.textOnAccent : palette.textSecondary
-                )
-                .frame(maxWidth: .infinity, minHeight: 48)
-                .background(
-                    isActionAvailable ? palette.accent : palette.surfaceElevated,
-                    in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                )
-                .contentShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .disabled(!canGenerate)
-
-            Text(
-                reachedLimit
-                    ? AppL10n.string("polishStyles.learn.limit")
-                    : AppL10n.string("polishStyles.learn.privacy")
-            )
-            .font(TypeStyle.caption2)
-            .foregroundStyle(palette.textTertiary)
-            .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(Spacing.lg)
-        .surfaceCard()
+    /// Distilled personal styles belong to the Skills tab and drive AI replies
+    /// only, so they never appear here — not even under "My styles". Filtering
+    /// by `isPersonalReplyStyle` rather than by "newest learned pack" also keeps
+    /// older generations from leaking in as if they were hand-written.
+    private var remainingUserPacks: [PolishStylePack] {
+        PolishStylePackCatalog.all(userCatalog: catalog)
+            .filter { $0.kind == .user && !PolishStylePackCatalog.isPersonalReplyStyle($0) }
     }
 
     private func packGridSection(
-        title: LocalizedStringKey,
+        title: String,
         packs: [PolishStylePack]
     ) -> some View {
-        CardSection(title) {
+        CardSection(title: AppL10n.string(title)) {
             LazyVGrid(columns: columns, spacing: CardLayoutMetrics.compactItemSpacing) {
                 ForEach(packs) { pack in
                     packCard(pack)
@@ -258,7 +169,10 @@ struct PolishStylesView: View {
                         .foregroundStyle(palette.textPrimary)
                         .lineLimit(1)
                         .padding(.trailing, 32)
-                    Text(descriptionKey(for: pack))
+                    // AppL10n honors Settings → App Language; Text(String) would
+                    // show the raw key, and a bare LocalizedStringKey would follow
+                    // the system language instead (see Scripts/check_l10n_keys.sh).
+                    Text(AppL10n.string(descriptionKey(for: pack), language: config.uiLanguage))
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.textTertiary)
                         .lineLimit(2)
@@ -281,7 +195,7 @@ struct PolishStylesView: View {
             }
             .padding(Spacing.sm)
             .buttonStyle(.plain)
-            .accessibilityLabel(Text("polishStyles.edit"))
+            .accessibilityLabel(Text(AppL10n.string("polishStyles.edit")))
 
             if isSelected {
                 CatalogCardChrome.checkIcon(palette: palette)
@@ -307,50 +221,22 @@ struct PolishStylesView: View {
         .clipShape(shape)
         .cardElevation(accented: isSelected)
         .contextMenu {
-            Button("polishStyles.duplicate") {
+            Button(AppL10n.string("polishStyles.duplicate")) {
                 duplicate(pack)
             }
             if pack.kind == .user {
-                Button("common.delete", role: .destructive) {
+                Button(AppL10n.string("common.delete"), role: .destructive) {
                     delete(pack)
                 }
             }
         }
     }
 
-    private func generateLearnedStyle(from corpus: PolishStyleLearningCorpus) {
-        guard corpus.isReady, !isGeneratingLearnedStyle else { return }
-        isGeneratingLearnedStyle = true
-        Task {
-            defer { isGeneratingLearnedStyle = false }
-            do {
-                let generated = try await PolishStyleLearningService(store: store)
-                    .generateStyle(
-                        from: corpus,
-                        outputLanguage: config.uiLanguage
-                    )
-                // Always let the user inspect and edit the learned prompt before
-                // it is saved, synced, or made active.
-                editingPack = generated
-            } catch {
-                errorMessage = localizedLearningError(error)
-            }
-        }
-    }
-
-    private func descriptionKey(for pack: PolishStylePack) -> LocalizedStringKey {
+    /// Host-bundle caption keys. Resolved at the render site with `AppL10n`
+    /// so Settings → App Language wins over the launch-time system locale.
+    private func descriptionKey(for pack: PolishStylePack) -> String {
         guard pack.kind == .builtin else { return "polishStyles.custom.description" }
-        switch pack.id {
-        case "builtin.structured": return "polishStyles.structured.description"
-        case "builtin.formal": return "polishStyles.formal.description"
-        case "builtin.dating": return "polishStyles.dating.description"
-        case "builtin.chat": return "polishStyles.chat.description"
-        case "builtin.flex": return "polishStyles.flex.description"
-        case "builtin.corp": return "polishStyles.corp.description"
-        case "builtin.diba": return "polishStyles.diba.description"
-        case "builtin.xhs": return "polishStyles.xhs.description"
-        default: return "polishStyles.light.description"
-        }
+        return "polishStyles.\(pack.id.dropFirst("builtin.".count)).description"
     }
 
     private func reload() {
@@ -366,9 +252,11 @@ struct PolishStylesView: View {
         }
     }
 
-    private func save(_ pack: PolishStylePack) {
+    private func save(_ pack: PolishStylePack) -> Bool {
+        var updatedCatalog = catalog
         do {
-            try catalog.upsert(pack)
+            try updatedCatalog.upsert(pack)
+            catalog = updatedCatalog
             store.setPolishStyleCatalog(catalog)
             store.setActivePolishStyleId(pack.id)
             activeID = pack.id
@@ -376,14 +264,22 @@ struct PolishStylesView: View {
                 try? await PolishStyleCloudSync.shared.pushLocalIfEnabled(catalog)
                 try? await AppCloudSync.shared.settingsSyncService.pushLocalIfEnabled()
             }
+            return true
         } catch {
-            errorMessage = localized(error)
+            errorAlert = PolishStyleErrorAlert(
+                title: AppL10n.string("polishStyles.error.title"),
+                message: localized(error)
+            )
+            return false
         }
     }
 
     private func duplicate(_ pack: PolishStylePack) {
         guard catalog.entries.count < PolishStyleLimits.maximumUserPacks else {
-            errorMessage = AppL10n.string("polishStyles.error.limit")
+            errorAlert = PolishStyleErrorAlert(
+                title: AppL10n.string("polishStyles.error.title"),
+                message: AppL10n.string("polishStyles.error.limit")
+            )
             return
         }
         editingPack = PolishStylePack(
@@ -417,21 +313,6 @@ struct PolishStylesView: View {
         }
     }
 
-    private func localizedLearningError(_ error: Error) -> String {
-        switch error as? PolishStyleLearningError {
-        case .insufficientCorpus:
-            return AppL10n.string("polishStyles.learn.error.insufficient")
-        case .invalidResponse:
-            return AppL10n.string("polishStyles.learn.error.invalidResponse")
-        case .promptTooLong:
-            return AppL10n.string("polishStyles.learn.error.promptTooLong")
-        case .requestTooLarge:
-            return AppL10n.string("polishStyles.learn.error.requestTooLarge")
-        case nil:
-            return AppL10n.string("polishStyles.learn.error.request")
-        }
-    }
-
     private func localized(_ error: Error) -> String {
         switch error as? PolishStyleValidationError {
         case .emptyName: return AppL10n.string("polishStyles.error.emptyName")
@@ -442,6 +323,7 @@ struct PolishStylesView: View {
         case nil: return AppL10n.string("polishStyles.error.generic")
         }
     }
+
 }
 
 private struct PolishStylePromptDetailSheet: View {
@@ -469,7 +351,7 @@ private struct PolishStylePromptDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("common.done") { dismiss() }
+                    Button(AppL10n.string("common.done")) { dismiss() }
                         .tint(palette.textPrimary)
                 }
             }
@@ -477,10 +359,12 @@ private struct PolishStylePromptDetailSheet: View {
     }
 }
 
-private struct PolishStyleEditorSheet: View {
+/// Shared with `PersonalReplyStyleSection`: a generated personal style is
+/// reviewed in the same editor before it is saved or enabled.
+struct PolishStyleEditorSheet: View {
     let pack: PolishStylePack
     let isNew: Bool
-    let onSave: (PolishStylePack) -> Void
+    let onSave: (PolishStylePack) -> Bool
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.themePalette) private var palette
@@ -491,7 +375,7 @@ private struct PolishStyleEditorSheet: View {
     init(
         pack: PolishStylePack,
         isNew: Bool,
-        onSave: @escaping (PolishStylePack) -> Void
+        onSave: @escaping (PolishStylePack) -> Bool
     ) {
         self.pack = pack
         self.isNew = isNew
@@ -504,17 +388,46 @@ private struct PolishStyleEditorSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("polishStyles.editor.name") {
-                    TextField("polishStyles.editor.namePlaceholder", text: $name)
+                if let metadata = pack.learningMetadata {
+                    Section {
+                        VStack(alignment: .leading, spacing: Spacing.xs) {
+                            Text(
+                                Self.hasInsufficientEvidence(metadata)
+                                    ? AppL10n.string("personalReplyStyle.lowConfidence")
+                                    : AppL10n.string("personalReplyStyle.generated.description")
+                            )
+                            .font(TypeStyle.caption2)
+                            .foregroundStyle(
+                                Self.hasInsufficientEvidence(metadata)
+                                    ? palette.danger
+                                    : palette.textSecondary
+                            )
+                            Text(
+                                AppL10n.format(
+                                    "personalReplyStyle.confidence",
+                                    Self.confidencePercentage(metadata.confidence)
+                                )
+                            )
+                            .font(TypeStyle.caption2)
+                            .foregroundStyle(palette.textTertiary)
+                        }
+                        .fixedSize(horizontal: false, vertical: true)
+                        .settingsListRow()
+                        .cardListRow(elevated: false)
+                        .accessibilityIdentifier("polishStyles.editor.learningEvidence")
+                    }
+                }
+                Section(AppL10n.string("polishStyles.editor.name")) {
+                    TextField(AppL10n.string("polishStyles.editor.namePlaceholder"), text: $name)
                         .settingsListRow()
                         .cardListRow(elevated: false)
                 }
                 Section {
-                    Toggle("polishStyles.editor.allowsAddedEmoji", isOn: $allowsAddedEmoji)
+                    Toggle(AppL10n.string("polishStyles.editor.allowsAddedEmoji"), isOn: $allowsAddedEmoji)
                         .settingsListRow()
                         .cardListRow(elevated: false)
                 } footer: {
-                    Text("polishStyles.editor.allowsAddedEmoji.hint")
+                    Text(AppL10n.string("polishStyles.editor.allowsAddedEmoji.hint"))
                 }
                 Section {
                     TextEditor(text: $prompt)
@@ -522,6 +435,7 @@ private struct PolishStyleEditorSheet: View {
                         .frame(minHeight: 320)
                         .padding(Spacing.md)
                         .cardListRow(elevated: false)
+                        .accessibilityIdentifier("polishStyles.editor.prompt")
                         .onChange(of: prompt) { _, newValue in
                             // Paste-only custom prompts that declare emoji opt-in
                             // should flip the toggle so post-processing keeps them.
@@ -532,7 +446,7 @@ private struct PolishStyleEditorSheet: View {
                         }
                 } header: {
                     HStack {
-                        Text("polishStyles.editor.prompt")
+                        Text(AppL10n.string("polishStyles.editor.prompt"))
                         Spacer()
                         Text("\(prompt.count)/\(PolishStyleLimits.maximumPromptCharacters)")
                             .foregroundStyle(
@@ -542,29 +456,35 @@ private struct PolishStyleEditorSheet: View {
                             )
                     }
                 } footer: {
-                    Text("polishStyles.editor.hint")
+                    Text(AppL10n.string("polishStyles.editor.hint"))
                 }
             }
-            .navigationTitle(isNew ? "polishStyles.add" : "polishStyles.edit")
+            .navigationTitle(
+                AppL10n.string(isNew ? "polishStyles.add" : "polishStyles.edit")
+            )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") { dismiss() }
+                    Button(AppL10n.string("common.cancel")) { dismiss() }
                         .tint(palette.textPrimary)
+                        .accessibilityIdentifier("polishStyles.editor.cancel")
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("common.save") {
+                    Button(AppL10n.string("common.save")) {
                         let result = PolishStylePack(
                             id: pack.id,
                             name: name,
                             prompt: prompt,
                             allowsAddedEmoji: allowsAddedEmoji
                                 || PolishStylePack.promptDeclaresAddedEmojiOptIn(prompt),
+                            learningMetadata: pack.learningMetadata,
                             kind: .user,
-                            createdAt: pack.createdAt
+                            createdAt: pack.createdAt,
+                            updatedAt: Date()
                         )
-                        onSave(result)
-                        dismiss()
+                        if onSave(result) {
+                            dismiss()
+                        }
                     }
                     .disabled(
                         name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -572,8 +492,19 @@ private struct PolishStyleEditorSheet: View {
                             || prompt.count > PolishStyleLimits.maximumPromptCharacters
                     )
                     .tint(palette.textPrimary)
+                    .accessibilityIdentifier("polishStyles.editor.save")
                 }
             }
         }
+    }
+
+    private static func hasInsufficientEvidence(
+        _ metadata: PolishStylePack.LearningMetadata
+    ) -> Bool {
+        metadata.evidenceStatus.caseInsensitiveCompare("insufficient") == .orderedSame
+    }
+
+    private static func confidencePercentage(_ confidence: Double) -> Int64 {
+        Int64((min(max(confidence, 0), 1) * 100).rounded())
     }
 }

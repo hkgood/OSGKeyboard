@@ -1,0 +1,146 @@
+{
+  "classifiers" : [
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.98,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.99,
+        "zh-Hans" : 0.98
+      },
+      "id" : "task",
+      "labels" : [
+        "notTask",
+        "task"
+      ],
+      "modelFile" : "TaskIntentClassifier.mlmodel",
+      "positiveLabel" : "task"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.6,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.6,
+        "zh-Hans" : 0.6
+      },
+      "id" : "question",
+      "labels" : [
+        "notQuestion",
+        "question"
+      ],
+      "modelFile" : "QuestionIntentClassifier.mlmodel",
+      "positiveLabel" : "question"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.79,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.8,
+        "zh-Hans" : 0.82
+      },
+      "id" : "invitation",
+      "labels" : [
+        "notInvitation",
+        "invitation"
+      ],
+      "modelFile" : "InvitationIntentClassifier.mlmodel",
+      "positiveLabel" : "invitation"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.79,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.79,
+        "zh-Hans" : 0.79
+      },
+      "id" : "complaint",
+      "labels" : [
+        "notComplaint",
+        "complaint"
+      ],
+      "modelFile" : "ComplaintIntentClassifier.mlmodel",
+      "positiveLabel" : "complaint"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.53,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.53,
+        "zh-Hans" : 0.53
+      },
+      "id" : "scheduleNegotiation",
+      "labels" : [
+        "notScheduleNegotiation",
+        "scheduleNegotiation"
+      ],
+      "modelFile" : "ScheduleNegotiationIntentClassifier.mlmodel",
+      "positiveLabel" : "scheduleNegotiation"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.77,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.77,
+        "zh-Hans" : 0.8
+      },
+      "id" : "confirmationDecision",
+      "labels" : [
+        "notConfirmationDecision",
+        "confirmationDecision"
+      ],
+      "modelFile" : "ConfirmationDecisionIntentClassifier.mlmodel",
+      "positiveLabel" : "confirmationDecision"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.77,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.83,
+        "zh-Hans" : 0.77
+      },
+      "id" : "followUpReminder",
+      "labels" : [
+        "notFollowUpReminder",
+        "followUpReminder"
+      ],
+      "modelFile" : "FollowUpReminderIntentClassifier.mlmodel",
+      "positiveLabel" : "followUpReminder"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.74,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.74,
+        "zh-Hans" : 0.79
+      },
+      "id" : "replyableMessage",
+      "labels" : [
+        "notReplyableMessage",
+        "replyableMessage"
+      ],
+      "modelFile" : "ConversationalReplyIntentClassifier.mlmodel",
+      "positiveLabel" : "replyableMessage"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "id" : "sentiment",
+      "labels" : [
+        "negative",
+        "neutral",
+        "positive"
+      ],
+      "modelFile" : "SentimentClassifier.mlmodel"
+    }
+  ],
+  "corpusRecordCount" : 11172,
+  "generatedAt" : "2026-08-26T10:38:35Z",
+  "schemaVersion" : 2
+}

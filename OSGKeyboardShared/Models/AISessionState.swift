@@ -70,6 +70,10 @@ public struct AISessionState: Equatable, Sendable {
     public private(set) var conversationID: UUID?
     public private(set) var activeUtteranceID: UUID?
     public private(set) var answer: AIAnswer?
+    /// Three reply choices retained until the user taps one whole card.
+    public private(set) var replyVariants: [AIReplyVariant]
+    /// Stable selection hook for future local feedback recording.
+    public private(set) var selectedReplyVariant: AIReplyVariant?
     /// Live LLM draft while `phase == .generating`. Cleared on final/cancel.
     public private(set) var draftAnswerText: String?
     public private(set) var transcript: String
@@ -82,6 +86,8 @@ public struct AISessionState: Equatable, Sendable {
         conversationID: UUID? = nil,
         activeUtteranceID: UUID? = nil,
         answer: AIAnswer? = nil,
+        replyVariants: [AIReplyVariant] = [],
+        selectedReplyVariant: AIReplyVariant? = nil,
         draftAnswerText: String? = nil,
         transcript: String = "",
         errorMessage: String? = nil
@@ -90,6 +96,8 @@ public struct AISessionState: Equatable, Sendable {
         self.conversationID = conversationID
         self.activeUtteranceID = activeUtteranceID
         self.answer = answer
+        self.replyVariants = replyVariants
+        self.selectedReplyVariant = selectedReplyVariant
         self.draftAnswerText = draftAnswerText
         self.transcript = transcript
         self.errorMessage = errorMessage
@@ -108,6 +116,13 @@ public struct AISessionState: Equatable, Sendable {
 
     public var canInsert: Bool {
         phase == .ready && answer?.deliveryState == .ready
+    }
+
+    public var canSelectReplyVariant: Bool {
+        phase == .ready
+            && answer == nil
+            && selectedReplyVariant == nil
+            && AIReplyVariantSet.resolve(kinds: Set(replyVariants.map(\.kind))) != nil
     }
 
     public var canSend: Bool {
@@ -172,10 +187,47 @@ public struct AISessionState: Equatable, Sendable {
     public mutating func receiveAnswer(_ text: String, utteranceID: UUID) {
         guard isActive, activeUtteranceID == utteranceID else { return }
         answer = AIAnswer(text: text)
+        replyVariants = []
+        selectedReplyVariant = nil
         draftAnswerText = nil
         phase = .ready
         activeUtteranceID = nil
         errorMessage = nil
+    }
+
+    public mutating func receiveReplyVariants(
+        _ variants: [AIReplyVariant],
+        utteranceID: UUID
+    ) {
+        guard isActive, activeUtteranceID == utteranceID else { return }
+        let kinds = Set(variants.map(\.kind))
+        guard let variantSet = AIReplyVariantSet.resolve(kinds: kinds),
+              variants.count == variantSet.kinds.count else {
+            return
+        }
+        answer = nil
+        replyVariants = variantSet.kinds.compactMap { kind in
+            variants.first { $0.kind == kind }
+        }
+        selectedReplyVariant = nil
+        draftAnswerText = nil
+        phase = .ready
+        activeUtteranceID = nil
+        errorMessage = nil
+    }
+
+    /// Converts the tapped choice into the existing insertion model. Keeping
+    /// the selected variant exposes kind/emotion for later feedback recording.
+    @discardableResult
+    public mutating func selectReplyVariant(id: UUID) -> AIAnswer? {
+        guard canSelectReplyVariant,
+              let variant = replyVariants.first(where: { $0.id == id }) else {
+            return nil
+        }
+        let selectedAnswer = AIAnswer(id: variant.id, text: variant.text)
+        selectedReplyVariant = variant
+        answer = selectedAnswer
+        return selectedAnswer
     }
 
     public mutating func markAnswerInserted(offersSend: Bool) {
@@ -195,6 +247,8 @@ public struct AISessionState: Equatable, Sendable {
     public mutating func discardReadyAnswer() {
         guard phase == .ready else { return }
         answer = nil
+        replyVariants = []
+        selectedReplyVariant = nil
         activeUtteranceID = nil
         draftAnswerText = nil
         transcript = ""
@@ -233,6 +287,9 @@ public struct AISessionState: Equatable, Sendable {
     }
 
     private var restingPhase: Phase {
+        if !replyVariants.isEmpty, selectedReplyVariant == nil {
+            return .ready
+        }
         guard let answer else { return .idle }
         switch answer.deliveryState {
         case .ready:

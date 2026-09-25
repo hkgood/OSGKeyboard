@@ -26,6 +26,17 @@ public struct ManagedLLMClient: LLMClient {
             case .agent: .agentPlanning
             }
         }
+
+        static func resolve(taskKind: ManagedGatewayTaskKind?) -> Self {
+            switch taskKind {
+            case .dictationPolish, .translation, .editLastInput, nil:
+                return .polish
+            case .aiQuestion, .currentInformationQuestion, .clipboardTransform, .customSkill:
+                return .assistant
+            case .agentPlanning:
+                return .agent
+            }
+        }
     }
 
     private struct Attempt {

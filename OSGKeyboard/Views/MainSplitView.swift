@@ -76,7 +76,7 @@ struct MainSplitView: View {
     }
 
     private var devicesFooter: some View {
-        Label("home.wide.devices", systemImage: "ipad.and.iphone")
+        Label(AppL10n.string("home.wide.devices"), systemImage: "ipad.and.iphone")
             .font(TypeStyle.caption2)
             .foregroundStyle(palette.textTertiary)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -109,7 +109,10 @@ private struct WideSidebarRow: View {
 
     var body: some View {
         Button(action: action) {
-            Label(tab.sidebarTitle, systemImage: tab.sidebarSystemImage(selected: isSelected))
+            Label(
+                AppL10n.string(tab.sidebarTitle),
+                systemImage: tab.sidebarSystemImage(selected: isSelected)
+            )
                 .labelStyle(SidebarIconColumnLabelStyle())
                 // Slightly larger label + taller vertical padding so each
                 // sidebar row hits the Apple HIG 44pt touch target on iPad
@@ -226,28 +229,28 @@ private struct WideStatusFooter: View {
                 .frame(width: 6, height: 6)
 
             if needsAPIKeySetup {
-                Text("home.flow.notReady")
+                Text(AppL10n.string("home.flow.notReady"))
                     .foregroundStyle(palette.warning)
             } else if flowManager.isUtteranceRecording {
-                Text("home.flow.recording")
+                Text(AppL10n.string("home.flow.recording"))
             } else if flowManager.isUtteranceProcessing {
-                Text("home.flow.processing")
+                Text(AppL10n.string("home.flow.processing"))
             } else if flowManager.isActive,
                       FlowSessionBridge.isHostReady(),
                       let expires = flowManager.sessionExpiresAt {
-                Text("home.flow.label")
+                Text(AppL10n.string("home.flow.label"))
                 Text(":")
                 Text(expires, style: .timer)
                     .monospacedDigit()
             } else {
-                Text(flowStatusLabel)
+                Text(AppL10n.string(flowStatusLabel))
             }
 
             if flowManager.isActive {
                 Button {
                     flowManager.endSession()
                 } label: {
-                    Text("home.flow.endShort")
+                    Text(AppL10n.string("home.flow.endShort"))
                         .foregroundStyle(palette.accent)
                 }
                 .buttonStyle(.plain)
@@ -258,7 +261,7 @@ private struct WideStatusFooter: View {
                         startCapture: true
                     )
                 } label: {
-                    Text("home.flow.startShort")
+                    Text(AppL10n.string("home.flow.startShort"))
                         .foregroundStyle(palette.accent)
                 }
                 .buttonStyle(.plain)
@@ -290,7 +293,7 @@ private struct WideStatusFooter: View {
         return palette.textTertiary
     }
 
-    private var flowStatusLabel: LocalizedStringKey {
+    private var flowStatusLabel: String {
         if needsAPIKeySetup {
             return "home.flow.notReady"
         }

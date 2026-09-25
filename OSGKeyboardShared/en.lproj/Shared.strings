@@ -45,8 +45,15 @@
 "error.llm.http" = "API returned HTTP %lld. Try again later or contact the provider.";
 "error.llm.decoding" = "Failed to parse the API response.";
 "error.llm.transport" = "Network error. Check your connection and try again.";
+"error.llm.timeout" = "The AI request timed out. Please try again.";
 "error.llm.rateLimited" = "Too many API requests. Please wait and try again.";
 "error.llm.cancelled" = "Request cancelled.";
+
+/* Personal style learning errors */
+"styleLearning.error.emptyRequest" = "There is no learning content to send to the AI. Reopen this page and try again.";
+"styleLearning.error.timeout" = "Style generation timed out while analyzing your history. Please try again.";
+"styleLearning.error.missingAPIKey" = "The current AI service has no API key. Configure it in Settings and try again.";
+"styleLearning.error.keychainLocked" = "The API key is temporarily unavailable. Unlock your device and try again.";
 
 /* ASR errors */
 "error.asr.localeUnsupported" = "Speech language assets are unavailable. Try again later or switch the recognition language.";
@@ -60,11 +67,13 @@
 "error.cloudASR.invalidURL" = "Invalid cloud ASR endpoint.";
 "error.cloudASR.http" = "Cloud ASR returned HTTP %lld.";
 "error.cloudASR.httpWithMessage" = "Cloud ASR returned HTTP %lld: %@";
+"error.cloudASR.insufficientBalance" = "Account balance is insufficient. Some models require a positive balance even when priced at ¥0 — top up your account and try again.";
 "error.cloudASR.decoding" = "Failed to parse cloud ASR response: %@";
 "error.cloudASR.transport" = "Cloud ASR network error: %@";
 "error.cloudASR.emptyTranscript" = "Cloud ASR returned an empty transcript.";
 "error.cloudASR.audioTooLong" = "Audio segment is too long for this cloud ASR provider.";
 "error.cloudASR.providerUnsupported" = "This provider does not support cloud speech recognition yet.";
+"error.cloudASR.timedOut" = "Connection check timed out. The provider did not respond in time — check your network, API key, and account balance, then try again.";
 "error.cloudASR.streamingNotImplemented" = "Streaming ASR failed for this provider. Check your API key and network, or try again.";
 
 /* Managed account gateway */
@@ -136,7 +145,6 @@
 "ai.responseLength.medium" = "Medium";
 "ai.responseLength.detailed" = "Detailed";
 
-
 /* v0.3.0: Detected app context labels */
 "appContext.code" = "Code";
 "appContext.email" = "Email";
@@ -194,7 +202,7 @@
 "mac.styles.prompt" = "Complete prompt";
 "mac.styles.hint" = "Use {{DICTIONARY}} to place the personal dictionary. System rules are appended automatically.";
 "mac.styles.learn.title" = "Generate Your Style";
-"mac.styles.learn.body" = "Learn how you naturally express yourself from past dictation.";
+"mac.styles.learn.body" = "Learn how you naturally express yourself from past dictation. Applies to AI replies on the iPhone keyboard.";
 "mac.styles.learn.progress" = "%lld / %lld characters";
 "mac.styles.learn.remaining" = "%lld to go";
 "mac.styles.learn.ready" = "Ready";
@@ -202,6 +210,7 @@
 "mac.styles.learn.generating" = "Generating…";
 "mac.styles.learn.privacy" = "Sent to your configured AI only when you generate. Review and edit before saving.";
 "mac.styles.learn.limit" = "Delete a custom style before generating another one.";
+"mac.styles.learn.error.title" = "Couldn’t Generate Style";
 "mac.styles.learn.error.insufficient" = "Keep dictating until 2,500 effective characters are available.";
 "mac.styles.learn.error.invalidResponse" = "The AI did not return a valid writing style. Please try again.";
 "mac.styles.learn.error.promptTooLong" = "The generated prompt exceeded 6,000 characters. Please try again.";
@@ -280,7 +289,6 @@
 "mac.delete" = "Delete";
 "mac.dict.deleteTitle" = "Delete this word?";
 "mac.dict.deleteMessage" = "This cannot be undone.";
-"mac.hint.holdOption" = "Hold Option to dictate";
 "mac.settings.cloudProvider" = "CLOUD PROVIDER";
 "mac.settings.polishProvider" = "TEXT POLISH (LLM)";
 "mac.settings.asrProvider" = "SPEECH RECOGNITION (ASR)";
@@ -345,6 +353,7 @@
 "mac.hint.hold.leftOption" = "Hold left Option (⌥) to dictate";
 "mac.hint.hold.eitherOption" = "Hold either Option (⌥) to dictate";
 "mac.hint.holdOption" = "Hold Option to dictate";
+"mac.hint.holdOption.compact" = "Hold Option";
 "mac.settings.qwen3Model" = "Qwen3 model folder";
 "mac.settings.qwen3ModelDesc" = "Folder with config.json, model.safetensors, vocab.json, and merges.txt.";
 "mac.settings.qwen3Browse" = "Choose folder…";
@@ -384,9 +393,12 @@
 "mac.onboarding.engine.subtitle" = "Start locally for privacy, or use your own cloud API for provider-based recognition and polish.";
 "mac.onboarding.engine.localDesc" = "Private on-device recognition with Sherpa models. Falls back to Apple Speech until a model is installed.";
 "mac.onboarding.engine.cloudDesc" = "Use your API key for cloud speech recognition and AI polishing.";
-"mac.onboarding.cloud.title" = "Configure API access";
-"mac.onboarding.cloud.subtitle" = "Pick a provider and add your key. This step is optional, so you can finish now and fill it later in Settings.";
+"mac.onboarding.cloud.title" = "Configure speech recognition";
+"mac.onboarding.cloud.subtitle" = "Pick a cloud speech provider and add your key. This step is optional, so you can finish now and fill it later in Settings.";
 "mac.onboarding.cloud.skipHint" = "You can leave these blank and finish setup; cloud mode will ask for a key before use.";
+"mac.onboarding.polish.title" = "Configure polishing";
+"mac.onboarding.polish.subtitle" = "Pick the model provider used for polishing, translation and AI answers. Optional — you can fill it in later in Settings.";
+"mac.onboarding.polish.skipHint" = "You can leave these blank and finish setup; polishing will ask for a key before use.";
 "mac.onboarding.model.title" = "Prepare local recognition";
 "mac.onboarding.model.subtitle" = "Download the basic Sherpa runtime and default model now, or skip and continue with Apple Speech fallback.";
 "mac.onboarding.model.download" = "Download Default Model";
@@ -459,17 +471,103 @@
 "settings.appLanguage.english" = "English";
 "settings.appLanguage.chinese" = "Chinese";
 
-/* Voluntary support tip (Consumable IAP — no feature unlock) */
-"tip.title" = "Support the Developer";
-"tip.body" = "OSGKeyboard is completely free with every feature unlocked. If you find it useful, you can leave an optional tip — it does not unlock anything extra.";
-"tip.button" = "Tip %@";
-"tip.buttonFallback" = "Send a Tip";
-"tip.consumableNotice" = "Consumable in-app purchase. Tips cannot be restored (Apple policy).";
-"tip.thankYou.title" = "Thank you!";
-"tip.thankYou.message" = "Your support helps keep OSGKeyboard free and open for everyone.";
-"tip.thankYou.past" = "You've supported us %lld time(s). Thank you!";
-"tip.error.title" = "Purchase Failed";
-"tip.error.productUnavailable" = "The tip product is unavailable right now. Try again later.";
-"tip.error.pending" = "Your purchase is pending approval.";
-"tip.error.unknown" = "The purchase could not be completed.";
-"tip.alert.dismiss" = "OK";
+/* Account — Mac account page (Sign in with Apple, credits, invitation link).
+   The account.* / account.referral.* keys below mirror the iOS app bundle so
+   the shared AccountSessionCoordinator error keys resolve on macOS too. */
+"mac.section.account" = "Account";
+"mac.account.restoring" = "Restoring your session…";
+"mac.account.signedOut.title" = "Not signed in";
+"mac.account.signedOut.body" = "Sign in with Apple to use your credit balance on this Mac and to get your invitation link.";
+"mac.account.signedOut.footnote" = "Credits are bought on iPhone or on the web and shared across all your devices.";
+"mac.account.signIn.loading" = "Signing in…";
+"mac.account.profile.unnamed" = "Apple Account";
+"mac.account.profile.accountID" = "Account %@";
+"mac.account.signOut" = "Sign Out";
+"mac.account.credits.title" = "Credits";
+"mac.account.credits.balance" = "Balance";
+"mac.account.credits.used" = "Used";
+"mac.account.credits.loading" = "Loading balance…";
+"mac.account.credits.refresh" = "Refresh";
+"mac.account.credits.purchaseNote" = "Purchases are not available on macOS. Buy credits on iPhone or on the web — the balance is shared.";
+"mac.account.invite.title" = "Invitation";
+"mac.account.invite.link" = "Your invitation link";
+"mac.account.invite.copy" = "Copy";
+"mac.account.invite.copied" = "Copied";
+"mac.account.invite.loading" = "Loading your invitation link…";
+"mac.account.invite.retry" = "Retry";
+"mac.account.invite.rewarded" = "Rewarded invites";
+"mac.account.invite.pending" = "Pending invites";
+"mac.account.invite.footnote" = "Both of you get credits once an invited friend qualifies.";
+"mac.account.delete.title" = "Delete Account";
+"mac.account.delete.body" = "Deleting removes your account and any remaining credits. This cannot be undone.";
+"mac.account.delete.action" = "Delete Account…";
+"mac.account.delete.confirmBody" = "Confirm with Apple to permanently delete your account and remaining credits.";
+"mac.account.delete.cancel" = "Cancel";
+"mac.account.error.title" = "Account";
+"mac.account.error.dismiss" = "OK";
+"account.error.appleAuthorization" = "Apple authorization could not be completed.";
+"account.error.appleReauthenticationRequired" = "Sign in with Apple again to keep your account protected.";
+"account.error.delete" = "Could not delete the account.";
+"account.error.load" = "Could not load account details.";
+"account.error.managedGateway" = "Could not prepare the managed service.";
+"account.error.redeemReferral" = "The invitation is saved, but could not be redeemed yet.";
+"account.error.restore" = "Could not restore your account session.";
+"account.error.sessionExpired" = "Your session expired. Sign in again to continue.";
+"account.error.signIn" = "Could not sign in. Please try again.";
+"account.error.signOut" = "Could not sign out. Please try again.";
+"account.error.unavailable" = "Account services are not connected in this build.";
+"account.error.updateProfile" = "Could not update your profile.";
+"account.referral.error.conflict" = "Your invitation link is temporarily unavailable.";
+"account.referral.error.load" = "Couldn’t load your invitation link.";
+"account.referral.error.network" = "Check your connection and try again.";
+"account.referral.error.notFound" = "Your invitation link isn’t available yet.";
+"account.referral.error.session" = "Sign in again to load your invitation link.";
+"account.referral.error.unavailable" = "The invitation service is temporarily unavailable.";
+
+/* Rime / typing engine errors */
+"error.rime.appGroupUnavailable" = "App Group unavailable.";
+"error.rime.bundledResourceMissing" = "Missing input-method resource: %@";
+"error.rime.lockUnavailable" = "Input-method resources are being updated by another process.";
+"error.rime.deploymentFailed" = "Input-method resource deployment failed.";
+"error.rime.resourcesNotInstalled" = "Open OSGKeyboard first to finish input-method setup.";
+"error.rime.hostAppRequired" = "Input-method resources can only be deployed by the OSGKeyboard app.";
+"error.rime.schemaUnavailable" = "Input schema unavailable: %@";
+
+/* Text polish errors */
+"error.polish.noTranscript" = "No transcript to polish.";
+"error.polish.timeout" = "LLM polish timed out.";
+"error.polish.missingAPIKey" = "Missing API key — fill it in Settings before polish can run.";
+"error.polish.keychainLocked" = "API key unavailable while the device is locked — will work after unlock.";
+
+/* Local ASR model errors */
+"error.localASR.downloadFailed" = "Download failed: %@";
+"error.localASR.extractFailed" = "Extract failed: %@";
+"error.localASR.validationFailed" = "Validation failed: %@";
+"error.localASR.runtimeMissing" = "Sherpa runtime is not installed.";
+"error.localASR.binaryMissing" = "Sherpa binary not found in runtime bundle.";
+"error.localASR.missingBundledCatalog" = "Missing bundled local ASR catalog.";
+"error.localASR.modelNotFound" = "Local ASR model not found: %@";
+
+/* Account service errors */
+"error.account.refreshTokenReuse" = "The session was revoked because refresh-token reuse was detected.";
+"error.account.transport" = "The account service could not be reached.";
+"error.account.invalidResponse" = "The account service returned an invalid response.";
+"error.account.decoding" = "The account service response could not be decoded.";
+"error.account.secureStorage" = "The private account session could not be stored securely.";
+"error.account.sessionUnavailable" = "No account session is available.";
+"error.account.appleAuthorization" = "Sign in with Apple did not return valid credentials.";
+"error.account.integrityUnavailable" = "Device integrity verification is unavailable.";
+
+/* Custom language model errors */
+"error.clm.missingManifest" = "Missing bundled custom language model manifest.";
+"error.clm.missingTrainingAsset" = "Missing bundled custom language model training asset.";
+"error.clm.missingAppGroupContainer" = "App Group container unavailable for custom language model preparation.";
+"error.clm.missingPreparedArtifacts" = "Custom language model preparation did not produce LM/Vocab artifacts.";
+"error.clm.retryBudgetExhausted" = "Custom language model preparation retry budget exhausted.";
+
+/* macOS-only errors and status labels */
+"mac.error.speechDenied" = "Speech recognition permission denied.";
+"mac.error.converterUnavailable" = "Failed to initialize audio converter.";
+"mac.error.microphoneAccessDenied" = "Microphone access denied — enable it in System Settings → Privacy & Security → Microphone.";
+"mac.accessibility.status.granted" = "Granted";
+"mac.accessibility.status.needed" = "Needed";

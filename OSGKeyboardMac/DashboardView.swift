@@ -111,7 +111,7 @@ struct DashboardView: View {
                     // 总览：累积所有会话文本，内部滚动、自动贴底显示最新一句。
                     ScrollView {
                         Text(viewModel.homePreviewText)
-                            .font(.system(size: 20, weight: .regular))
+                            .font(TypeStyle.title3.weight(.regular))
                             .foregroundStyle(palette.textPrimary)
                             .lineSpacing(4)
                             .textSelection(.enabled)
@@ -172,7 +172,8 @@ struct BottomDictationBar: View {
             recordControl
         }
         .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.xs)
+        .padding(.top, Spacing.xs)
+        .padding(.bottom, Spacing.sm)
         // No surface fill — the mic bar sits on the page background so Home
         // stays flat and the canvas above can stay shorter without a second
         // floating card competing for height.
@@ -215,16 +216,13 @@ struct BottomDictationBar: View {
                     .truncationMode(.tail)
                 Spacer(minLength: Spacing.xs)
                 Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(TypeStyle.caption2.weight(.semibold))
                     .foregroundStyle(palette.textTertiary)
             }
             .font(MacSettingsType.control)
-            .padding(.horizontal, Spacing.sm)
+            .padding(.horizontal, Spacing.md)
             .frame(minHeight: MacMetrics.settingsControlHeight)
-            .background(
-                palette.surfaceElevated,
-                in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-            )
+            .background(palette.surfaceElevated, in: Capsule())
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
@@ -247,16 +245,24 @@ struct BottomDictationBar: View {
             .animation(Motion.quick, value: viewModel.isRecording)
     }
 
+    /// 胶囊按钮内、麦克风右侧的快捷键指引：「⌥ 按住 Option」。
+    private var optionHoldHint: some View {
+        HStack(spacing: Spacing.xxs) {
+            Image(systemName: "option")
+                .font(TypeStyle.caption.weight(.semibold))
+            Text(MacL10n.string("mac.hint.holdOption.compact", language: lang))
+                .font(TypeStyle.caption)
+                .lineLimit(1)
+        }
+        .foregroundStyle(palette.textOnAccent.opacity(0.9))
+        .fixedSize()
+        .accessibilityElement(children: .combine)
+    }
+
     private var recordButton: some View {
         Button(action: viewModel.toggleRecording) {
-            ZStack {
-                Circle()
-                    .fill(viewModel.isRecording ? palette.recordRed : palette.accent)
-                    .frame(width: 52, height: 52)
-                    .shadow(
-                        color: (viewModel.isRecording ? palette.recordRed : palette.accent).opacity(0.35),
-                        radius: pulse ? 10 : 5
-                    )
+            // 胶囊按钮：左侧麦克风（录音时为波形），右侧「按住 Option」提示。
+            HStack(spacing: Spacing.sm) {
                 Group {
                     if viewModel.isRecording {
                         MiniWaveform(level: viewModel.audioLevel, barCount: 4, tint: palette.textOnAccent)
@@ -266,8 +272,25 @@ struct BottomDictationBar: View {
                             .foregroundStyle(palette.textOnAccent)
                     }
                 }
+                .frame(width: 24)
                 .transition(.opacity.combined(with: .scale(scale: 0.7)))
+
+                if !viewModel.isRecording {
+                    optionHoldHint
+                        .transition(.opacity.combined(with: .move(edge: .trailing)))
+                }
             }
+            .padding(.horizontal, Spacing.md)
+            .frame(height: 52)
+            .background(
+                (viewModel.isRecording ? palette.recordRed : palette.accent),
+                in: Capsule()
+            )
+            .shadow(
+                color: (viewModel.isRecording ? palette.recordRed : palette.accent).opacity(0.35),
+                radius: pulse ? 10 : 5
+            )
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .disabled(viewModel.isProcessing)

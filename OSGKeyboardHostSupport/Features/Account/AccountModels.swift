@@ -4,8 +4,11 @@
 // Wire models for the host-private OSG account protocol.
 
 import Foundation
+#if canImport(OSGKeyboardShared)
+import OSGKeyboardShared
+#endif
 
-public struct AccountSession: Codable, Equatable, Sendable {
+public struct AccountTokenSession: Codable, Equatable, Sendable {
     public let accountId: UUID
     public let tokenType: String
     public let accessToken: String
@@ -229,8 +232,8 @@ public struct AccountRefreshTransaction: Codable, Equatable, Sendable {
 }
 
 public protocol AccountSessionVault: Sendable {
-    func loadSession() async throws -> AccountSession?
-    func saveSession(_ session: AccountSession) async throws
+    func loadSession() async throws -> AccountTokenSession?
+    func saveSession(_ session: AccountTokenSession) async throws
     func clearSession() async throws
     func beginRefreshTransaction(
         refreshTokenDigest: String
@@ -285,23 +288,23 @@ extension AccountAPIError: LocalizedError {
              .rateLimited(let message):
             return message
         case .refreshTokenReuse:
-            return "The session was revoked because refresh-token reuse was detected."
+            return SharedL10n.string("error.account.refreshTokenReuse")
         case .server(_, _, let message):
             return message
         case .transport:
-            return "The account service could not be reached."
+            return SharedL10n.string("error.account.transport")
         case .invalidResponse:
-            return "The account service returned an invalid response."
+            return SharedL10n.string("error.account.invalidResponse")
         case .decoding:
-            return "The account service response could not be decoded."
+            return SharedL10n.string("error.account.decoding")
         case .secureStorage:
-            return "The private account session could not be stored securely."
+            return SharedL10n.string("error.account.secureStorage")
         case .sessionUnavailable:
-            return "No account session is available."
+            return SharedL10n.string("error.account.sessionUnavailable")
         case .appleAuthorization:
-            return "Sign in with Apple did not return valid credentials."
+            return SharedL10n.string("error.account.appleAuthorization")
         case .integrityUnavailable:
-            return "Device integrity verification is unavailable."
+            return SharedL10n.string("error.account.integrityUnavailable")
         }
     }
 }

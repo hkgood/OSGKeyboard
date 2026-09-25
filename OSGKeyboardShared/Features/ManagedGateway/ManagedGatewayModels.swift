@@ -5,6 +5,13 @@
 
 import Foundation
 
+public extension Notification.Name {
+    /// A completed managed-AI request may have changed the server-side balance.
+    static let managedCreditsMayHaveChanged = Notification.Name(
+        "com.osgkeyboard.account.managedCreditsMayHaveChanged"
+    )
+}
+
 public enum ManagedGatewayCapability: String, Codable, CaseIterable, Sendable {
     case polish
     case assistant = "ai"

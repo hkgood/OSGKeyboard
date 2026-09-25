@@ -77,11 +77,16 @@ public enum LocalASRModelManagerError: Error, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .downloadFailed(let detail): return "Download failed: \(detail)"
-        case .extractFailed(let detail): return "Extract failed: \(detail)"
-        case .validationFailed(let detail): return "Validation failed: \(detail)"
-        case .runtimeMissing: return "Sherpa runtime is not installed."
-        case .binaryMissing: return "Sherpa binary not found in runtime bundle."
+        case .downloadFailed(let detail):
+            return SharedL10n.format("error.localASR.downloadFailed", detail)
+        case .extractFailed(let detail):
+            return SharedL10n.format("error.localASR.extractFailed", detail)
+        case .validationFailed(let detail):
+            return SharedL10n.format("error.localASR.validationFailed", detail)
+        case .runtimeMissing:
+            return SharedL10n.string("error.localASR.runtimeMissing")
+        case .binaryMissing:
+            return SharedL10n.string("error.localASR.binaryMissing")
         }
     }
 }

@@ -1,0 +1,111 @@
+{
+  "allGatesPassed": false,
+  "candidate": "taxonomy-v6-expanded-maxEnt",
+  "corpus": {
+    "blindLabelPolicy": "Product-owner task/question/replyable labels are used for the first 60 records; other v6 fields require per-field multi-model consensus. Unknown fields are excluded.",
+    "blindRecords": 120,
+    "candidateCorpusRecords": 273746,
+    "humanLabeledBlindRecords": 60,
+    "registryCanonicalRecords": 327337,
+    "trainCandidates": 273626
+  },
+  "currentModelBlindBaseline": {
+    "accuracy": 0.8845,
+    "f1": 0.2326,
+    "precision": 0.2578,
+    "recall": 0.2974
+  },
+  "deploymentMode": "shadow/display",
+  "domainGoldenMetrics": {
+    "accuracy": 0.3704,
+    "macroF1": 0.3282,
+    "total": 27
+  },
+  "gates": {
+    "domainMacroF1": {
+      "actual": 0.3282,
+      "passed": false,
+      "required": 0.85
+    },
+    "evaluationIsolation": {
+      "exactOverlapCount": 0,
+      "passed": true,
+      "trainBarredByCalibrationCount": 1,
+      "trainBarredByEvaluationCount": 0
+    },
+    "newIntentMacroF1": {
+      "actual": 0.5915,
+      "passed": false,
+      "required": 0.9
+    },
+    "newIntentMinimumPrecision": {
+      "actual": 0.25,
+      "passed": false,
+      "required": 0.95
+    },
+    "oldNineNoRegression": {
+      "currentBlindMacroF1": 0.2326,
+      "passed": true,
+      "reason": "The candidate is additive and the production manifest and nine deployed model files were not replaced."
+    },
+    "runtimePerformance": {
+      "actual": {
+        "coldLoadMilliseconds": 49.2974,
+        "modelBytes": 570083,
+        "peakRSSDeltaBytes": 25001984,
+        "warmP95Milliseconds": 0.2498
+      },
+      "budgets": {
+        "coldLoadMilliseconds": 100,
+        "modelBytes": 2000000,
+        "peakRSSDeltaBytes": 41943040,
+        "warmP95Milliseconds": 1
+      },
+      "passed": true
+    }
+  },
+  "limitations": [
+    "Only 60 of 120 product blind records have product-owner labels.",
+    "The remaining fields are high-confidence model consensus, not human gold.",
+    "Per-language calibration has too few positive blind examples.",
+    "The current model has no heads for the three new intents or domain."
+  ],
+  "newIntentGoldenMetrics": {
+    "assistantCommand": {
+      "accuracy": 0.9722,
+      "f1": 0.8,
+      "falseNegative": 0,
+      "falsePositive": 1,
+      "precision": 0.6667,
+      "recall": 1,
+      "total": 36,
+      "trueNegative": 33,
+      "truePositive": 2
+    },
+    "informationQuery": {
+      "accuracy": 0.7692,
+      "f1": 0.3077,
+      "falseNegative": 3,
+      "falsePositive": 6,
+      "precision": 0.25,
+      "recall": 0.4,
+      "total": 39,
+      "trueNegative": 28,
+      "truePositive": 2
+    },
+    "systemNotification": {
+      "accuracy": 0.95,
+      "f1": 0.6667,
+      "falseNegative": 2,
+      "falsePositive": 0,
+      "precision": 1,
+      "recall": 0.5,
+      "total": 40,
+      "trueNegative": 36,
+      "truePositive": 2
+    }
+  },
+  "productionManifestSHA256": "52cf3916ea18325fc1f4b51f3c1ee2d9f73c5633b227d3355606f5a1a1ea0c1c",
+  "releaseDecision": "keep-current-model",
+  "schemaVersion": 1
+}

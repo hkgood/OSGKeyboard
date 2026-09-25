@@ -107,6 +107,8 @@ public struct AnthropicMessagesClient: LLMClient {
             throw LLMError.cancelled
         } catch let urlError as URLError where urlError.code == .cancelled {
             throw LLMError.cancelled
+        } catch let urlError as URLError where urlError.code == .timedOut {
+            throw LLMError.timeout
         } catch {
             throw LLMError.transport(String(describing: error))
         }

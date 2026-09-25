@@ -2,42 +2,198 @@
   "containsUserClipboardData": false,
   "families": {
     "acknowledgment": 388,
+    "acknowledgment_decision_boundary": 540,
+    "blessing_boundary": 560,
+    "blessing_golden": 20,
+    "blessing_message": 540,
+    "complaint_implicit_failure": 540,
+    "complaint_incident_diverse": 540,
     "complaint_request": 546,
     "complaint_statement": 546,
+    "confirmation_decision": 540,
+    "confirmation_decision_boundary": 20,
+    "confirmation_decision_golden": 20,
+    "confirmation_selection_short": 540,
     "conversational_message": 550,
     "event_statement": 544,
+    "follow_up_action": 540,
+    "follow_up_personal_reminder": 540,
+    "follow_up_reminder_boundary": 20,
+    "follow_up_reminder_golden": 20,
+    "follow_up_triggered": 540,
     "information_question": 544,
     "invitation_question": 548,
     "negative_news": 486,
     "neutral_fact": 550,
+    "personal_action_item_boundary": 540,
     "positive_feedback": 546,
     "quoted_question": 384,
+    "resolved_issue_boundary": 540,
+    "schedule_fixed_invitation_boundary": 540,
+    "schedule_negotiation": 540,
+    "schedule_negotiation_boundary": 20,
+    "schedule_negotiation_golden": 20,
     "self_plan": 546,
+    "task_assignment_diverse": 540,
+    "task_completion_boundary": 540,
+    "task_indirect_assignment": 540,
+    "task_indirect_question": 540,
     "task_question": 546,
-    "task_statement": 548
+    "task_statement": 548,
+    "vague_future_boundary": 540
+  },
+  "goldenCoverage": {
+    "blessing": {
+      "en": {
+        "boundaryNegative": 10,
+        "positive": 10
+      },
+      "zh-Hans": {
+        "boundaryNegative": 10,
+        "positive": 10
+      }
+    },
+    "confirmationDecision": {
+      "en": {
+        "boundaryNegative": 10,
+        "positive": 10
+      },
+      "zh-Hans": {
+        "boundaryNegative": 10,
+        "positive": 10
+      }
+    },
+    "followUpReminder": {
+      "en": {
+        "boundaryNegative": 10,
+        "positive": 13
+      },
+      "zh-Hans": {
+        "boundaryNegative": 10,
+        "positive": 13
+      }
+    },
+    "scheduleNegotiation": {
+      "en": {
+        "boundaryNegative": 10,
+        "positive": 10
+      },
+      "zh-Hans": {
+        "boundaryNegative": 10,
+        "positive": 10
+      }
+    }
+  },
+  "labelsByLanguage": {
+    "en": {
+      "blessing": {
+        "negative": 8566,
+        "positive": 280
+      },
+      "complaint": {
+        "negative": 7760,
+        "positive": 1086
+      },
+      "confirmationDecision": {
+        "negative": 8296,
+        "positive": 550
+      },
+      "followUpReminder": {
+        "negative": 7753,
+        "positive": 1093
+      },
+      "invitation": {
+        "negative": 8298,
+        "positive": 548
+      },
+      "question": {
+        "negative": 6933,
+        "positive": 1913
+      },
+      "replyable": {
+        "negative": 3106,
+        "positive": 5740
+      },
+      "scheduleNegotiation": {
+        "negative": 8566,
+        "positive": 280
+      },
+      "task": {
+        "negative": 6671,
+        "positive": 2175
+      }
+    },
+    "zh-Hans": {
+      "blessing": {
+        "negative": 8566,
+        "positive": 280
+      },
+      "complaint": {
+        "negative": 7760,
+        "positive": 1086
+      },
+      "confirmationDecision": {
+        "negative": 8296,
+        "positive": 550
+      },
+      "followUpReminder": {
+        "negative": 7753,
+        "positive": 1093
+      },
+      "invitation": {
+        "negative": 8298,
+        "positive": 548
+      },
+      "question": {
+        "negative": 6933,
+        "positive": 1913
+      },
+      "replyable": {
+        "negative": 3106,
+        "positive": 5740
+      },
+      "scheduleNegotiation": {
+        "negative": 8566,
+        "positive": 280
+      },
+      "task": {
+        "negative": 6671,
+        "positive": 2175
+      }
+    }
   },
   "languages": {
-    "en": 3636,
-    "zh-Hans": 3636
+    "en": 8846,
+    "zh-Hans": 8846
   },
   "positiveIntentLabels": {
-    "complaint": 1092,
-    "invitation": 548,
-    "question": 2182,
-    "replyable": 4374,
-    "task": 1094
+    "blessing": 560,
+    "complaint": 2172,
+    "confirmationDecision": 1100,
+    "followUpReminder": 2186,
+    "invitation": 1096,
+    "question": 3826,
+    "replyable": 11480,
+    "scheduleNegotiation": 560,
+    "task": 4350
   },
   "seed": 20260821,
   "sentiments": {
-    "negative": 1578,
-    "neutral": 5148,
-    "positive": 546
+    "negative": 2658,
+    "neutral": 13928,
+    "positive": 1106
   },
   "splits": {
-    "golden": 92,
-    "test": 1260,
-    "train": 4660,
-    "validation": 1260
+    "golden": 252,
+    "test": 2970,
+    "train": 11500,
+    "validation": 2970
   },
-  "total": 7272
+  "total": 17692,
+  "validation": {
+    "crossSplitTextLeaks": 0,
+    "duplicateIDs": 0,
+    "duplicateNormalizedTexts": 0,
+    "sensitiveContentMatches": 0
+  }
 }

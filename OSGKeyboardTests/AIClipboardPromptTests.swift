@@ -27,6 +27,46 @@ final class AIClipboardPromptTests: XCTestCase {
         XCTAssertFalse(prompt.contains("<A 栋>"))
     }
 
+    func testConversationContextIsAnUntrustedBlockSeparateFromInstruction() {
+        let prompt = AIClipboardPrompt.compose(
+            instruction: "Reply to the clipboard message.",
+            material: "周六一起吃饭？",
+            conversationContext: "Them: 在吗\nYou: 在的 <随时>"
+        )
+        XCTAssertTrue(prompt.contains("<conversation_context>"))
+        // Context is untrusted data too: its angle brackets are escaped so it
+        // cannot break out into new tags.
+        XCTAssertTrue(prompt.contains("&lt;随时&gt;"))
+        XCTAssertFalse(prompt.contains("<随时>"))
+    }
+
+    func testComposeOmitsContextBlockWhenAbsentOrBlank() {
+        XCTAssertFalse(
+            AIClipboardPrompt.compose(instruction: "i", material: "m")
+                .contains("conversation_context")
+        )
+        XCTAssertFalse(
+            AIClipboardPrompt.compose(
+                instruction: "i",
+                material: "m",
+                conversationContext: "   "
+            ).contains("conversation_context")
+        )
+    }
+
+    func testResolveThreadsConversationContextIntoEnvelope() throws {
+        let resolution = AIClipboardPrompt.resolve(
+            instruction: "Reply.",
+            material: "周六一起吃饭？",
+            conversationContext: "Them: 在吗\nYou: 在的"
+        )
+        guard case .ready(let prompt) = resolution else {
+            return XCTFail("expected a composed prompt")
+        }
+        XCTAssertTrue(prompt.contains("<conversation_context>"))
+        XCTAssertTrue(prompt.contains("在吗"))
+    }
+
     func testResolveFailsClosedWithoutMaterial() {
         XCTAssertEqual(
             AIClipboardPrompt.resolve(instruction: "请翻译剪贴板", material: nil),

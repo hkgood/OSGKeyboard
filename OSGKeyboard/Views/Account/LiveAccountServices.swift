@@ -7,8 +7,12 @@
 
 import AuthenticationServices
 import Foundation
+#if canImport(OSGKeyboardHostSupport)
 import OSGKeyboardHostSupport
+#endif
+#if canImport(OSGKeyboardShared)
 import OSGKeyboardShared
+#endif
 
 @MainActor
 enum LiveAccountDependencyFactory {
@@ -333,7 +337,7 @@ private actor LiveAccountService:
             )
             throw AccountAPIError.secureStorage
         }
-        let session: OSGKeyboardHostSupport.AccountSession
+        let session: AccountTokenSession
         do {
             session = try await apiClient.signInWithApple(
                 AppleSignInRequest(
@@ -603,7 +607,7 @@ private actor LiveAccountService:
     }
 
     private func uiSession(
-        _ session: OSGKeyboardHostSupport.AccountSession,
+        _ session: AccountTokenSession,
         createdAtEpochSeconds: Int64,
         displayName: String?
     ) -> AccountSession {
@@ -616,7 +620,11 @@ private actor LiveAccountService:
 
 }
 
-private enum AccountDiagnostic {
+/// Stable, non-identifying failure codes for account traffic. Logged on both
+/// platforms and — on macOS, where sign-in has no App Store receipt trail to
+/// fall back on — also shown under the error alert so a failure can be
+/// reported without a console capture.
+enum AccountDiagnostic {
     static func code(for error: Error) -> String {
         guard let error = error as? AccountAPIError else {
             return String(describing: type(of: error))

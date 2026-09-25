@@ -112,6 +112,40 @@
 				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
 			</array>
 		</dict>
+		<dict>
+			<!-- MetricKit crash reports: exception type, signal, termination
+			     reason, binary names and a truncated call stack. Captured on
+			     every build, but uploaded ONLY from internal Debug / TestFlight
+			     builds (InternalDiagnosticsUploader); App Store builds keep them
+			     on device for manual export. Declared unconditionally because
+			     the manifest has no beta-only qualifier and under-declaring is
+			     the review risk. Linked because the upload carries the account
+			     bearer when the tester is signed in. -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeCrashData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<!-- MetricKit hang / CPU / disk-write diagnostics. Same capture and
+			     upload rules as the crash data above. -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePerformanceData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
 	</array>
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>

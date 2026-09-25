@@ -12,6 +12,14 @@ import SwiftUI
 struct OSGKeyboardMacApp: App {
     @NSApplicationDelegateAdaptor(MacAppDelegate.self) private var appDelegate
     @StateObject private var viewModel = MacDictationViewModel.shared
+    // Optional managed account: Sign in with Apple, server-held credits, and
+    // the invitation link. Unlike iOS there is no managed-gateway credential
+    // handoff to reset on sign-out — the Mac app is BYOK-only for providers,
+    // so the account only carries identity, credits and referrals.
+    @StateObject private var accountSession = AccountSessionCoordinator(
+        dependencies: LiveAccountDependencyFactory.make(),
+        arePurchasesAvailable: false
+    )
 
     // Mac-local appearance preference. Drives both the SwiftUI colour scheme
     // and — via `applyToApp` — the AppKit window chrome / popover.
@@ -36,8 +44,10 @@ struct OSGKeyboardMacApp: App {
             }
                 .macSystemPalette()
                 .environment(\.locale, viewModel.config.uiLanguage.swiftUILocale)
+                .environmentObject(accountSession)
                 .preferredColorScheme(appearance.colorScheme)
                 .task { await viewModel.onAppear() }
+                .task { await accountSession.restoreIfNeeded() }
                 .onAppear { MacAppearancePreference.applyToApp(appearance) }
                 .onChange(of: appearanceRaw) { MacAppearancePreference.applyToApp(appearance) }
                 .onReceive(NotificationCenter.default.publisher(for: .settingsDidSyncFromCloud)) { _ in
@@ -53,6 +63,16 @@ struct OSGKeyboardMacApp: App {
                     viewModel.speechHistory.reloadFromDisk()
                 }
                 .onOpenURL { url in
+                    // Invitation links (https://osglab.com/i/<code>). Reaching
+                    // the app this way additionally needs the
+                    // `applinks:osglab.com` associated-domains entitlement on
+                    // the Mac App ID; without it the handler is simply never
+                    // called and sharing your own link still works.
+                    if accountSession.handleIncomingURL(url) {
+                        // Account lives in Settings on Mac (first card).
+                        viewModel.selectedSection = .settings
+                        return
+                    }
                     #if DEBUG
                     guard url.scheme == "osgkeyboard", url.host == "seed-demo" else { return }
                     DemoDataSeeder.seedRichPlaceholderData(
@@ -71,9 +91,10 @@ struct OSGKeyboardMacApp: App {
         // very top, matching macOS System Settings.
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentMinSize)
-        // Open at the minimum size — same as `MacMetrics.windowMin*`, so the
-        // first launch already matches the smallest allowed window.
-        .defaultSize(width: MacMetrics.windowMinWidth, height: MacMetrics.windowMinHeight)
+        // Open larger than the minimum: onboarding's hero + step card +
+        // progress dots + bottom bar do not fit in `windowMin*`, which pushed
+        // the primary button off screen on first launch.
+        .defaultSize(width: MacMetrics.windowDefaultWidth, height: MacMetrics.windowDefaultHeight)
     }
 }
 
@@ -233,7 +254,7 @@ private struct MacMenuBarPopover: View {
     private var onboardingPrompt: some View {
         VStack(spacing: Spacing.md) {
             Image(systemName: "sparkles")
-                .font(.system(size: 30, weight: .semibold))
+                .font(TypeStyle.pageTitle)
                 .foregroundStyle(.accent)
 
             Text(MacL10n.string("mac.onboarding.popover.title", language: viewModel.config.uiLanguage))

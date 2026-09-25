@@ -7,10 +7,10 @@ OSGKeyboard is a voice input tool for iPhone, iPad, and Mac. Its iOS keyboard co
 ![Platform](https://img.shields.io/badge/iOS%20%2F%20iPadOS-26%2B-0078D4?logo=apple)
 ![Platform](https://img.shields.io/badge/macOS-15%2B-555?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-6.0-FA7343?logo=swift)
-![Version](https://img.shields.io/badge/version-2.0.3-3aa05a)
+![Version](https://img.shields.io/badge/version-2.1.0-3aa05a)
 ![License](https://img.shields.io/badge/license-Source%20Available-blue)
 
-[Website](https://hkgood.github.io/OSGKeyboard/?lang=en) · [中文](./README.md) · [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/) · [Changelog](./CHANGELOG.md)
+[Website](https://hkgood.github.io/OSGKeyboard/?lang=en) · [TestFlight Beta](https://testflight.apple.com/join/c2Bz4qK9) · [中文](./README.md) · [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/) · [Changelog](./CHANGELOG.md)
 
 <p align="center">
   <a href="https://apps.apple.com/app/osgkeyboard/id6781553267">
@@ -78,7 +78,6 @@ The iOS / iPadOS account center includes:
 - Server verification of purchases and a synchronized credit ledger
 - Short-lived, scope-limited managed-service grants for the keyboard extension
 
-The voluntary `ByRockyACoffee` tip is separate from credit packs and does not unlock core functionality.
 
 ## History, statistics, and sync
 

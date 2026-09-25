@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "completedResearchRounds": 60,
+  "requestedCoreRounds": 20,
+  "seed": 20260827,
+  "data": {
+    "baseTrainingRecords": 11500,
+    "reachableLicensedOpenRecords": 3845,
+    "holdoutOverlapCounts": {
+      "comprehensiveOnline": 0,
+      "random": 0,
+      "targetedRelease": 0
+    },
+    "unavailableSources": [
+      "MASSIVE",
+      "CLINC150",
+      "CFPB"
+    ]
+  },
+  "phases": [
+    {
+      "name": "shared-configuration-search",
+      "rounds": 20,
+      "selectedRound": 1,
+      "golden": {
+        "macroPrecision": 0.9366,
+        "macroRecall": 0.6801,
+        "macroF1": 0.7711
+      },
+      "randomHoldout": {
+        "macroPrecision": 0.8569,
+        "macroRecall": 0.4603,
+        "macroF1": 0.5709
+      },
+      "researchOnlyComprehensive": {
+        "macroPrecision": 0.4398,
+        "macroRecall": 0.2161,
+        "macroF1": 0.2383
+      },
+      "targetedRelease": {
+        "macroPrecision": 0.5489,
+        "macroRecall": 0.3139,
+        "macroF1": 0.3899
+      }
+    },
+    {
+      "name": "per-intent-fine-tuning",
+      "rounds": 20,
+      "selectedRoundsByIntent": {
+        "blessing": 19,
+        "complaint": 1,
+        "confirmationDecision": 3,
+        "followUpReminder": 1,
+        "invitation": 1,
+        "question": 1,
+        "replyableMessage": 1,
+        "scheduleNegotiation": 7,
+        "task": 15
+      },
+      "golden": {
+        "macroPrecision": 0.9377,
+        "macroRecall": 0.6819,
+        "macroF1": 0.7666
+      },
+      "randomHoldout": {
+        "macroPrecision": 0.8701,
+        "macroRecall": 0.4705,
+        "macroF1": 0.5770
+      },
+      "researchOnlyComprehensive": {
+        "macroPrecision": 0.4292,
+        "macroRecall": 0.2250,
+        "macroF1": 0.2645
+      },
+      "targetedRelease": {
+        "macroPrecision": 0.5467,
+        "macroRecall": 0.3375,
+        "macroF1": 0.4095
+      }
+    },
+    {
+      "name": "explicit-evidence-fine-tuning",
+      "rounds": 20,
+      "selectedRound": 1,
+      "golden": {
+        "macroPrecision": 0.9877,
+        "macroRecall": 0.4354,
+        "macroF1": 0.5476
+      },
+      "randomHoldout": {
+        "macroPrecision": 0.7731,
+        "macroRecall": 0.3029,
+        "macroF1": 0.3905
+      },
+      "researchOnlyComprehensive": {
+        "macroPrecision": 0.6097,
+        "macroRecall": 0.1647,
+        "macroF1": 0.2325
+      },
+      "targetedRelease": {
+        "macroPrecision": 0.5489,
+        "macroRecall": 0.2537,
+        "macroF1": 0.3209
+      }
+    }
+  ],
+  "currentDeployedReference": {
+    "randomHoldout": {
+      "macroPrecision": 0.9832,
+      "macroRecall": 0.6557,
+      "macroF1": 0.7669
+    },
+    "researchOnlyComprehensive": {
+      "macroPrecision": 0.2948,
+      "macroRecall": 0.3320,
+      "macroF1": 0.2783
+    }
+  },
+  "findings": [
+    "The first low-complexity round generalized better than later self-training rounds.",
+    "Three-round high-confidence pseudo-labeling amplified source and template bias instead of improving frozen regressions.",
+    "Per-intent configuration selection improved the research-only comprehensive F1 from 0.2383 to 0.2645 but remained below the deployed reference F1 of 0.2783.",
+    "Explicit evidence gates raised golden precision to 0.9877 and research-only precision to 0.6097, but recall collapsed and the release gate still failed.",
+    "No surrogate candidate is eligible to replace or augment the deployed Apple models."
+  ],
+  "releaseGatePassed": false,
+  "deploymentDecision": "retain-current-deployed-models",
+  "platformLimitation": "Linux cannot train, compile, run, or benchmark the deployable Apple Create ML models. These rounds are surrogate research and produce a macOS replay specification, not app-ready model assets."
+}

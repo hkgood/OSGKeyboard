@@ -8,8 +8,16 @@ import OSGKeyboardShared
 import UIKit
 
 enum AIAgentShortcutRunner {
+    /// `onReminders` / `onEvents` receive the parsed payload for the built-in
+    /// native Reminders / Calendar skills so the caller can drive EventKit +
+    /// present UI. `onEvents` gets the canonical `start|end|title|location`
+    /// lines (decoded host-side by `AIEventExporter`). Other exports still open
+    /// their companion Shortcut here.
     @MainActor
-    static func runPendingIfNeeded() {
+    static func runPendingIfNeeded(
+        onReminders: ([String]) -> Void = { _ in },
+        onEvents: ([String]) -> Void = { _ in }
+    ) {
         AIAgentShortcutRun.trace("host.runPending begin")
         let store = AppGroupStore()
         guard let payload = store.consumePendingShortcutRun() else { return }
@@ -21,6 +29,16 @@ enum AIAgentShortcutRunner {
         }
         if skill.id == AIClipboardSkillCatalog.navigateID {
             openMap(for: payload)
+            return
+        }
+        if skill.id == AIClipboardSkillCatalog.extractTodosID {
+            AIAgentShortcutRun.trace("host.runPending nativeReminders items=\(payload.titles.count)")
+            onReminders(payload.titles)
+            return
+        }
+        if skill.id == AIClipboardSkillCatalog.extractEventsID {
+            AIAgentShortcutRun.trace("host.runPending nativeCalendar items=\(payload.titles.count)")
+            onEvents(payload.titles)
             return
         }
         guard let name = skill.shortcutName else {

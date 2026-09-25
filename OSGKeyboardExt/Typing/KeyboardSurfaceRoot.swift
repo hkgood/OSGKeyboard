@@ -20,6 +20,17 @@ struct KeyboardSurfaceRoot: View {
         colorScheme == .dark ? Palette.dark : Palette.light
     }
 
+    /// True only for overlays that replace the keyboard surface. The auto-reply
+    /// guide is excluded — it dims the keyboard but keeps it visible underneath.
+    private var surfacesHidden: Bool {
+        switch state.clipboardOverlay {
+        case .enableGuide, .historyPanel:
+            return true
+        case .none, .autoReplyGuide:
+            return false
+        }
+    }
+
     /// Height is deliberately independent of the surface: the voice surface
     /// adopts the typing surface's content-driven height and parks the surplus
     /// above its action cluster, so switching surfaces never resizes the
@@ -59,14 +70,25 @@ struct KeyboardSurfaceRoot: View {
                     )
                 }
             }
-            .opacity(state.clipboardOverlay == .none ? 1 : 0)
-            .allowsHitTesting(state.clipboardOverlay == .none)
+            // The enable-guide / history panel replace the surface; the
+            // auto-reply guide instead layers over the still-visible keyboard.
+            .opacity(surfacesHidden ? 0 : 1)
+            .allowsHitTesting(!surfacesHidden)
 
             // Match every surface's outer chrome so the panel title / X sit in
             // the same slot as the logo + clipboard chip (not 4 pt higher).
             clipboardOverlayLayer
                 .padding(.top, TypingSurfaceMetrics.outerPaddingTop)
                 .padding(.bottom, TypingSurfaceMetrics.outerPaddingBottom)
+
+            // Scrim-based nudge sits on top of the live keyboard, no padding so
+            // the dim reaches every edge.
+            if state.clipboardOverlay == .autoReplyGuide, state.canShowClipboardEntry {
+                ClipboardAutoReplyGuideView(
+                    onClose: state.dismissClipboardOverlay,
+                    onTry: state.tryAutoReplyFromGuide
+                )
+            }
         }
         // Overlays are siblings of the surfaces, so the palette has to be
         // injected here or they fall back to the environment's dark default.
@@ -123,6 +145,9 @@ struct KeyboardSurfaceRoot: View {
                         ? ExtL10n.string("keyboard.clipboard.panel.fullAccessHint")
                         : nil
                 )
+            case .autoReplyGuide:
+                // Rendered as a scrim layer over the live keyboard, not here.
+                EmptyView()
             }
         }
     }

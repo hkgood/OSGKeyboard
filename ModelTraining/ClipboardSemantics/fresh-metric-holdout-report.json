@@ -1,0 +1,1231 @@
+{
+  "binaryMacro" : {
+    "accuracy" : 0.969,
+    "f1" : 0.6746,
+    "precision" : 0.7245,
+    "recall" : 0.6395
+  },
+  "binaryMacroByLanguage" : {
+    "en" : {
+      "accuracy" : 0.9615,
+      "f1" : 0.6434,
+      "precision" : 0.749,
+      "recall" : 0.575
+    },
+    "zh-Hans" : {
+      "accuracy" : 0.9766,
+      "f1" : 0.7015,
+      "precision" : 0.7066,
+      "recall" : 0.704
+    }
+  },
+  "classifiers" : [
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.879,
+          "family" : "fresh_plain_task_boundary",
+          "id" : "random-20260827-en-fresh_plain_task_boundary-018",
+          "language" : "en",
+          "text" : "Also, Complete the acceptance screenshots once, deliver it to Support, and close the task."
+        },
+        {
+          "confidence" : 0.8516,
+          "family" : "fresh_task_assignment",
+          "id" : "random-20260827-en-fresh_task_assignment-018",
+          "language" : "en",
+          "text" : "You are closing out this deliverable: finish the signature page and give it to Operations before the next review."
+        },
+        {
+          "confidence" : 0.851,
+          "family" : "fresh_task_assignment",
+          "id" : "random-20260827-en-fresh_task_assignment-005",
+          "language" : "en",
+          "text" : "Just to add, You are closing out this deliverable: finish the signature page and give it to Support before the next review."
+        },
+        {
+          "confidence" : 0.8286,
+          "family" : "fresh_plain_task_boundary",
+          "id" : "random-20260827-en-fresh_plain_task_boundary-004",
+          "language" : "en",
+          "text" : "For the record, Prepare the acceptance screenshots now and send it to the project lead; no later follow-up is needed."
+        },
+        {
+          "confidence" : 0.8105,
+          "family" : "fresh_follow_up",
+          "id" : "random-20260827-en-fresh_follow_up-018",
+          "language" : "en",
+          "text" : "After the current item closes, return to the landlord and track the delivery date."
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "task",
+      "metrics" : {
+        "accuracy" : 0.9458,
+        "f1" : 0.9116,
+        "falseNegative" : 26,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.8375,
+        "total" : 480,
+        "trueNegative" : 320,
+        "truePositive" : 134
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9167,
+          "f1" : 0.8571,
+          "falseNegative" : 20,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.75,
+          "total" : 240,
+          "trueNegative" : 160,
+          "truePositive" : 60
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.975,
+          "f1" : 0.961,
+          "falseNegative" : 6,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.925,
+          "total" : 240,
+          "trueNegative" : 160,
+          "truePositive" : 74
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9688,
+          "f1" : 0.955,
+          "falseNegative" : 1,
+          "falsePositive" : 14,
+          "precision" : 0.9191,
+          "recall" : 0.9938,
+          "total" : 480,
+          "trueNegative" : 306,
+          "truePositive" : 159
+        },
+        "threshold" : 0.31
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.975,
+          "f1" : 0.9623,
+          "falseNegative" : 7,
+          "falsePositive" : 5,
+          "precision" : 0.9684,
+          "recall" : 0.9563,
+          "total" : 480,
+          "trueNegative" : 315,
+          "truePositive" : 153
+        },
+        "threshold" : 0.57
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.975,
+            "f1" : 0.9639,
+            "falseNegative" : 0,
+            "falsePositive" : 6,
+            "precision" : 0.9302,
+            "recall" : 1,
+            "total" : 240,
+            "trueNegative" : 154,
+            "truePositive" : 80
+          },
+          "threshold" : 0.39
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9667,
+            "f1" : 0.9524,
+            "falseNegative" : 0,
+            "falsePositive" : 8,
+            "precision" : 0.9091,
+            "recall" : 1,
+            "total" : 240,
+            "trueNegative" : 152,
+            "truePositive" : 80
+          },
+          "threshold" : 0.21
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9792,
+            "f1" : 0.9686,
+            "falseNegative" : 3,
+            "falsePositive" : 2,
+            "precision" : 0.9747,
+            "recall" : 0.9625,
+            "total" : 240,
+            "trueNegative" : 158,
+            "truePositive" : 77
+          },
+          "threshold" : 0.58
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.975,
+            "f1" : 0.962,
+            "falseNegative" : 4,
+            "falsePositive" : 2,
+            "precision" : 0.9744,
+            "recall" : 0.95,
+            "total" : 240,
+            "trueNegative" : 158,
+            "truePositive" : 76
+          },
+          "threshold" : 0.57
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.4372,
+          "family" : "fresh_task_question",
+          "id" : "random-20260827-en-fresh_task_question-020",
+          "language" : "en",
+          "text" : "The main point is this: Can you close out the retro summary before the next review and update the project lead?"
+        },
+        {
+          "confidence" : 0.3568,
+          "family" : "fresh_task_question",
+          "id" : "random-20260827-en-fresh_task_question-012",
+          "language" : "en",
+          "text" : "The main point is this: Can you close out the delivery checklist before lunch and update Finance?"
+        },
+        {
+          "confidence" : 0.2062,
+          "family" : "fresh_complaint_request",
+          "id" : "random-20260827-en-fresh_complaint_request-013",
+          "language" : "en",
+          "text" : "Also, tracking has not moved for five days has reached the point where all work is blocked. When will you actually resolve it?"
+        },
+        {
+          "confidence" : 0.0877,
+          "family" : "fresh_complaint_request",
+          "id" : "random-20260827-en-fresh_complaint_request-012",
+          "language" : "en",
+          "text" : "Also, tracking has not moved for five days has reached the point where delivery is now delayed. When will you actually resolve it?"
+        },
+        {
+          "confidence" : 0.0402,
+          "family" : "fresh_complaint_request",
+          "id" : "random-20260827-en-fresh_complaint_request-003",
+          "language" : "en",
+          "text" : "For context, the page stays blank has reached the point where my family cannot receive the item. When will you actually resolve it?"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9546,
+          "family" : "fresh_task_assignment",
+          "id" : "random-20260827-zh-Hans-fresh_task_assignment-002",
+          "language" : "zh-Hans",
+          "text" : "补充一下，运营把复盘摘要分给你处理，完成时间不能晚于下次评审前。"
+        },
+        {
+          "confidence" : 0.8949,
+          "family" : "fresh_task_assignment",
+          "id" : "random-20260827-zh-Hans-fresh_task_assignment-018",
+          "language" : "zh-Hans",
+          "text" : "顺便提一句，供应商把预算备注分给你处理，完成时间不能晚于下次评审前。"
+        },
+        {
+          "confidence" : 0.8927,
+          "family" : "fresh_task_assignment",
+          "id" : "random-20260827-zh-Hans-fresh_task_assignment-017",
+          "language" : "zh-Hans",
+          "text" : "供应商把交付清单分给你处理，完成时间不能晚于月底前。"
+        },
+        {
+          "confidence" : 0.8816,
+          "family" : "fresh_task_assignment",
+          "id" : "random-20260827-zh-Hans-fresh_task_assignment-019",
+          "language" : "zh-Hans",
+          "text" : "还有一件事，客服团队把验收截图分给你处理，完成时间不能晚于下次评审前。"
+        },
+        {
+          "confidence" : 0.8141,
+          "family" : "fresh_task_assignment",
+          "id" : "random-20260827-zh-Hans-fresh_task_assignment-011",
+          "language" : "zh-Hans",
+          "text" : "刚想到，设计同学把复盘摘要分给你处理，完成时间不能晚于午休前。"
+        }
+      ],
+      "id" : "question",
+      "metrics" : {
+        "accuracy" : 0.9646,
+        "f1" : 0.8931,
+        "falseNegative" : 9,
+        "falsePositive" : 8,
+        "precision" : 0.8987,
+        "recall" : 0.8875,
+        "total" : 480,
+        "trueNegative" : 392,
+        "truePositive" : 71
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9625,
+          "f1" : 0.8732,
+          "falseNegative" : 9,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.775,
+          "total" : 240,
+          "trueNegative" : 200,
+          "truePositive" : 31
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9667,
+          "f1" : 0.9091,
+          "falseNegative" : 0,
+          "falsePositive" : 8,
+          "precision" : 0.8333,
+          "recall" : 1,
+          "total" : 240,
+          "trueNegative" : 192,
+          "truePositive" : 40
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9667,
+          "f1" : 0.8987,
+          "falseNegative" : 9,
+          "falsePositive" : 7,
+          "precision" : 0.9103,
+          "recall" : 0.8875,
+          "total" : 480,
+          "trueNegative" : 393,
+          "truePositive" : 71
+        },
+        "threshold" : 0.64
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9354,
+          "f1" : 0.7634,
+          "falseNegative" : 30,
+          "falsePositive" : 1,
+          "precision" : 0.9804,
+          "recall" : 0.625,
+          "total" : 480,
+          "trueNegative" : 399,
+          "truePositive" : 50
+        },
+        "threshold" : 0.9
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9667,
+            "f1" : 0.8974,
+            "falseNegative" : 5,
+            "falsePositive" : 3,
+            "precision" : 0.9211,
+            "recall" : 0.875,
+            "total" : 240,
+            "trueNegative" : 197,
+            "truePositive" : 35
+          },
+          "threshold" : 0.08
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9583,
+            "f1" : 0.8684,
+            "falseNegative" : 7,
+            "falsePositive" : 3,
+            "precision" : 0.9167,
+            "recall" : 0.825,
+            "total" : 240,
+            "trueNegative" : 197,
+            "truePositive" : 33
+          },
+          "threshold" : 0.89
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.975,
+            "f1" : 0.9189,
+            "falseNegative" : 6,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.85,
+            "total" : 240,
+            "trueNegative" : 200,
+            "truePositive" : 34
+          },
+          "threshold" : 0.15
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9583,
+            "f1" : 0.8611,
+            "falseNegative" : 9,
+            "falsePositive" : 1,
+            "precision" : 0.9688,
+            "recall" : 0.775,
+            "total" : 240,
+            "trueNegative" : 199,
+            "truePositive" : 31
+          },
+          "threshold" : 0.9
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "invitation",
+      "metrics" : {
+        "accuracy" : 1,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 0,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 480,
+        "trueNegative" : 480,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 240,
+          "trueNegative" : 240,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 240,
+          "trueNegative" : 240,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.8393,
+          "family" : "fresh_complaint",
+          "id" : "random-20260827-en-fresh_complaint-005",
+          "language" : "en",
+          "text" : "By the way, This was promised for today, yet the attachment never opens, and now I cannot continue."
+        },
+        {
+          "confidence" : 0.8294,
+          "family" : "fresh_complaint_request",
+          "id" : "random-20260827-en-fresh_complaint_request-003",
+          "language" : "en",
+          "text" : "For context, the page stays blank has reached the point where my family cannot receive the item. When will you actually resolve it?"
+        },
+        {
+          "confidence" : 0.8096,
+          "family" : "fresh_complaint_request",
+          "id" : "random-20260827-zh-Hans-fresh_complaint_request-015",
+          "language" : "zh-Hans",
+          "text" : "顺便提一句，付款结果重复扣款已经影响到工作完全卡住，你们准备哪天真正解决？"
+        },
+        {
+          "confidence" : 0.8071,
+          "family" : "fresh_complaint",
+          "id" : "random-20260827-en-fresh_complaint-003",
+          "language" : "en",
+          "text" : "A quick note: The same failure has happened a third time: the account is locked again, so delivery is now delayed."
+        },
+        {
+          "confidence" : 0.807,
+          "family" : "fresh_complaint",
+          "id" : "random-20260827-en-fresh_complaint-014",
+          "language" : "en",
+          "text" : "By the way, The same failure has happened a third time: the attachment never opens, so I cannot continue."
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "complaint",
+      "metrics" : {
+        "accuracy" : 0.9333,
+        "f1" : 0.75,
+        "falseNegative" : 32,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.6,
+        "total" : 480,
+        "trueNegative" : 400,
+        "truePositive" : 48
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9083,
+          "f1" : 0.6207,
+          "falseNegative" : 22,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.45,
+          "total" : 240,
+          "trueNegative" : 200,
+          "truePositive" : 18
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9583,
+          "f1" : 0.8571,
+          "falseNegative" : 10,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.75,
+          "total" : 240,
+          "trueNegative" : 200,
+          "truePositive" : 30
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9688,
+          "f1" : 0.9068,
+          "falseNegative" : 7,
+          "falsePositive" : 8,
+          "precision" : 0.9012,
+          "recall" : 0.9125,
+          "total" : 480,
+          "trueNegative" : 392,
+          "truePositive" : 73
+        },
+        "threshold" : 0.41
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.975,
+          "f1" : 0.9221,
+          "falseNegative" : 9,
+          "falsePositive" : 3,
+          "precision" : 0.9595,
+          "recall" : 0.8875,
+          "total" : 480,
+          "trueNegative" : 397,
+          "truePositive" : 71
+        },
+        "threshold" : 0.49
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9583,
+            "f1" : 0.8684,
+            "falseNegative" : 7,
+            "falsePositive" : 3,
+            "precision" : 0.9167,
+            "recall" : 0.825,
+            "total" : 240,
+            "trueNegative" : 197,
+            "truePositive" : 33
+          },
+          "threshold" : 0.49
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9917,
+            "f1" : 0.9756,
+            "falseNegative" : 0,
+            "falsePositive" : 2,
+            "precision" : 0.9524,
+            "recall" : 1,
+            "total" : 240,
+            "trueNegative" : 198,
+            "truePositive" : 40
+          },
+          "threshold" : 0.25
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9458,
+            "f1" : 0.8116,
+            "falseNegative" : 12,
+            "falsePositive" : 1,
+            "precision" : 0.9655,
+            "recall" : 0.7,
+            "total" : 240,
+            "trueNegative" : 199,
+            "truePositive" : 28
+          },
+          "threshold" : 0.65
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9917,
+            "f1" : 0.9756,
+            "falseNegative" : 0,
+            "falsePositive" : 2,
+            "precision" : 0.9524,
+            "recall" : 1,
+            "total" : 240,
+            "trueNegative" : 198,
+            "truePositive" : 40
+          },
+          "threshold" : 0.25
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "scheduleNegotiation",
+      "metrics" : {
+        "accuracy" : 1,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 0,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 480,
+        "trueNegative" : 480,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 240,
+          "trueNegative" : 240,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 240,
+          "trueNegative" : 240,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.6682,
+          "family" : "fresh_confirmation",
+          "id" : "random-20260827-en-fresh_confirmation-002",
+          "language" : "en",
+          "text" : "The main point is this: The decision is now official: use the second quote for document archiving."
+        },
+        {
+          "confidence" : 0.6681,
+          "family" : "fresh_confirmation",
+          "id" : "random-20260827-en-fresh_confirmation-004",
+          "language" : "en",
+          "text" : "By the way, The decision is now official: use quarterly billing for support coverage."
+        },
+        {
+          "confidence" : 0.6552,
+          "family" : "fresh_confirmation",
+          "id" : "random-20260827-en-fresh_confirmation-012",
+          "language" : "en",
+          "text" : "For the record, The review is over; my final selection is the offline resolution, and the alternatives are closed."
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "confirmationDecision",
+      "metrics" : {
+        "accuracy" : 0.9938,
+        "f1" : 0.961,
+        "falseNegative" : 3,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.925,
+        "total" : 480,
+        "trueNegative" : 440,
+        "truePositive" : 37
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9875,
+          "f1" : 0.9189,
+          "falseNegative" : 3,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.85,
+          "total" : 240,
+          "trueNegative" : 220,
+          "truePositive" : 17
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 240,
+          "trueNegative" : 220,
+          "truePositive" : 20
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 480,
+          "trueNegative" : 440,
+          "truePositive" : 40
+        },
+        "threshold" : 0.26
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 480,
+          "trueNegative" : 440,
+          "truePositive" : 40
+        },
+        "threshold" : 0.26
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 240,
+            "trueNegative" : 220,
+            "truePositive" : 20
+          },
+          "threshold" : 0.17
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 240,
+            "trueNegative" : 220,
+            "truePositive" : 20
+          },
+          "threshold" : 0.26
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 240,
+            "trueNegative" : 220,
+            "truePositive" : 20
+          },
+          "threshold" : 0.17
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 240,
+            "trueNegative" : 220,
+            "truePositive" : 20
+          },
+          "threshold" : 0.26
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7283,
+          "family" : "fresh_follow_up",
+          "id" : "random-20260827-en-fresh_follow_up-015",
+          "language" : "en",
+          "text" : "Also, Two days after the checkup ends, check with the doctor again about the missing documents and record the outcome."
+        },
+        {
+          "confidence" : 0.7159,
+          "family" : "fresh_follow_up",
+          "id" : "random-20260827-en-fresh_follow_up-016",
+          "language" : "en",
+          "text" : "For context, After the current item closes, return to the landlord and track the missing documents."
+        },
+        {
+          "confidence" : 0.7159,
+          "family" : "fresh_follow_up",
+          "id" : "random-20260827-en-fresh_follow_up-006",
+          "language" : "en",
+          "text" : "In short, After the current item closes, return to the warehouse lead and track the missing documents."
+        },
+        {
+          "confidence" : 0.6981,
+          "family" : "fresh_follow_up",
+          "id" : "random-20260827-en-fresh_follow_up-008",
+          "language" : "en",
+          "text" : "Two days after the contract is signed, check with the recruiter again about resolution progress and record the outcome."
+        },
+        {
+          "confidence" : 0.6249,
+          "family" : "fresh_follow_up",
+          "id" : "random-20260827-en-fresh_follow_up-007",
+          "language" : "en",
+          "text" : "For context, Two days after the contract is signed, check with the doctor again about the missing documents and record the outcome."
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9002,
+          "family" : "fresh_plain_task_boundary",
+          "id" : "random-20260827-zh-Hans-fresh_plain_task_boundary-016",
+          "language" : "zh-Hans",
+          "text" : "单独记一下，一次性完成复盘摘要即可，交给供应商后任务结束。"
+        },
+        {
+          "confidence" : 0.861,
+          "family" : "fresh_plain_task_boundary",
+          "id" : "random-20260827-zh-Hans-fresh_plain_task_boundary-012",
+          "language" : "zh-Hans",
+          "text" : "一次性完成验收截图即可，交给设计同学后任务结束。"
+        },
+        {
+          "confidence" : 0.8199,
+          "family" : "fresh_plain_task_boundary",
+          "id" : "random-20260827-zh-Hans-fresh_plain_task_boundary-007",
+          "language" : "zh-Hans",
+          "text" : "先说重点，一次性完成预算备注即可，交给供应商后任务结束。"
+        },
+        {
+          "confidence" : 0.8123,
+          "family" : "fresh_plain_task_boundary",
+          "id" : "random-20260827-zh-Hans-fresh_plain_task_boundary-010",
+          "language" : "zh-Hans",
+          "text" : "补充一下，一次性完成预算备注即可，交给财务后任务结束。"
+        },
+        {
+          "confidence" : 0.75,
+          "family" : "fresh_plain_task_boundary",
+          "id" : "random-20260827-zh-Hans-fresh_plain_task_boundary-011",
+          "language" : "zh-Hans",
+          "text" : "单独记一下，一次性完成测试结论即可，交给运营后任务结束。"
+        }
+      ],
+      "id" : "followUpReminder",
+      "metrics" : {
+        "accuracy" : 0.9792,
+        "f1" : 0.9375,
+        "falseNegative" : 5,
+        "falsePositive" : 5,
+        "precision" : 0.9375,
+        "recall" : 0.9375,
+        "total" : 480,
+        "trueNegative" : 395,
+        "truePositive" : 75
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9792,
+          "f1" : 0.9333,
+          "falseNegative" : 5,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.875,
+          "total" : 240,
+          "trueNegative" : 200,
+          "truePositive" : 35
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9792,
+          "f1" : 0.9412,
+          "falseNegative" : 0,
+          "falsePositive" : 5,
+          "precision" : 0.8889,
+          "recall" : 1,
+          "total" : 240,
+          "trueNegative" : 195,
+          "truePositive" : 40
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9833,
+          "f1" : 0.9518,
+          "falseNegative" : 1,
+          "falsePositive" : 7,
+          "precision" : 0.9186,
+          "recall" : 0.9875,
+          "total" : 480,
+          "trueNegative" : 393,
+          "truePositive" : 79
+        },
+        "threshold" : 0.64
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9688,
+          "f1" : 0.8993,
+          "falseNegative" : 13,
+          "falsePositive" : 2,
+          "precision" : 0.971,
+          "recall" : 0.8375,
+          "total" : 480,
+          "trueNegative" : 398,
+          "truePositive" : 67
+        },
+        "threshold" : 0.82
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9875,
+            "f1" : 0.9639,
+            "falseNegative" : 0,
+            "falsePositive" : 3,
+            "precision" : 0.9302,
+            "recall" : 1,
+            "total" : 240,
+            "trueNegative" : 197,
+            "truePositive" : 40
+          },
+          "threshold" : 0.46
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9833,
+            "f1" : 0.9524,
+            "falseNegative" : 0,
+            "falsePositive" : 4,
+            "precision" : 0.9091,
+            "recall" : 1,
+            "total" : 240,
+            "trueNegative" : 196,
+            "truePositive" : 40
+          },
+          "threshold" : 0.76
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9917,
+            "f1" : 0.975,
+            "falseNegative" : 1,
+            "falsePositive" : 1,
+            "precision" : 0.975,
+            "recall" : 0.975,
+            "total" : 240,
+            "trueNegative" : 199,
+            "truePositive" : 39
+          },
+          "threshold" : 0.64
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9917,
+            "f1" : 0.975,
+            "falseNegative" : 1,
+            "falsePositive" : 1,
+            "precision" : 0.975,
+            "recall" : 0.975,
+            "total" : 240,
+            "trueNegative" : 199,
+            "truePositive" : 39
+          },
+          "threshold" : 0.87
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7416,
+          "family" : "fresh_follow_up",
+          "id" : "random-20260827-zh-Hans-fresh_follow_up-020",
+          "language" : "zh-Hans",
+          "text" : "先说重点，等合同盖章满两天后，再找招聘方核实补充材料并记录结果。"
+        },
+        {
+          "confidence" : 0.7122,
+          "family" : "fresh_follow_up",
+          "id" : "random-20260827-en-fresh_follow_up-012",
+          "language" : "en",
+          "text" : "Just to add, Two days after the patch ships, check with the warehouse lead again about payment status and record the outcome."
+        },
+        {
+          "confidence" : 0.7031,
+          "family" : "fresh_confirmation",
+          "id" : "random-20260827-en-fresh_confirmation-020",
+          "language" : "en",
+          "text" : "Also, The decision is now official: use the second quote for document archiving."
+        },
+        {
+          "confidence" : 0.6779,
+          "family" : "fresh_plain_task_boundary",
+          "id" : "random-20260827-en-fresh_plain_task_boundary-017",
+          "language" : "en",
+          "text" : "The main point is this: Prepare the signature page now and send it to Design; no later follow-up is needed."
+        },
+        {
+          "confidence" : 0.6164,
+          "family" : "fresh_plain_task_boundary",
+          "id" : "random-20260827-en-fresh_plain_task_boundary-019",
+          "language" : "en",
+          "text" : "For context, Prepare the delivery checklist now and send it to Finance; no later follow-up is needed."
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9994,
+          "family" : "fresh_personal_reminder",
+          "id" : "random-20260827-zh-Hans-fresh_personal_reminder-010",
+          "language" : "zh-Hans",
+          "text" : "刚想到，个人行动项：复诊结束以后再次检查下一步安排。"
+        },
+        {
+          "confidence" : 0.9989,
+          "family" : "fresh_personal_reminder",
+          "id" : "random-20260827-zh-Hans-fresh_personal_reminder-004",
+          "language" : "zh-Hans",
+          "text" : "刚想到，个人行动项：补丁上线以后再次检查下一步安排。"
+        },
+        {
+          "confidence" : 0.9775,
+          "family" : "fresh_personal_reminder",
+          "id" : "random-20260827-zh-Hans-fresh_personal_reminder-019",
+          "language" : "zh-Hans",
+          "text" : "简单说，个人行动项：复诊结束以后再次检查处理进度。"
+        },
+        {
+          "confidence" : 0.9715,
+          "family" : "fresh_personal_reminder",
+          "id" : "random-20260827-zh-Hans-fresh_personal_reminder-005",
+          "language" : "zh-Hans",
+          "text" : "顺便提一句，个人行动项：复诊结束以后再次检查处理进度。"
+        },
+        {
+          "confidence" : 0.9669,
+          "family" : "fresh_personal_reminder",
+          "id" : "random-20260827-zh-Hans-fresh_personal_reminder-007",
+          "language" : "zh-Hans",
+          "text" : "简单说，个人行动项：合同盖章以后再次检查处理进度。"
+        }
+      ],
+      "id" : "replyableMessage",
+      "metrics" : {
+        "accuracy" : 0.9354,
+        "f1" : 0.9437,
+        "falseNegative" : 20,
+        "falsePositive" : 11,
+        "precision" : 0.9594,
+        "recall" : 0.9286,
+        "total" : 480,
+        "trueNegative" : 189,
+        "truePositive" : 260
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9375,
+          "f1" : 0.9438,
+          "falseNegative" : 14,
+          "falsePositive" : 1,
+          "precision" : 0.9921,
+          "recall" : 0.9,
+          "total" : 240,
+          "trueNegative" : 99,
+          "truePositive" : 126
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9333,
+          "f1" : 0.9437,
+          "falseNegative" : 6,
+          "falsePositive" : 10,
+          "precision" : 0.9306,
+          "recall" : 0.9571,
+          "total" : 240,
+          "trueNegative" : 90,
+          "truePositive" : 134
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9333,
+          "f1" : 0.9456,
+          "falseNegative" : 2,
+          "falsePositive" : 30,
+          "precision" : 0.9026,
+          "recall" : 0.9929,
+          "total" : 480,
+          "trueNegative" : 170,
+          "truePositive" : 278
+        },
+        "threshold" : 0.19
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9521,
+          "f1" : 0.9591,
+          "falseNegative" : 10,
+          "falsePositive" : 13,
+          "precision" : 0.9541,
+          "recall" : 0.9643,
+          "total" : 480,
+          "trueNegative" : 187,
+          "truePositive" : 270
+        },
+        "threshold" : 0.53
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.95,
+            "f1" : 0.9583,
+            "falseNegative" : 2,
+            "falsePositive" : 10,
+            "precision" : 0.9324,
+            "recall" : 0.9857,
+            "total" : 240,
+            "trueNegative" : 90,
+            "truePositive" : 138
+          },
+          "threshold" : 0.19
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9375,
+            "f1" : 0.9492,
+            "falseNegative" : 0,
+            "falsePositive" : 15,
+            "precision" : 0.9032,
+            "recall" : 1,
+            "total" : 240,
+            "trueNegative" : 85,
+            "truePositive" : 140
+          },
+          "threshold" : 0.27
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9583,
+            "f1" : 0.9643,
+            "falseNegative" : 5,
+            "falsePositive" : 5,
+            "precision" : 0.9643,
+            "recall" : 0.9643,
+            "total" : 240,
+            "trueNegative" : 95,
+            "truePositive" : 135
+          },
+          "threshold" : 0.37
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9167,
+            "f1" : 0.9265,
+            "falseNegative" : 14,
+            "falsePositive" : 6,
+            "precision" : 0.9545,
+            "recall" : 0.9,
+            "total" : 240,
+            "trueNegative" : 94,
+            "truePositive" : 126
+          },
+          "threshold" : 0.92
+        }
+      }
+    }
+  ],
+  "corpusRecordCount" : 480,
+  "exactTrainingOverlapCount" : 0,
+  "familyCount" : 12,
+  "generatedAt" : "2026-08-27T01:15:12Z",
+  "languageCounts" : {
+    "en" : 240,
+    "zh-Hans" : 240
+  },
+  "manifestSchemaVersion" : 2,
+  "seed" : 20260827,
+  "sentiment" : {
+    "accuracy" : 0.8563,
+    "correct" : 411,
+    "macroF1" : 0.5702,
+    "perLabelF1" : {
+      "negative" : 0.7614,
+      "neutral" : 0.9492,
+      "positive" : 0
+    },
+    "total" : 480,
+    "unknown" : 55,
+    "unknownRate" : 0.1146
+  }
+}

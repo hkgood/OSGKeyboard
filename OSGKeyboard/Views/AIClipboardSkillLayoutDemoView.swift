@@ -46,7 +46,7 @@ struct AIClipboardSkillLayoutDemoView: View {
 
     private var controls: some View {
         VStack(spacing: 10) {
-            Text("技能布局预览")
+            Text(language == .en ? "Skill layout preview" : "技能布局预览")
                 .font(.headline)
                 .foregroundStyle(OSGColor.fixedLightContent)
             HStack(spacing: 16) {
@@ -56,7 +56,7 @@ struct AIClipboardSkillLayoutDemoView: View {
                     Image(systemName: "minus.circle.fill")
                         .font(.system(size: 28))
                 }
-                Text("\(count) 个")
+                Text(language == .en ? "\(count)" : "\(count) 个")
                     .font(.title2.monospacedDigit().weight(.semibold))
                     .foregroundStyle(OSGColor.fixedLightContent)
                     .frame(minWidth: 72)

@@ -1,0 +1,2265 @@
+{
+  "binaryMacro" : {
+    "accuracy" : 0.8704,
+    "f1" : 0.2734,
+    "precision" : 0.3517,
+    "recall" : 0.3825
+  },
+  "binaryMacroByLanguage" : {
+    "en" : {
+      "accuracy" : 0.8826,
+      "f1" : 0.3264,
+      "precision" : 0.3711,
+      "recall" : 0.4101
+    },
+    "zh-Hans" : {
+      "accuracy" : 0.8646,
+      "f1" : 0.2477,
+      "precision" : 0.4067,
+      "recall" : 0.3277
+    }
+  },
+  "classifiers" : [
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 1,
+          "family" : "online_massive_intent_33",
+          "id" : "comprehensive-massive-zh-CN-16401",
+          "language" : "zh-Hans",
+          "sourceDataset" : "AmazonScience/MASSIVE zh-CN test",
+          "text" : "发一封电子邮件给韩梅梅今天你在干嘛"
+        },
+        {
+          "confidence" : 1,
+          "family" : "online_massive_intent_47",
+          "id" : "comprehensive-massive-en-US-15655",
+          "language" : "en",
+          "sourceDataset" : "AmazonScience/MASSIVE en-US test",
+          "text" : "tweet to google costumer service my new nexus phone stop working help please"
+        },
+        {
+          "confidence" : 1,
+          "family" : "online_massive_intent_33",
+          "id" : "comprehensive-massive-zh-CN-16314",
+          "language" : "zh-Hans",
+          "sourceDataset" : "AmazonScience/MASSIVE zh-CN test",
+          "text" : "给梅梅发一封电子邮件"
+        },
+        {
+          "confidence" : 1,
+          "family" : "online_massive_intent_15",
+          "id" : "comprehensive-massive-en-US-16781",
+          "language" : "en",
+          "sourceDataset" : "AmazonScience/MASSIVE en-US test",
+          "text" : "add this email address to my contacts and send an email to"
+        },
+        {
+          "confidence" : 0.9999,
+          "family" : "online_massive_intent_47",
+          "id" : "comprehensive-massive-en-US-15456",
+          "language" : "en",
+          "sourceDataset" : "AmazonScience/MASSIVE en-US test",
+          "text" : "i want to send a tweet to united airlines i'm angry you lost my bags"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 1,
+          "family" : "online_massive_intent_1",
+          "id" : "comprehensive-massive-en-US-3050",
+          "language" : "en",
+          "sourceDataset" : "AmazonScience/MASSIVE en-US test",
+          "text" : "change my light color to blue and please turn off the kitchen light"
+        },
+        {
+          "confidence" : 1,
+          "family" : "online_enron_intent_neg",
+          "id" : "comprehensive-enron-intent_neg-1133",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "If you'd like to turn this off, please visit your AppShopper profile to make changes to your email"
+        },
+        {
+          "confidence" : 1,
+          "family" : "online_enron_intent_neg",
+          "id" : "comprehensive-enron-intent_neg-1088",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "If you wish to cancel your subscription, please call the phone number below before your trial membership expires and your card will not be charged."
+        },
+        {
+          "confidence" : 1,
+          "family" : "online_enron_intent_neg",
+          "id" : "comprehensive-enron-intent_neg-1514",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "Please don't reply to this email, if you need to reach us please email customer service by clicking on this link:"
+        },
+        {
+          "confidence" : 1,
+          "family" : "online_massive_intent_56",
+          "id" : "comprehensive-massive-en-US-3196",
+          "language" : "en",
+          "sourceDataset" : "AmazonScience/MASSIVE en-US test",
+          "text" : "hey olly can you please make me a creamy coffee"
+        }
+      ],
+      "id" : "task",
+      "metrics" : {
+        "accuracy" : 0.8988,
+        "f1" : 0.2604,
+        "falseNegative" : 1044,
+        "falsePositive" : 3126,
+        "precision" : 0.1902,
+        "recall" : 0.4128,
+        "total" : 41195,
+        "trueNegative" : 36291,
+        "truePositive" : 734
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.8737,
+          "f1" : 0.354,
+          "falseNegative" : 663,
+          "falsePositive" : 1001,
+          "precision" : 0.313,
+          "recall" : 0.4075,
+          "total" : 13176,
+          "trueNegative" : 11056,
+          "truePositive" : 456
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9106,
+          "f1" : 0.1816,
+          "falseNegative" : 381,
+          "falsePositive" : 2125,
+          "precision" : 0.1157,
+          "recall" : 0.4219,
+          "total" : 28019,
+          "trueNegative" : 25235,
+          "truePositive" : 278
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US test" : {
+          "accuracy" : 0.7728,
+          "f1" : 0.4239,
+          "falseNegative" : 293,
+          "falsePositive" : 381,
+          "precision" : 0.3943,
+          "recall" : 0.4584,
+          "total" : 2967,
+          "trueNegative" : 2045,
+          "truePositive" : 248
+        },
+        "AmazonScience/MASSIVE zh-CN test" : {
+          "accuracy" : 0.7923,
+          "f1" : 0.4559,
+          "falseNegative" : 230,
+          "falsePositive" : 362,
+          "precision" : 0.4066,
+          "recall" : 0.5188,
+          "total" : 2850,
+          "trueNegative" : 2010,
+          "truePositive" : 248
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 0.836,
+          "f1" : 0.3881,
+          "falseNegative" : 40,
+          "falsePositive" : 1,
+          "precision" : 0.9286,
+          "recall" : 0.2453,
+          "total" : 250,
+          "trueNegative" : 196,
+          "truePositive" : 13
+        },
+        "CPED test split" : {
+          "accuracy" : 0.9241,
+          "f1" : 0.0306,
+          "falseNegative" : 138,
+          "falsePositive" : 1763,
+          "precision" : 0.0167,
+          "recall" : 0.1786,
+          "total" : 25049,
+          "trueNegative" : 23118,
+          "truePositive" : 30
+        },
+        "Google Research GoEmotions test" : {
+          "accuracy" : 0.9688,
+          "f1" : 0.1058,
+          "falseNegative" : 40,
+          "falsePositive" : 129,
+          "precision" : 0.0719,
+          "recall" : 0.2,
+          "total" : 5418,
+          "trueNegative" : 5239,
+          "truePositive" : 10
+        },
+        "Meituan-Dianping/ASAP test" : {
+          "accuracy" : 0.8917,
+          "f1" : 0,
+          "falseNegative" : 13,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 120,
+          "trueNegative" : 107,
+          "truePositive" : 0
+        },
+        "Sulak2020 GitHub issues multi-repo dataset" : {
+          "accuracy" : 0.8994,
+          "f1" : 0,
+          "falseNegative" : 90,
+          "falsePositive" : 11,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1004,
+          "trueNegative" : 903,
+          "truePositive" : 0
+        },
+        "Verified Enron Intent Dataset" : {
+          "accuracy" : 0.808,
+          "f1" : 0.3527,
+          "falseNegative" : 200,
+          "falsePositive" : 479,
+          "precision" : 0.2786,
+          "recall" : 0.4805,
+          "total" : 3537,
+          "trueNegative" : 2673,
+          "truePositive" : 185
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.99,
+          "family" : "online_goemotions_reddit",
+          "id" : "comprehensive-goemotions-eejd7kz",
+          "language" : "en",
+          "sourceDataset" : "Google Research GoEmotions test",
+          "text" : "Are you okay?"
+        },
+        {
+          "confidence" : 0.99,
+          "family" : "online_cped_question",
+          "id" : "comprehensive-cped-34_349_007",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "可不可以我们一起喝个茶"
+        },
+        {
+          "confidence" : 0.99,
+          "family" : "online_massive_intent_19",
+          "id" : "comprehensive-massive-en-US-11700",
+          "language" : "en",
+          "sourceDataset" : "AmazonScience/MASSIVE en-US test",
+          "text" : "show me reviews of my nearest location food court"
+        },
+        {
+          "confidence" : 0.9899,
+          "family" : "online_cped_question",
+          "id" : "comprehensive-cped-37_186_015",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "但是我怎么就这么不信"
+        },
+        {
+          "confidence" : 0.9899,
+          "family" : "online_cped_question",
+          "id" : "comprehensive-cped-27_360_001",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "你们想要怎么样"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 1,
+          "family" : "online_enron_intent_neg",
+          "id" : "comprehensive-enron-intent_neg-1060",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "If you think there’s things to improve leave us 3 or 4 stars and tell us what or if you think the app is rubbish leave us 1 or 2 stars and let us know why."
+        },
+        {
+          "confidence" : 1,
+          "family" : "online_goemotions_reddit",
+          "id" : "comprehensive-goemotions-edetgnk",
+          "language" : "en",
+          "sourceDataset" : "Google Research GoEmotions test",
+          "text" : "But should I? And who would I report that too? since none of us 3 are in the same country"
+        },
+        {
+          "confidence" : 1,
+          "family" : "online_enron_intent_pos",
+          "id" : "comprehensive-enron-intent_pos-293",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "Give me a ring if you have a few minutes and I'll give you the update on what's going on up here (dial 87-7449 in case you've forgotten how to dial us from world headquarters)."
+        },
+        {
+          "confidence" : 1,
+          "family" : "online_enron_intent_neg",
+          "id" : "comprehensive-enron-intent_neg-2403",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "—NickyEven if you already enjoy reading your Bible, did you know that some of our most popular Bibles…can also read to you? Listening to the Bible lets you experience God’s Word while you’re doing other things—driving, exercising, even reading along!"
+        },
+        {
+          "confidence" : 1,
+          "family" : "online_enron_intent_neg",
+          "id" : "comprehensive-enron-intent_neg-989",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "If you have any questions or need any assistance at implementing any of the tools please feel free to contact us in Customer Support at"
+        }
+      ],
+      "id" : "question",
+      "metrics" : {
+        "accuracy" : 0.7787,
+        "f1" : 0.2083,
+        "falseNegative" : 8641,
+        "falsePositive" : 476,
+        "precision" : 0.7158,
+        "recall" : 0.1218,
+        "total" : 41195,
+        "trueNegative" : 30879,
+        "truePositive" : 1199
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.8429,
+          "f1" : 0.4363,
+          "falseNegative" : 1855,
+          "falsePositive" : 215,
+          "precision" : 0.7884,
+          "recall" : 0.3016,
+          "total" : 13176,
+          "trueNegative" : 10305,
+          "truePositive" : 801
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.7485,
+          "f1" : 0.1015,
+          "falseNegative" : 6786,
+          "falsePositive" : 261,
+          "precision" : 0.6039,
+          "recall" : 0.0554,
+          "total" : 28019,
+          "trueNegative" : 20574,
+          "truePositive" : 398
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US test" : {
+          "accuracy" : 0.5902,
+          "f1" : 0.4051,
+          "falseNegative" : 1202,
+          "falsePositive" : 14,
+          "precision" : 0.9673,
+          "recall" : 0.2562,
+          "total" : 2967,
+          "trueNegative" : 1337,
+          "truePositive" : 414
+        },
+        "AmazonScience/MASSIVE zh-CN test" : {
+          "accuracy" : 0.5246,
+          "f1" : 0.2417,
+          "falseNegative" : 1346,
+          "falsePositive" : 9,
+          "precision" : 0.96,
+          "recall" : 0.1383,
+          "total" : 2850,
+          "trueNegative" : 1279,
+          "truePositive" : 216
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 0.892,
+          "f1" : 0,
+          "falseNegative" : 17,
+          "falsePositive" : 10,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 250,
+          "trueNegative" : 223,
+          "truePositive" : 0
+        },
+        "CPED test split" : {
+          "accuracy" : 0.774,
+          "f1" : 0.0582,
+          "falseNegative" : 5411,
+          "falsePositive" : 250,
+          "precision" : 0.4118,
+          "recall" : 0.0313,
+          "total" : 25049,
+          "trueNegative" : 19213,
+          "truePositive" : 175
+        },
+        "Google Research GoEmotions test" : {
+          "accuracy" : 0.9127,
+          "f1" : 0.3881,
+          "falseNegative" : 382,
+          "falsePositive" : 91,
+          "precision" : 0.6224,
+          "recall" : 0.282,
+          "total" : 5418,
+          "trueNegative" : 4795,
+          "truePositive" : 150
+        },
+        "Meituan-Dianping/ASAP test" : {
+          "accuracy" : 0.7417,
+          "f1" : 0.3111,
+          "falseNegative" : 29,
+          "falsePositive" : 2,
+          "precision" : 0.7778,
+          "recall" : 0.1944,
+          "total" : 120,
+          "trueNegative" : 82,
+          "truePositive" : 7
+        },
+        "Sulak2020 GitHub issues multi-repo dataset" : {
+          "accuracy" : 0.9452,
+          "f1" : 0.3373,
+          "falseNegative" : 42,
+          "falsePositive" : 13,
+          "precision" : 0.5185,
+          "recall" : 0.25,
+          "total" : 1004,
+          "trueNegative" : 935,
+          "truePositive" : 14
+        },
+        "Verified Enron Intent Dataset" : {
+          "accuracy" : 0.9155,
+          "f1" : 0.5987,
+          "falseNegative" : 212,
+          "falsePositive" : 87,
+          "precision" : 0.7194,
+          "recall" : 0.5126,
+          "total" : 3537,
+          "trueNegative" : 3015,
+          "truePositive" : 223
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7773,
+          "family" : "online_cped_statement-non-opinion",
+          "id" : "comprehensive-cped-29_206_005",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "我们可以采取B方案 昨天一起吃饭的关谷"
+        },
+        {
+          "confidence" : 0.7713,
+          "family" : "online_cped_statement-non-opinion",
+          "id" : "comprehensive-cped-29_282_010",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "我愿意陪你一起去"
+        },
+        {
+          "confidence" : 0.7479,
+          "family" : "online_cped_question",
+          "id" : "comprehensive-cped-27_343_013",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "你们要不要看"
+        },
+        {
+          "confidence" : 0.7473,
+          "family" : "online_cped_question",
+          "id" : "comprehensive-cped-28_168_002",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "你要不要再考虑一下背叛是大事"
+        },
+        {
+          "confidence" : 0.7456,
+          "family" : "online_cped_statement-opinion",
+          "id" : "comprehensive-cped-30_152_003",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "还有一起看春晚"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9939,
+          "family" : "online_cped_statement-non-opinion",
+          "id" : "comprehensive-cped-29_276_016",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "你要仔细想一想儿子"
+        },
+        {
+          "confidence" : 0.9895,
+          "family" : "online_cped_statement-opinion",
+          "id" : "comprehensive-cped-37_223_005",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "他要来参加"
+        },
+        {
+          "confidence" : 0.9889,
+          "family" : "online_cped_question",
+          "id" : "comprehensive-cped-28_151_004",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "你该不会想要拿去抄吧"
+        },
+        {
+          "confidence" : 0.9877,
+          "family" : "online_cped_statement-opinion",
+          "id" : "comprehensive-cped-27_182_022",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "要死我们一起死"
+        },
+        {
+          "confidence" : 0.987,
+          "family" : "online_cped_question",
+          "id" : "comprehensive-cped-30_269_007",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "你是想让我们全部重新来一遍吗"
+        }
+      ],
+      "id" : "invitation",
+      "metrics" : {
+        "accuracy" : 0.9699,
+        "f1" : 0.0747,
+        "falseNegative" : 84,
+        "falsePositive" : 1154,
+        "precision" : 0.0415,
+        "recall" : 0.3731,
+        "total" : 41195,
+        "trueNegative" : 39907,
+        "truePositive" : 50
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9809,
+          "f1" : 0.1127,
+          "falseNegative" : 45,
+          "falsePositive" : 207,
+          "precision" : 0.0717,
+          "recall" : 0.2623,
+          "total" : 13176,
+          "trueNegative" : 12908,
+          "truePositive" : 16
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9648,
+          "f1" : 0.0645,
+          "falseNegative" : 39,
+          "falsePositive" : 947,
+          "precision" : 0.0347,
+          "recall" : 0.4658,
+          "total" : 28019,
+          "trueNegative" : 26999,
+          "truePositive" : 34
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US test" : {
+          "accuracy" : 0.9811,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 56,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2967,
+          "trueNegative" : 2911,
+          "truePositive" : 0
+        },
+        "AmazonScience/MASSIVE zh-CN test" : {
+          "accuracy" : 0.9898,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 29,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2850,
+          "trueNegative" : 2821,
+          "truePositive" : 0
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 250,
+          "trueNegative" : 250,
+          "truePositive" : 0
+        },
+        "CPED test split" : {
+          "accuracy" : 0.9618,
+          "f1" : 0.0663,
+          "falseNegative" : 39,
+          "falsePositive" : 918,
+          "precision" : 0.0357,
+          "recall" : 0.4658,
+          "total" : 25049,
+          "trueNegative" : 24058,
+          "truePositive" : 34
+        },
+        "Google Research GoEmotions test" : {
+          "accuracy" : 0.9886,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 62,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 5418,
+          "trueNegative" : 5356,
+          "truePositive" : 0
+        },
+        "Meituan-Dianping/ASAP test" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 120,
+          "trueNegative" : 120,
+          "truePositive" : 0
+        },
+        "Sulak2020 GitHub issues multi-repo dataset" : {
+          "accuracy" : 0.989,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 11,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1004,
+          "trueNegative" : 993,
+          "truePositive" : 0
+        },
+        "Verified Enron Intent Dataset" : {
+          "accuracy" : 0.9652,
+          "f1" : 0.2065,
+          "falseNegative" : 45,
+          "falsePositive" : 78,
+          "precision" : 0.1702,
+          "recall" : 0.2623,
+          "total" : 3537,
+          "trueNegative" : 3398,
+          "truePositive" : 16
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9956,
+            "f1" : 0.0938,
+            "falseNegative" : 58,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.0492,
+            "total" : 13176,
+            "trueNegative" : 13115,
+            "truePositive" : 3
+          },
+          "threshold" : 0.98
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9956,
+            "f1" : 0.0938,
+            "falseNegative" : 58,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.0492,
+            "total" : 13176,
+            "trueNegative" : 13115,
+            "truePositive" : 3
+          },
+          "threshold" : 0.98
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.8074,
+          "family" : "online_goemotions_reddit",
+          "id" : "comprehensive-goemotions-effidao",
+          "language" : "en",
+          "sourceDataset" : "Google Research GoEmotions test",
+          "text" : "I used to do shit like this...back when I had a serious drinking problem I was in denial about"
+        },
+        {
+          "confidence" : 0.8067,
+          "family" : "online_cfpb_complaint",
+          "id" : "online-cfpb-7171008",
+          "language" : "en",
+          "sourceDataset" : "CFPB via hpe-ai/customer-complaints",
+          "text" : "I strongly urge you to rectify this error without any delay. Please take immediate action to correct my account and ensure that it accurately reflects my payment history."
+        },
+        {
+          "confidence" : 0.8046,
+          "family" : "online_github_issue_title",
+          "id" : "comprehensive-github-1806508451",
+          "language" : "en",
+          "sourceDataset" : "Sulak2020 GitHub issues multi-repo dataset",
+          "text" : "Loading column subset from parquet file produces error since version 2.13"
+        },
+        {
+          "confidence" : 0.8027,
+          "family" : "online_github_issue_title",
+          "id" : "comprehensive-github-2631917431",
+          "language" : "en",
+          "sourceDataset" : "Sulak2020 GitHub issues multi-repo dataset",
+          "text" : "Accessing audio dataset value throws Format not recognised error"
+        },
+        {
+          "confidence" : 0.8001,
+          "family" : "online_github_issue_title",
+          "id" : "comprehensive-github-2790549889",
+          "language" : "en",
+          "sourceDataset" : "Sulak2020 GitHub issues multi-repo dataset",
+          "text" : "500 Server error with pushing a dataset"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9997,
+          "family" : "online_github_issue_comment_intent",
+          "id" : "comprehensive-github-2044721288-comment-3",
+          "language" : "en",
+          "sourceDataset" : "Sulak2020 GitHub issues multi-repo dataset",
+          "text" : "I am having the same issue on a computing cluster but this works on my laptop as well. I instead have this error: `/home/.conda/envs/py10/lib/python3.10/site-packages/filelock/_unix.py\", line 43, in _acquire fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB) OSError: [Errno 5] Input/output error` the load_dataset command does not work on server for local or hosted hugging-face datasets, and I have tried for several files"
+        },
+        {
+          "confidence" : 0.9996,
+          "family" : "online_goemotions_reddit",
+          "id" : "comprehensive-goemotions-edgx5mh",
+          "language" : "en",
+          "sourceDataset" : "Google Research GoEmotions test",
+          "text" : "> if i no longer lived in a nuclear armed/~~major power~~ a *somewhat important but nowhere near as important as they think* power FTFY"
+        },
+        {
+          "confidence" : 0.9992,
+          "family" : "online_goemotions_reddit",
+          "id" : "comprehensive-goemotions-edkt3gv",
+          "language" : "en",
+          "sourceDataset" : "Google Research GoEmotions test",
+          "text" : "> no money at what normal, un-secterian people want! Surely not being sectarian should be considered normal in a civilised democratic society"
+        },
+        {
+          "confidence" : 0.9991,
+          "family" : "online_enron_intent_neg",
+          "id" : "comprehensive-enron-intent_neg-368",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "Enron has proposed several options for resolving the credit risk issues and 20 is working with DWR to arrive at a solution that is mutually agreeable to 20 both sides and that might serve as a template for power purchase agreements 20 going forward."
+        },
+        {
+          "confidence" : 0.9989,
+          "family" : "online_enron_intent_pos",
+          "id" : "comprehensive-enron-intent_pos-181",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "Christy, can we send these documents in word format - I'm not sure if this is a problem for everyone but I can never open these attachments from Braeswell."
+        }
+      ],
+      "id" : "complaint",
+      "metrics" : {
+        "accuracy" : 0.89,
+        "f1" : 0.1538,
+        "falseNegative" : 292,
+        "falsePositive" : 4241,
+        "precision" : 0.0885,
+        "recall" : 0.5852,
+        "total" : 41195,
+        "trueNegative" : 36250,
+        "truePositive" : 412
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.8487,
+          "f1" : 0.2265,
+          "falseNegative" : 142,
+          "falsePositive" : 1852,
+          "precision" : 0.1362,
+          "recall" : 0.6728,
+          "total" : 13176,
+          "trueNegative" : 10890,
+          "truePositive" : 292
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9094,
+          "f1" : 0.0864,
+          "falseNegative" : 150,
+          "falsePositive" : 2389,
+          "precision" : 0.0478,
+          "recall" : 0.4444,
+          "total" : 28019,
+          "trueNegative" : 25360,
+          "truePositive" : 120
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US test" : {
+          "accuracy" : 0.8945,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 313,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2967,
+          "trueNegative" : 2654,
+          "truePositive" : 0
+        },
+        "AmazonScience/MASSIVE zh-CN test" : {
+          "accuracy" : 0.966,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 97,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2850,
+          "trueNegative" : 2753,
+          "truePositive" : 0
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 0.968,
+          "f1" : 0.9837,
+          "falseNegative" : 8,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.968,
+          "total" : 250,
+          "trueNegative" : 0,
+          "truePositive" : 242
+        },
+        "CPED test split" : {
+          "accuracy" : 0.9035,
+          "f1" : 0.0195,
+          "falseNegative" : 126,
+          "falsePositive" : 2292,
+          "precision" : 0.0104,
+          "recall" : 0.16,
+          "total" : 25049,
+          "trueNegative" : 22607,
+          "truePositive" : 24
+        },
+        "Google Research GoEmotions test" : {
+          "accuracy" : 0.8232,
+          "f1" : 0.0184,
+          "falseNegative" : 11,
+          "falsePositive" : 947,
+          "precision" : 0.0094,
+          "recall" : 0.45,
+          "total" : 5418,
+          "trueNegative" : 4451,
+          "truePositive" : 9
+        },
+        "Meituan-Dianping/ASAP test" : {
+          "accuracy" : 0.8,
+          "f1" : 0.8889,
+          "falseNegative" : 24,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.8,
+          "total" : 120,
+          "trueNegative" : 0,
+          "truePositive" : 96
+        },
+        "Sulak2020 GitHub issues multi-repo dataset" : {
+          "accuracy" : 0.7251,
+          "f1" : 0.2291,
+          "falseNegative" : 123,
+          "falsePositive" : 153,
+          "precision" : 0.2113,
+          "recall" : 0.25,
+          "total" : 1004,
+          "trueNegative" : 687,
+          "truePositive" : 41
+        },
+        "Verified Enron Intent Dataset" : {
+          "accuracy" : 0.8759,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 439,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 3537,
+          "trueNegative" : 3098,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9925,
+            "f1" : 0.3812,
+            "falseNegative" : 205,
+            "falsePositive" : 6,
+            "precision" : 0.9155,
+            "recall" : 0.2407,
+            "total" : 28019,
+            "trueNegative" : 27743,
+            "truePositive" : 65
+          },
+          "threshold" : 0.98
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9924,
+            "f1" : 0.3436,
+            "falseNegative" : 214,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.2074,
+            "total" : 28019,
+            "trueNegative" : 27749,
+            "truePositive" : 56
+          },
+          "threshold" : 0.99
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.4546,
+          "family" : "online_enron_intent_pos",
+          "id" : "comprehensive-enron-intent_pos-93",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "Ben, are you available at 9am on Monday re ABB?"
+        },
+        {
+          "confidence" : 0.4215,
+          "family" : "online_enron_intent_pos",
+          "id" : "comprehensive-enron-intent_pos-1057",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "Unfortunately, Sally is not available on Thursday either - she will be at the Enron Management conference in San Antonio Thursday & Friday."
+        },
+        {
+          "confidence" : 0.4085,
+          "family" : "online_enron_intent_pos",
+          "id" : "comprehensive-enron-intent_pos-1158",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "What time are you arriving on Friday?"
+        },
+        {
+          "confidence" : 0.3848,
+          "family" : "online_enron_intent_pos",
+          "id" : "comprehensive-enron-intent_pos-488",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "I'm available at about 11:45 AM my time if you'd like to try to talk then."
+        },
+        {
+          "confidence" : 0.3625,
+          "family" : "online_enron_intent_pos",
+          "id" : "comprehensive-enron-intent_pos-260",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "Does she have any interest in meeting one-on-one or is she just looking for a public hanging?"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9691,
+          "family" : "online_massive_intent_38",
+          "id" : "comprehensive-massive-zh-CN-4112",
+          "language" : "zh-Hans",
+          "sourceDataset" : "AmazonScience/MASSIVE zh-CN test",
+          "text" : "把现在时间从格林威治时间改成东部标准时间"
+        },
+        {
+          "confidence" : 0.9633,
+          "family" : "online_enron_intent_pos",
+          "id" : "comprehensive-enron-intent_pos-83",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "As we spoke I got scheduled for a 2:30 too, so how about 3:30 tomorrow?"
+        },
+        {
+          "confidence" : 0.9566,
+          "family" : "online_cped_statement-non-opinion",
+          "id" : "comprehensive-cped-29_049_018",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "如果让我逮到那两个印度人"
+        },
+        {
+          "confidence" : 0.9534,
+          "family" : "online_goemotions_reddit",
+          "id" : "comprehensive-goemotions-edxtibo",
+          "language" : "en",
+          "sourceDataset" : "Google Research GoEmotions test",
+          "text" : "Funny how we get more anxious about our heroes than their victims"
+        },
+        {
+          "confidence" : 0.9479,
+          "family" : "online_massive_intent_48",
+          "id" : "comprehensive-massive-zh-CN-612",
+          "language" : "zh-Hans",
+          "sourceDataset" : "AmazonScience/MASSIVE zh-CN test",
+          "text" : "下个周六早上八点起床闹钟响铃"
+        }
+      ],
+      "id" : "scheduleNegotiation",
+      "metrics" : {
+        "accuracy" : 0.8202,
+        "f1" : 0.0067,
+        "falseNegative" : 46,
+        "falsePositive" : 7362,
+        "precision" : 0.0034,
+        "recall" : 0.3521,
+        "total" : 41195,
+        "trueNegative" : 33762,
+        "truePositive" : 25
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.8764,
+          "f1" : 0.0298,
+          "falseNegative" : 42,
+          "falsePositive" : 1587,
+          "precision" : 0.0155,
+          "recall" : 0.3731,
+          "total" : 13176,
+          "trueNegative" : 11522,
+          "truePositive" : 25
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.7937,
+          "f1" : 0,
+          "falseNegative" : 4,
+          "falsePositive" : 5775,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 28019,
+          "trueNegative" : 22240,
+          "truePositive" : 0
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US test" : {
+          "accuracy" : 0.8288,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 508,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2967,
+          "trueNegative" : 2459,
+          "truePositive" : 0
+        },
+        "AmazonScience/MASSIVE zh-CN test" : {
+          "accuracy" : 0.7421,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 735,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2850,
+          "trueNegative" : 2115,
+          "truePositive" : 0
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 0.996,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 250,
+          "trueNegative" : 249,
+          "truePositive" : 0
+        },
+        "CPED test split" : {
+          "accuracy" : 0.7986,
+          "f1" : 0,
+          "falseNegative" : 4,
+          "falsePositive" : 5040,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 25049,
+          "trueNegative" : 20005,
+          "truePositive" : 0
+        },
+        "Google Research GoEmotions test" : {
+          "accuracy" : 0.8896,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 598,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 5418,
+          "trueNegative" : 4820,
+          "truePositive" : 0
+        },
+        "Meituan-Dianping/ASAP test" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 120,
+          "trueNegative" : 120,
+          "truePositive" : 0
+        },
+        "Sulak2020 GitHub issues multi-repo dataset" : {
+          "accuracy" : 0.7191,
+          "f1" : 0.06,
+          "falseNegative" : 16,
+          "falsePositive" : 266,
+          "precision" : 0.0327,
+          "recall" : 0.36,
+          "total" : 1004,
+          "trueNegative" : 713,
+          "truePositive" : 9
+        },
+        "Verified Enron Intent Dataset" : {
+          "accuracy" : 0.9321,
+          "f1" : 0.1176,
+          "falseNegative" : 26,
+          "falsePositive" : 214,
+          "precision" : 0.0696,
+          "recall" : 0.381,
+          "total" : 3537,
+          "trueNegative" : 3281,
+          "truePositive" : 16
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9983,
+          "f1" : 0.0811,
+          "falseNegative" : 68,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.0423,
+          "total" : 41195,
+          "trueNegative" : 41124,
+          "truePositive" : 3
+        },
+        "threshold" : 0.97
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9983,
+          "f1" : 0.0811,
+          "falseNegative" : 68,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.0423,
+          "total" : 41195,
+          "trueNegative" : 41124,
+          "truePositive" : 3
+        },
+        "threshold" : 0.97
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9951,
+            "f1" : 0.0857,
+            "falseNegative" : 64,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.0448,
+            "total" : 13176,
+            "trueNegative" : 13109,
+            "truePositive" : 3
+          },
+          "threshold" : 0.97
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9951,
+            "f1" : 0.0857,
+            "falseNegative" : 64,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.0448,
+            "total" : 13176,
+            "trueNegative" : 13109,
+            "truePositive" : 3
+          },
+          "threshold" : 0.97
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.9643,
+          "family" : "online_cped_statement-opinion",
+          "id" : "comprehensive-cped-27_306_003",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "我认为也许我们可以开始真的交往"
+        },
+        {
+          "confidence" : 0.9306,
+          "family" : "online_cped_statement-opinion",
+          "id" : "comprehensive-cped-37_021_018",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "我正式通知你这事就这么定了"
+        },
+        {
+          "confidence" : 0.8682,
+          "family" : "online_cped_statement-opinion",
+          "id" : "comprehensive-cped-27_517_003",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "就这么定了"
+        },
+        {
+          "confidence" : 0.8485,
+          "family" : "online_enron_intent_pos",
+          "id" : "comprehensive-enron-intent_pos-1090",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "We have already scheduled an internal presentation on December 7. Please, go ahead and make a reservation."
+        },
+        {
+          "confidence" : 0.8421,
+          "family" : "online_enron_intent_pos",
+          "id" : "comprehensive-enron-intent_pos-347",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "I am comfortable with your decisions, so feel free to go ahead with this."
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 1,
+          "family" : "online_enron_intent_neg",
+          "id" : "comprehensive-enron-intent_neg-627",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "I guess that the one caveat that I would put out, is to wait and see if there are other names brought forth from other parts of the organization that would make it seem that Kristin should be in that pack."
+        },
+        {
+          "confidence" : 1,
+          "family" : "online_enron_intent_neg",
+          "id" : "comprehensive-enron-intent_neg-723",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "I think it's fuzzy enough that two good lawyers could give two different views--wanted to ensure that all analytic bases are covered."
+        },
+        {
+          "confidence" : 1,
+          "family" : "online_goemotions_reddit",
+          "id" : "comprehensive-goemotions-ed7xq99",
+          "language" : "en",
+          "sourceDataset" : "Google Research GoEmotions test",
+          "text" : "What's your source for that? Just curious (and yes I know it sounds like a tired contrarian statement)."
+        },
+        {
+          "confidence" : 0.9999,
+          "family" : "online_goemotions_reddit",
+          "id" : "comprehensive-goemotions-edy6nlz",
+          "language" : "en",
+          "sourceDataset" : "Google Research GoEmotions test",
+          "text" : "\"For liquids I might leave the \"\"7\"\" out and make sure your citizens are the only race that can spawn in highly savage areas.\""
+        },
+        {
+          "confidence" : 0.9997,
+          "family" : "online_cfpb_complaint",
+          "id" : "online-cfpb-3824854",
+          "language" : "en",
+          "sourceDataset" : "CFPB via hpe-ai/customer-complaints",
+          "text" : "Every time I get a quote for insurance either I was ineligible, or it was too high. I would always ask what the reason for this and I was always get told that it could be because of my credit. I decided to pull my credit and I am extremely shocked on the outcome of the report. The things I have listed on this application are not mine. Please remove these items from my report. XXXX XXXX {$500.00} XXXX XXXX XXXX {$660.00} XXXX XXXX XXXX {$1200.00}"
+        }
+      ],
+      "id" : "confirmationDecision",
+      "metrics" : {
+        "accuracy" : 0.9909,
+        "f1" : 0.0105,
+        "falseNegative" : 67,
+        "falsePositive" : 309,
+        "precision" : 0.0064,
+        "recall" : 0.029,
+        "total" : 41195,
+        "trueNegative" : 40817,
+        "truePositive" : 2
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9757,
+          "f1" : 0,
+          "falseNegative" : 12,
+          "falsePositive" : 308,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 13176,
+          "trueNegative" : 12856,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.998,
+          "f1" : 0.0667,
+          "falseNegative" : 55,
+          "falsePositive" : 1,
+          "precision" : 0.6667,
+          "recall" : 0.0351,
+          "total" : 28019,
+          "trueNegative" : 27961,
+          "truePositive" : 2
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US test" : {
+          "accuracy" : 0.997,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 9,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2967,
+          "trueNegative" : 2958,
+          "truePositive" : 0
+        },
+        "AmazonScience/MASSIVE zh-CN test" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2850,
+          "trueNegative" : 2850,
+          "truePositive" : 0
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 0.916,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 21,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 250,
+          "trueNegative" : 229,
+          "truePositive" : 0
+        },
+        "CPED test split" : {
+          "accuracy" : 0.9978,
+          "f1" : 0.0667,
+          "falseNegative" : 55,
+          "falsePositive" : 1,
+          "precision" : 0.6667,
+          "recall" : 0.0351,
+          "total" : 25049,
+          "trueNegative" : 24991,
+          "truePositive" : 2
+        },
+        "Google Research GoEmotions test" : {
+          "accuracy" : 0.964,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 195,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 5418,
+          "trueNegative" : 5223,
+          "truePositive" : 0
+        },
+        "Meituan-Dianping/ASAP test" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 120,
+          "trueNegative" : 120,
+          "truePositive" : 0
+        },
+        "Sulak2020 GitHub issues multi-repo dataset" : {
+          "accuracy" : 0.994,
+          "f1" : 0,
+          "falseNegative" : 2,
+          "falsePositive" : 4,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1004,
+          "trueNegative" : 998,
+          "truePositive" : 0
+        },
+        "Verified Enron Intent Dataset" : {
+          "accuracy" : 0.9748,
+          "f1" : 0,
+          "falseNegative" : 10,
+          "falsePositive" : 79,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 3537,
+          "trueNegative" : 3448,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.9546,
+          "family" : "online_cped_statement-non-opinion",
+          "id" : "comprehensive-cped-29_149_016",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "可要记得感激我"
+        },
+        {
+          "confidence" : 0.9534,
+          "family" : "online_massive_intent_50",
+          "id" : "comprehensive-massive-zh-CN-3600",
+          "language" : "zh-Hans",
+          "sourceDataset" : "AmazonScience/MASSIVE zh-CN test",
+          "text" : "十分钟后提醒我"
+        },
+        {
+          "confidence" : 0.949,
+          "family" : "online_massive_intent_48",
+          "id" : "comprehensive-massive-zh-CN-3398",
+          "language" : "zh-Hans",
+          "sourceDataset" : "AmazonScience/MASSIVE zh-CN test",
+          "text" : "给我设个下午五点的闹铃"
+        },
+        {
+          "confidence" : 0.9476,
+          "family" : "online_cped_statement-opinion",
+          "id" : "comprehensive-cped-28_176_006",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "当归让他记得当夜归来"
+        },
+        {
+          "confidence" : 0.9474,
+          "family" : "online_massive_intent_50",
+          "id" : "comprehensive-massive-zh-CN-7981",
+          "language" : "zh-Hans",
+          "sourceDataset" : "AmazonScience/MASSIVE zh-CN test",
+          "text" : "会议开始前发送提醒"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9999,
+          "family" : "online_cped_disagreement",
+          "id" : "comprehensive-cped-34_224_008",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "别过两天过两天就晚了"
+        },
+        {
+          "confidence" : 0.9989,
+          "family" : "online_cped_disagreement",
+          "id" : "comprehensive-cped-37_151_009",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "别别别别别 咱们俩先按兵不动"
+        },
+        {
+          "confidence" : 0.9982,
+          "family" : "online_cped_statement-opinion",
+          "id" : "comprehensive-cped-27_043_002",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "没谈过才要勇敢的迈出第一步"
+        },
+        {
+          "confidence" : 0.9979,
+          "family" : "online_cped_statement-non-opinion",
+          "id" : "comprehensive-cped-34_206_000",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "别别别 就是一个画画的 谋生的手段而已"
+        },
+        {
+          "confidence" : 0.997,
+          "family" : "online_cped_statement-non-opinion",
+          "id" : "comprehensive-cped-34_070_000",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "就是明摆着要给自己招兵买马"
+        }
+      ],
+      "id" : "followUpReminder",
+      "metrics" : {
+        "accuracy" : 0.989,
+        "f1" : 0.1028,
+        "falseNegative" : 364,
+        "falsePositive" : 90,
+        "precision" : 0.2241,
+        "recall" : 0.0667,
+        "total" : 41195,
+        "trueNegative" : 40715,
+        "truePositive" : 26
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9894,
+          "f1" : 0.0789,
+          "falseNegative" : 119,
+          "falsePositive" : 21,
+          "precision" : 0.2222,
+          "recall" : 0.048,
+          "total" : 13176,
+          "trueNegative" : 13030,
+          "truePositive" : 6
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9888,
+          "f1" : 0.113,
+          "falseNegative" : 245,
+          "falsePositive" : 69,
+          "precision" : 0.2247,
+          "recall" : 0.0755,
+          "total" : 28019,
+          "trueNegative" : 27685,
+          "truePositive" : 20
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US test" : {
+          "accuracy" : 0.9636,
+          "f1" : 0.1,
+          "falseNegative" : 91,
+          "falsePositive" : 17,
+          "precision" : 0.2609,
+          "recall" : 0.0619,
+          "total" : 2967,
+          "trueNegative" : 2853,
+          "truePositive" : 6
+        },
+        "AmazonScience/MASSIVE zh-CN test" : {
+          "accuracy" : 0.9442,
+          "f1" : 0.1311,
+          "falseNegative" : 154,
+          "falsePositive" : 5,
+          "precision" : 0.7059,
+          "recall" : 0.0723,
+          "total" : 2850,
+          "trueNegative" : 2679,
+          "truePositive" : 12
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 250,
+          "trueNegative" : 250,
+          "truePositive" : 0
+        },
+        "CPED test split" : {
+          "accuracy" : 0.9938,
+          "f1" : 0.0936,
+          "falseNegative" : 91,
+          "falsePositive" : 64,
+          "precision" : 0.1111,
+          "recall" : 0.0808,
+          "total" : 25049,
+          "trueNegative" : 24886,
+          "truePositive" : 8
+        },
+        "Google Research GoEmotions test" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 5418,
+          "trueNegative" : 5418,
+          "truePositive" : 0
+        },
+        "Meituan-Dianping/ASAP test" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 120,
+          "trueNegative" : 120,
+          "truePositive" : 0
+        },
+        "Sulak2020 GitHub issues multi-repo dataset" : {
+          "accuracy" : 0.997,
+          "f1" : 0,
+          "falseNegative" : 2,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1004,
+          "trueNegative" : 1001,
+          "truePositive" : 0
+        },
+        "Verified Enron Intent Dataset" : {
+          "accuracy" : 0.9918,
+          "f1" : 0,
+          "falseNegative" : 26,
+          "falsePositive" : 3,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 3537,
+          "trueNegative" : 3508,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "blessing",
+      "metrics" : {
+        "accuracy" : 1,
+        "f1" : 1,
+        "falseNegative" : 0,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 1,
+        "total" : 41195,
+        "trueNegative" : 41109,
+        "truePositive" : 86
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 13176,
+          "trueNegative" : 13107,
+          "truePositive" : 69
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 28019,
+          "trueNegative" : 28002,
+          "truePositive" : 17
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US test" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2967,
+          "trueNegative" : 2967,
+          "truePositive" : 0
+        },
+        "AmazonScience/MASSIVE zh-CN test" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2850,
+          "trueNegative" : 2850,
+          "truePositive" : 0
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 250,
+          "trueNegative" : 250,
+          "truePositive" : 0
+        },
+        "CPED test split" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 25049,
+          "trueNegative" : 25032,
+          "truePositive" : 17
+        },
+        "Google Research GoEmotions test" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 5418,
+          "trueNegative" : 5352,
+          "truePositive" : 66
+        },
+        "Meituan-Dianping/ASAP test" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 120,
+          "trueNegative" : 120,
+          "truePositive" : 0
+        },
+        "Sulak2020 GitHub issues multi-repo dataset" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 1004,
+          "trueNegative" : 1002,
+          "truePositive" : 2
+        },
+        "Verified Enron Intent Dataset" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 3537,
+          "trueNegative" : 3536,
+          "truePositive" : 1
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 41195,
+          "trueNegative" : 41109,
+          "truePositive" : 86
+        },
+        "threshold" : 0.05
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 41195,
+          "trueNegative" : 41109,
+          "truePositive" : 86
+        },
+        "threshold" : 0.05
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 13176,
+            "trueNegative" : 13107,
+            "truePositive" : 69
+          },
+          "threshold" : 0.05
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 28019,
+            "trueNegative" : 28002,
+            "truePositive" : 17
+          },
+          "threshold" : 0.05
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 13176,
+            "trueNegative" : 13107,
+            "truePositive" : 69
+          },
+          "threshold" : 0.05
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 28019,
+            "trueNegative" : 28002,
+            "truePositive" : 17
+          },
+          "threshold" : 0.05
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.74,
+          "family" : "online_cped_statement-non-opinion",
+          "id" : "comprehensive-cped-29_272_002",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "反正我已经错过两次求婚了"
+        },
+        {
+          "confidence" : 0.7399,
+          "family" : "online_cped_statement-non-opinion",
+          "id" : "comprehensive-cped-29_073_003",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "我忘了还有这一茬"
+        },
+        {
+          "confidence" : 0.7399,
+          "family" : "online_cped_question",
+          "id" : "comprehensive-cped-27_451_010",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "你到底涂了没有"
+        },
+        {
+          "confidence" : 0.7399,
+          "family" : "online_cped_statement-non-opinion",
+          "id" : "comprehensive-cped-34_180_010",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "她对你那么好"
+        },
+        {
+          "confidence" : 0.7398,
+          "family" : "online_cped_statement-non-opinion",
+          "id" : "comprehensive-cped-30_109_001",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CPED test split",
+          "text" : "快来"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 1,
+          "family" : "online_enron_intent_neg",
+          "id" : "comprehensive-enron-intent_neg-1396",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "Now let me tell you why this medallion and Archangel Michael, the most powerful of angels, can deliver the miracles, protection, guidance and love you need to change your life so you can live your dreams."
+        },
+        {
+          "confidence" : 1,
+          "family" : "online_enron_intent_neg",
+          "id" : "comprehensive-enron-intent_neg-953",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "If you enjoy our apps and want to help us to continue to improve our products, please leave us a good review on the App Store.\\n\\nEnjoy and happy collecting!\\n\\nEthan C. Allen\\nSort It Apps, LLC - Founder\\n\\nIf you don't want to hear from me anymore, just go here: $LINK"
+        },
+        {
+          "confidence" : 1,
+          "family" : "online_enron_intent_neg",
+          "id" : "comprehensive-enron-intent_neg-2179",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "We have some grand ideas and need only your name and influence to make this a successful evening for TUTS!You and your wife may be as involved or not involved as you like!We would like to top the funds raised by this current year's event that was Co -Chaired by Chuck and Kim Watson .They helped TUTS to raise over $350,000."
+        },
+        {
+          "confidence" : 1,
+          "family" : "online_enron_intent_neg",
+          "id" : "comprehensive-enron-intent_neg-1213",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "It would be extremely useful if the folks participating in the meeting on Thursday with the Governor let him know that taking choices away from businesses and customers is the wrong way to go and that he and the legislative leaders need to work with the coalition to fix it."
+        },
+        {
+          "confidence" : 1,
+          "family" : "online_enron_intent_neg",
+          "id" : "comprehensive-enron-intent_neg-119",
+          "language" : "en",
+          "sourceDataset" : "Verified Enron Intent Dataset",
+          "text" : "And since I want you to do this so you'll have the ability to benefit from this connection and your incredible happenstance, anywhere, any place, any time, I believe it would be best if you could keep the power of Archangel Michael as close to you at all times, so I would like you to have..."
+        }
+      ],
+      "id" : "replyableMessage",
+      "metrics" : {
+        "accuracy" : 0.496,
+        "f1" : 0.6434,
+        "falseNegative" : 18577,
+        "falsePositive" : 2186,
+        "precision" : 0.8955,
+        "recall" : 0.5021,
+        "total" : 41195,
+        "trueNegative" : 1702,
+        "truePositive" : 18730
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.5556,
+          "f1" : 0.6992,
+          "falseNegative" : 4075,
+          "falsePositive" : 1780,
+          "precision" : 0.7927,
+          "recall" : 0.6255,
+          "total" : 13176,
+          "trueNegative" : 515,
+          "truePositive" : 6806
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.4679,
+          "f1" : 0.6153,
+          "falseNegative" : 14502,
+          "falsePositive" : 406,
+          "precision" : 0.9671,
+          "recall" : 0.4512,
+          "total" : 28019,
+          "trueNegative" : 1187,
+          "truePositive" : 11924
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US test" : {
+          "accuracy" : 0.5629,
+          "f1" : 0.7203,
+          "falseNegative" : 1297,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.5629,
+          "total" : 2967,
+          "trueNegative" : 0,
+          "truePositive" : 1670
+        },
+        "AmazonScience/MASSIVE zh-CN test" : {
+          "accuracy" : 0.3586,
+          "f1" : 0.5279,
+          "falseNegative" : 1828,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.3586,
+          "total" : 2850,
+          "trueNegative" : 0,
+          "truePositive" : 1022
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 0.736,
+          "f1" : 0.8479,
+          "falseNegative" : 66,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.736,
+          "total" : 250,
+          "trueNegative" : 0,
+          "truePositive" : 184
+        },
+        "CPED test split" : {
+          "accuracy" : 0.4783,
+          "f1" : 0.6229,
+          "falseNegative" : 12662,
+          "falsePositive" : 406,
+          "precision" : 0.9638,
+          "recall" : 0.4602,
+          "total" : 25049,
+          "trueNegative" : 1187,
+          "truePositive" : 10794
+        },
+        "Google Research GoEmotions test" : {
+          "accuracy" : 0.6333,
+          "f1" : 0.7755,
+          "falseNegative" : 1987,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.6333,
+          "total" : 5418,
+          "trueNegative" : 0,
+          "truePositive" : 3431
+        },
+        "Meituan-Dianping/ASAP test" : {
+          "accuracy" : 0.9,
+          "f1" : 0.9474,
+          "falseNegative" : 12,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.9,
+          "total" : 120,
+          "trueNegative" : 0,
+          "truePositive" : 108
+        },
+        "Sulak2020 GitHub issues multi-repo dataset" : {
+          "accuracy" : 0.4382,
+          "f1" : 0.6094,
+          "falseNegative" : 564,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.4382,
+          "total" : 1004,
+          "trueNegative" : 0,
+          "truePositive" : 440
+        },
+        "Verified Enron Intent Dataset" : {
+          "accuracy" : 0.4512,
+          "f1" : 0.5269,
+          "falseNegative" : 161,
+          "falsePositive" : 1780,
+          "precision" : 0.3778,
+          "recall" : 0.8704,
+          "total" : 3537,
+          "trueNegative" : 515,
+          "truePositive" : 1081
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.8803,
+          "f1" : 0.9362,
+          "falseNegative" : 1129,
+          "falsePositive" : 3802,
+          "precision" : 0.9049,
+          "recall" : 0.9697,
+          "total" : 41195,
+          "trueNegative" : 86,
+          "truePositive" : 36178
+        },
+        "threshold" : 0.05
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9133,
+            "f1" : 0.9547,
+            "falseNegative" : 867,
+            "falsePositive" : 1561,
+            "precision" : 0.9424,
+            "recall" : 0.9672,
+            "total" : 28019,
+            "trueNegative" : 32,
+            "truePositive" : 25559
+          },
+          "threshold" : 0.05
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.6237,
+            "f1" : 0.7583,
+            "falseNegative" : 9882,
+            "falsePositive" : 662,
+            "precision" : 0.9615,
+            "recall" : 0.6261,
+            "total" : 28019,
+            "trueNegative" : 931,
+            "truePositive" : 16544
+          },
+          "threshold" : 0.51
+        }
+      }
+    }
+  ],
+  "corpusRecordCount" : 41195,
+  "exactTrainingOverlapCount" : 0,
+  "familyCount" : 85,
+  "generatedAt" : "2026-08-27T05:31:23Z",
+  "languageCounts" : {
+    "en" : 13176,
+    "zh-Hans" : 28019
+  },
+  "manifestSchemaVersion" : 2,
+  "seed" : 20260826,
+  "sentiment" : {
+    "accuracy" : 0.12,
+    "correct" : 4944,
+    "macroF1" : 0.1947,
+    "perLabelF1" : {
+      "negative" : 0.1514,
+      "neutral" : 0.193,
+      "positive" : 0.2397
+    },
+    "total" : 41195,
+    "unknown" : 30355,
+    "unknownRate" : 0.7369
+  },
+  "sentimentBySource" : {
+    "AmazonScience/MASSIVE en-US test" : {
+      "accuracy" : 0.1045,
+      "correct" : 310,
+      "macroF1" : 0.108,
+      "perLabelF1" : {
+        "negative" : 0.0198,
+        "neutral" : 0.1802,
+        "positive" : 0.1241
+      },
+      "total" : 2967,
+      "unknown" : 2139,
+      "unknownRate" : 0.7209
+    },
+    "AmazonScience/MASSIVE zh-CN test" : {
+      "accuracy" : 0.2042,
+      "correct" : 582,
+      "macroF1" : 0.1873,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.3348,
+        "positive" : 0.227
+      },
+      "total" : 2850,
+      "unknown" : 2110,
+      "unknownRate" : 0.7404
+    },
+    "CFPB via hpe-ai/customer-complaints" : {
+      "accuracy" : 0.96,
+      "correct" : 240,
+      "macroF1" : 0.3265,
+      "perLabelF1" : {
+        "negative" : 0.9796,
+        "neutral" : 0,
+        "positive" : 0
+      },
+      "total" : 250,
+      "unknown" : 6,
+      "unknownRate" : 0.024
+    },
+    "CPED test split" : {
+      "accuracy" : 0.0486,
+      "correct" : 1218,
+      "macroF1" : 0.0848,
+      "perLabelF1" : {
+        "negative" : 0.0764,
+        "neutral" : 0.1118,
+        "positive" : 0.0661
+      },
+      "total" : 25049,
+      "unknown" : 21620,
+      "unknownRate" : 0.8631
+    },
+    "Google Research GoEmotions test" : {
+      "accuracy" : 0.3171,
+      "correct" : 1718,
+      "macroF1" : 0.361,
+      "perLabelF1" : {
+        "negative" : 0.3763,
+        "neutral" : 0.1258,
+        "positive" : 0.5809
+      },
+      "total" : 5418,
+      "unknown" : 2180,
+      "unknownRate" : 0.4024
+    },
+    "Meituan-Dianping/ASAP test" : {
+      "accuracy" : 0.725,
+      "correct" : 87,
+      "macroF1" : 0.2802,
+      "perLabelF1" : {
+        "negative" : 0.8406,
+        "neutral" : 0,
+        "positive" : 0
+      },
+      "total" : 120,
+      "unknown" : 18,
+      "unknownRate" : 0.15
+    },
+    "Sulak2020 GitHub issues multi-repo dataset" : {
+      "accuracy" : 0.1076,
+      "correct" : 108,
+      "macroF1" : 0.136,
+      "perLabelF1" : {
+        "negative" : 0.288,
+        "neutral" : 0.1201,
+        "positive" : 0
+      },
+      "total" : 1004,
+      "unknown" : 678,
+      "unknownRate" : 0.6753
+    },
+    "Verified Enron Intent Dataset" : {
+      "accuracy" : 0.1925,
+      "correct" : 681,
+      "macroF1" : 0.1076,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.3229,
+        "positive" : 0
+      },
+      "total" : 3537,
+      "unknown" : 1604,
+      "unknownRate" : 0.4535
+    }
+  }
+}

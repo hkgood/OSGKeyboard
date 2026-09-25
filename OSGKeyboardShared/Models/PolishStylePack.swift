@@ -12,12 +12,45 @@ public struct PolishStylePack: Codable, Equatable, Identifiable, Sendable {
         case user
     }
 
+    public struct LearningMetadata: Codable, Equatable, Sendable {
+        public let schemaVersion: Int
+        public let evidenceStatus: String
+        public let confidence: Double
+        public let asrExampleCount: Int
+        public let asrEffectiveCharacterCount: Int
+        public let replyExampleCount: Int
+        public let replyFinalEditCount: Int
+        public let generatedAt: Date
+
+        public init(
+            schemaVersion: Int,
+            evidenceStatus: String,
+            confidence: Double,
+            asrExampleCount: Int,
+            asrEffectiveCharacterCount: Int,
+            replyExampleCount: Int,
+            replyFinalEditCount: Int,
+            generatedAt: Date
+        ) {
+            self.schemaVersion = schemaVersion
+            self.evidenceStatus = evidenceStatus
+            self.confidence = confidence
+            self.asrExampleCount = asrExampleCount
+            self.asrEffectiveCharacterCount = asrEffectiveCharacterCount
+            self.replyExampleCount = replyExampleCount
+            self.replyFinalEditCount = replyFinalEditCount
+            self.generatedAt = generatedAt
+        }
+    }
+
     public let id: String
     public var name: String
     public var prompt: String
     /// When true, polish may keep model-added emoji and the prompt overrides R5.
     /// Defaults off so existing / builtin styles stay emoji-strict.
     public var allowsAddedEmoji: Bool
+    /// Optional learning provenance. It is never included in the runtime prompt.
+    public var learningMetadata: LearningMetadata?
     public let kind: Kind
     public let createdAt: Date
     public var updatedAt: Date
@@ -27,6 +60,7 @@ public struct PolishStylePack: Codable, Equatable, Identifiable, Sendable {
         name: String,
         prompt: String,
         allowsAddedEmoji: Bool = false,
+        learningMetadata: LearningMetadata? = nil,
         kind: Kind = .user,
         createdAt: Date = Date(),
         updatedAt: Date? = nil
@@ -35,6 +69,7 @@ public struct PolishStylePack: Codable, Equatable, Identifiable, Sendable {
         self.name = name
         self.prompt = prompt
         self.allowsAddedEmoji = allowsAddedEmoji
+        self.learningMetadata = learningMetadata
         self.kind = kind
         self.createdAt = createdAt
         self.updatedAt = updatedAt ?? createdAt
@@ -70,7 +105,7 @@ public struct PolishStylePack: Codable, Equatable, Identifiable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, prompt, allowsAddedEmoji, kind, createdAt, updatedAt
+        case id, name, prompt, allowsAddedEmoji, learningMetadata, kind, createdAt, updatedAt
     }
 
     public init(from decoder: Decoder) throws {
@@ -80,6 +115,11 @@ public struct PolishStylePack: Codable, Equatable, Identifiable, Sendable {
         prompt = try container.decode(String.self, forKey: .prompt)
         // Older synced packs omit the key — stay emoji-strict.
         allowsAddedEmoji = try container.decodeIfPresent(Bool.self, forKey: .allowsAddedEmoji) ?? false
+        // V1 packs have no learning provenance and remain fully decodable.
+        learningMetadata = try container.decodeIfPresent(
+            LearningMetadata.self,
+            forKey: .learningMetadata
+        )
         kind = try container.decode(Kind.self, forKey: .kind)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)
@@ -223,8 +263,43 @@ public enum PolishStylePackCatalog {
         }
     }
 
+    /// Distilled personal styles serve the AI-reply pipeline only. Voice polish
+    /// must never load one: a learned pack is injected as "outranks generic
+    /// cleanup", which would override the core T1/T2 filler and repetition
+    /// cleanup and put the speaker's disfluencies back into the transcript.
+    public static func isPersonalReplyStyle(_ pack: PolishStylePack) -> Bool {
+        pack.learningMetadata != nil
+    }
+
+    /// Voice-polish eligibility. Rejecting learned packs here — rather than in
+    /// the UI — means a stale iCloud value or a view bug still cannot reach
+    /// `PolishPromptComposer`; `setActivePolishStyleId` falls back to `defaultID`.
     public static func isValidActiveID(_ id: String, userCatalog: PolishStyleCatalog) -> Bool {
-        builtins.contains(where: { $0.id == id }) || userCatalog.entries.contains(where: { $0.id == id })
+        if builtins.contains(where: { $0.id == id }) { return true }
+        guard let pack = userCatalog.entries.first(where: { $0.id == id }) else { return false }
+        return !isPersonalReplyStyle(pack)
+    }
+
+    /// The mirror gate: only a distilled personal style may drive AI replies.
+    /// Hand-written user packs stay on the Styles page (voice input only).
+    public static func resolvePersonalReplyStyle(
+        id: String,
+        userCatalog: PolishStyleCatalog
+    ) -> PolishStylePack? {
+        guard !id.isEmpty,
+              let pack = userCatalog.entries.first(where: { $0.id == id }),
+              isPersonalReplyStyle(pack) else { return nil }
+        return pack
+    }
+
+    /// Newest distilled personal style. Used by the Skills page and by the
+    /// one-shot migration that splits voice input from AI replies.
+    public static func latestPersonalReplyStyle(
+        userCatalog: PolishStyleCatalog
+    ) -> PolishStylePack? {
+        userCatalog.entries
+            .filter(isPersonalReplyStyle)
+            .max { $0.updatedAt < $1.updatedAt }
     }
 
     /// Fun personality packs that fully rewrite voice (dating / flex / corp / diba / xhs).

@@ -35,7 +35,7 @@ struct PersonalDictionaryView: View {
             }
         }
         .background(palette.background)
-        .navigationTitle("settings.personalDictionary.title")
+        .navigationTitle(AppL10n.string("settings.personalDictionary.title"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if !dictionary.entries.isEmpty {
@@ -57,7 +57,7 @@ struct PersonalDictionaryView: View {
                         }
                         Button(AppL10n.string("common.cancel"), role: .cancel) {}
                     } message: {
-                        Text("settings.personalDictionary.clearAll.message")
+                        Text(AppL10n.string("settings.personalDictionary.clearAll.message"))
                     }
                 }
             }
@@ -110,7 +110,7 @@ struct PersonalDictionaryView: View {
                                 entryRow(entry)
                                     .surfaceCard()
                                     .contextMenu {
-                                        Button("common.delete", role: .destructive) {
+                                        Button(AppL10n.string("common.delete"), role: .destructive) {
                                             delete(entry)
                                         }
                                     }
@@ -151,7 +151,7 @@ struct PersonalDictionaryView: View {
                             Text("·")
                                 .font(TypeStyle.caption2)
                                 .foregroundStyle(palette.textTertiary)
-                            Text("settings.personalDictionary.aliases.generating")
+                            Text(AppL10n.string("settings.personalDictionary.aliases.generating"))
                                 .font(TypeStyle.caption2)
                                 .foregroundStyle(palette.textTertiary)
                         } else if !entry.aliases.isEmpty {
@@ -181,10 +181,10 @@ struct PersonalDictionaryView: View {
             Image(systemName: "square.stack.3d.down.right.fill")
                 .font(.system(size: 36, weight: .regular))
                 .foregroundStyle(palette.textTertiary.opacity(0.5))
-            Text("settings.personalDictionary.empty.title")
+            Text(AppL10n.string("settings.personalDictionary.empty.title"))
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textSecondary)
-            Text("settings.personalDictionary.empty.body")
+            Text(AppL10n.string("settings.personalDictionary.empty.body"))
                 .font(TypeStyle.caption)
                 .foregroundStyle(palette.textTertiary)
                 .multilineTextAlignment(.center)
@@ -193,7 +193,7 @@ struct PersonalDictionaryView: View {
                 editingEntry = nil
                 showEntrySheet = true
             } label: {
-                Text("settings.personalDictionary.add.title")
+                Text(AppL10n.string("settings.personalDictionary.add.title"))
             }
             .buttonStyle(.borderedProminent)
             .tint(palette.accent)

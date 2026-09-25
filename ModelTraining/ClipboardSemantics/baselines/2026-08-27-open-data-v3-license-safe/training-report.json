@@ -1,0 +1,1566 @@
+{
+  "classifiers" : [
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : false,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 7802,
+          "balancedValidationCount" : 1440,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.8801,
+              "f1" : 0.6716,
+              "falseNegative" : 178,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.5056,
+              "total" : 1485,
+              "trueNegative" : 1125,
+              "truePositive" : 182
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9347,
+              "f1" : 0.8443,
+              "falseNegative" : 97,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.7306,
+              "total" : 1485,
+              "trueNegative" : 1125,
+              "truePositive" : 263
+            }
+          },
+          "confidenceThresholdsByLanguage" : {
+            "en" : 0.92,
+            "zh-Hans" : 0.91
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9325,
+            "f1" : 0.6383,
+            "falseNegative" : 15,
+            "falsePositive" : 2,
+            "precision" : 0.8824,
+            "recall" : 0.5,
+            "total" : 252,
+            "trueNegative" : 220,
+            "truePositive" : 15
+          },
+          "goldenBinaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9524,
+              "f1" : 0.75,
+              "falseNegative" : 6,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.6,
+              "total" : 126,
+              "trueNegative" : 111,
+              "truePositive" : 9
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9127,
+              "f1" : 0.5217,
+              "falseNegative" : 9,
+              "falsePositive" : 2,
+              "precision" : 0.75,
+              "recall" : 0.4,
+              "total" : 126,
+              "trueNegative" : 109,
+              "truePositive" : 6
+            }
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] Alex owns the meeting notes and should post them in the project channel today. (score=0.8291)",
+            "[en] Could these documents be ready by the end of the month? (score=0.8627)",
+            "[en] Do not forget to check whether the refund arrives on Friday. (score=0.9079)",
+            "[en] When approval arrives, contact the applicant and explain the reason. (score=0.1097)",
+            "[en] Next action: create the release tag after the tests pass. (score=0.3625)",
+            "[en] Please collect the graduation messages in one spreadsheet. (score=0.0573)",
+            "[zh-Hans] 小王负责整理会议纪要，今天发到项目群。 (score=0.3501)",
+            "[zh-Hans] 方便帮我约一下周三下午的会议室吗？ (score=0.7914)",
+            "[zh-Hans] 这些材料可以在月底前准备好吗？ (score=0.8882)",
+            "[zh-Hans] 别忘了周五检查退款有没有到账。 (score=0.2765)",
+            "[zh-Hans] 会后需要整理三个决定并发到项目群。 (score=0.1896)",
+            "[zh-Hans] 等审批结果出来，请联系申请人说明原因。 (score=0.711)"
+          ],
+          "goldenFalsePositiveExamples" : [
+            "[zh-Hans] 下班后要不要一起喝杯咖啡？ (score=0.9212)",
+            "[zh-Hans] 明天我要去财务核对发票，不用你帮忙。 (score=0.9909)"
+          ],
+          "modelBytes" : 69291,
+          "runtimeAssetIndependent" : true,
+          "testBinary" : {
+            "accuracy" : 0.9074,
+            "f1" : 0.7639,
+            "falseNegative" : 275,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.6181,
+            "total" : 2970,
+            "trueNegative" : 2250,
+            "truePositive" : 445
+          },
+          "testFalseNegativeExamples" : [
+            "[en] Also, Reminder: call the client back before the next meeting. (score=0.5947)",
+            "[en] One more thing: Reminder: book the follow-up visit by Friday. (score=0.4448)",
+            "[en] Reminder: check the invoice status by the end of the month. (score=0.499)",
+            "[en] Reminder: call the client back by the end of the month. (score=0.6698)",
+            "[en] A quick note: Reminder: call the client back before the end of today. (score=0.5163)",
+            "[en] One more thing: Reminder: create the release tag before 3 PM. (score=0.3917)",
+            "[en] Reminder: contact the applicant by the end of the month. (score=0.5844)",
+            "[en] Also, Make review the approval result the next action and do it by the end of the month. (score=0.7513)",
+            "[en] A quick note: Make check the vendor delivery date the next action and do it by the end of the month. (score=0.6541)",
+            "[en] Reminder: contact the applicant after you receive this message. (score=0.6044)",
+            "[en] Make summarize the meeting decisions the next action and do it after you receive this message. (score=0.8516)",
+            "[en] A quick note: Reminder: verify the refund status before the next meeting. (score=0.4506)"
+          ],
+          "testFalsePositiveExamples" : [
+
+          ],
+          "threshold" : 0.91,
+          "validationBinary" : {
+            "accuracy" : 0.9202,
+            "f1" : 0.8075,
+            "falseNegative" : 223,
+            "falsePositive" : 14,
+            "precision" : 0.9726,
+            "recall" : 0.6903,
+            "total" : 2970,
+            "trueNegative" : 2236,
+            "truePositive" : 497
+          }
+        }
+      ],
+      "id" : "task",
+      "labels" : [
+        "notTask",
+        "task"
+      ],
+      "positiveLabel" : "task",
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "TaskIntentClassifier.mlmodel"
+    },
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : true,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 7526,
+          "balancedValidationCount" : 1260,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9138,
+              "f1" : 0.745,
+              "falseNegative" : 128,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.5937,
+              "total" : 1485,
+              "trueNegative" : 1170,
+              "truePositive" : 187
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9239,
+              "f1" : 0.7814,
+              "falseNegative" : 113,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.6413,
+              "total" : 1485,
+              "trueNegative" : 1170,
+              "truePositive" : 202
+            }
+          },
+          "confidenceThresholdsByLanguage" : {
+            "en" : 0.99,
+            "zh-Hans" : 0.99
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9365,
+            "f1" : 0.7895,
+            "falseNegative" : 16,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.6522,
+            "total" : 252,
+            "trueNegative" : 206,
+            "truePositive" : 30
+          },
+          "goldenBinaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9048,
+              "f1" : 0.6471,
+              "falseNegative" : 12,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.4783,
+              "total" : 126,
+              "trueNegative" : 103,
+              "truePositive" : 11
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9683,
+              "f1" : 0.9048,
+              "falseNegative" : 4,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.8261,
+              "total" : 126,
+              "trueNegative" : 103,
+              "truePositive" : 19
+            }
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] Which documents are required for this refund? (score=0.9881)",
+            "[en] Why is the order still marked as under review? (score=0.9504)",
+            "[en] I'd like to invite you to Monday's project kickoff. Are you available? (score=0.2554)",
+            "[en] My account was locked for no reason. Can you restore it today? (score=0.8448)",
+            "[en] Support has not replied for three days. When will this be handled? (score=0.9081)",
+            "[en] I cannot make Wednesday's meeting; could we move it to Thursday at ten? (score=0.7812)",
+            "[en] Two or three works for me. Which time suits you better? (score=0.9827)",
+            "[en] The client is unavailable, so how about next Monday afternoon instead? (score=0.9638)",
+            "[en] This slot is too early. Would half an hour later work? (score=0.8702)",
+            "[en] My flight changed; can pickup move to nine tonight? (score=0.9035)",
+            "[en] I suggest a one-day delay, with Thursday as the new deadline. Thoughts? (score=0.8163)",
+            "[en] Should a birthday message sound formal? (score=0.8713)"
+          ],
+          "goldenFalsePositiveExamples" : [
+
+          ],
+          "modelBytes" : 76639,
+          "runtimeAssetIndependent" : true,
+          "testBinary" : {
+            "accuracy" : 0.9189,
+            "f1" : 0.7635,
+            "falseNegative" : 241,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.6175,
+            "total" : 2970,
+            "trueNegative" : 2340,
+            "truePositive" : 389
+          },
+          "testFalseNegativeExamples" : [
+            "[en] Just to add, I need a clear answer: the page loads extremely slowly. How are you going to resolve it? (score=0.7275)",
+            "[en] I need a clear answer: messages never send. How are you going to resolve it? (score=0.8876)",
+            "[en] I need a clear answer: the invoice information is wrong. How are you going to resolve it? (score=0.9148)",
+            "[en] I need a clear answer: the order was charged twice. How are you going to resolve it? (score=0.8308)",
+            "[en] I need a clear answer: my reservation disappeared. How are you going to resolve it? (score=0.9143)",
+            "[en] Also, the item arrived damaged, which means it caused an extra charge. Can this be fixed today? (score=0.9759)",
+            "[en] Just to add, I need a clear answer: the app keeps crashing. How are you going to resolve it? (score=0.8464)",
+            "[en] Just to add, the order was charged twice, which means it caused an extra charge. Can this be fixed today? (score=0.9669)",
+            "[en] the order was charged twice, which means support has not resolved it. Can this be fixed today? (score=0.9694)",
+            "[en] Also, I need a clear answer: the app keeps crashing. How are you going to resolve it? (score=0.8745)",
+            "[en] One more thing: I need a clear answer: the order was charged twice. How are you going to resolve it? (score=0.7837)",
+            "[en] A quick note: I need a clear answer: messages never send. How are you going to resolve it? (score=0.8478)"
+          ],
+          "testFalsePositiveExamples" : [
+
+          ],
+          "threshold" : 0.99,
+          "validationBinary" : {
+            "accuracy" : 0.9061,
+            "f1" : 0.7185,
+            "falseNegative" : 274,
+            "falsePositive" : 5,
+            "precision" : 0.9861,
+            "recall" : 0.5651,
+            "total" : 2970,
+            "trueNegative" : 2335,
+            "truePositive" : 356
+          }
+        }
+      ],
+      "id" : "question",
+      "labels" : [
+        "notQuestion",
+        "question"
+      ],
+      "positiveLabel" : "question",
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "QuestionIntentClassifier.mlmodel"
+    },
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : true,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 1440,
+          "balancedValidationCount" : 360,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9724,
+              "f1" : 0.7133,
+              "falseNegative" : 39,
+              "falsePositive" : 2,
+              "precision" : 0.9623,
+              "recall" : 0.5667,
+              "total" : 1485,
+              "trueNegative" : 1393,
+              "truePositive" : 51
+            },
+            "zh-Hans" : {
+              "accuracy" : 1,
+              "f1" : 1,
+              "falseNegative" : 0,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 1,
+              "total" : 1485,
+              "trueNegative" : 1395,
+              "truePositive" : 90
+            }
+          },
+          "confidenceThresholdsByLanguage" : {
+            "en" : 0.76,
+            "zh-Hans" : 0.78
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9762,
+            "f1" : 0.7857,
+            "falseNegative" : 5,
+            "falsePositive" : 1,
+            "precision" : 0.9167,
+            "recall" : 0.6875,
+            "total" : 252,
+            "trueNegative" : 235,
+            "truePositive" : 11
+          },
+          "goldenBinaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9683,
+              "f1" : 0.6667,
+              "falseNegative" : 4,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.5,
+              "total" : 126,
+              "trueNegative" : 118,
+              "truePositive" : 4
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9841,
+              "f1" : 0.875,
+              "falseNegative" : 1,
+              "falsePositive" : 1,
+              "precision" : 0.875,
+              "recall" : 0.875,
+              "total" : 126,
+              "trueNegative" : 117,
+              "truePositive" : 7
+            }
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] I'd like to invite you to Monday's project kickoff. Are you available? (score=0.3085)",
+            "[en] Would you like to get coffee after work? (score=0.7467)",
+            "[en] The kickoff is fixed for Monday at nine; please attend on time. (score=0.4502)",
+            "[en] Want to see a movie this weekend? The tickets are for Saturday at eight. (score=0.4117)",
+            "[zh-Hans] 周末一起看电影吗？票是周六晚八点的。 (score=0.3534)"
+          ],
+          "goldenFalsePositiveExamples" : [
+            "[zh-Hans] 客户临时有事，咱们另约下周一下午怎么样？ (score=0.8146)"
+          ],
+          "modelBytes" : 21757,
+          "runtimeAssetIndependent" : true,
+          "testBinary" : {
+            "accuracy" : 0.9862,
+            "f1" : 0.8731,
+            "falseNegative" : 39,
+            "falsePositive" : 2,
+            "precision" : 0.986,
+            "recall" : 0.7833,
+            "total" : 2970,
+            "trueNegative" : 2788,
+            "truePositive" : 141
+          },
+          "testFalseNegativeExamples" : [
+            "[en] I saved you a spot to attend the design review next Monday at noon at the client office. How does that sound? (score=0.4769)",
+            "[en] A quick note: I saved you a spot to get coffee tomorrow at 3 PM at the station. How does that sound? (score=0.2377)",
+            "[en] I saved you a spot to attend the design review tomorrow at 3 PM at downstairs from the office. How does that sound? (score=0.5267)",
+            "[en] I saved you a spot to attend an appointment after work at the campus cafe. How does that sound? (score=0.6864)",
+            "[en] A quick note: I saved you a spot to have dinner Friday morning at the campus cafe. How does that sound? (score=0.3893)",
+            "[en] One more thing: I saved you a spot to have dinner after work at the Wangjing branch. How does that sound? (score=0.3678)",
+            "[en] Also, I saved you a spot to attend the design review before the end of the month at the Wangjing branch. How does that sound? (score=0.3332)",
+            "[en] Also, I saved you a spot to attend an appointment next Monday at noon at the station. How does that sound? (score=0.3432)",
+            "[en] A quick note: I saved you a spot to attend an appointment at seven tonight at the Wangjing branch. How does that sound? (score=0.457)",
+            "[en] I saved you a spot to have dinner next Monday at noon at the usual place. How does that sound? (score=0.5233)",
+            "[en] I saved you a spot to visit the client before the end of the month at the client office. How does that sound? (score=0.3744)",
+            "[en] I saved you a spot to meet the deadline Friday morning at the client office. How does that sound? (score=0.5345)"
+          ],
+          "testFalsePositiveExamples" : [
+            "[en] The document records plans to join a meeting Wednesday evening at the campus cafe. (score=0.8468)",
+            "[en] A quick note: The document records plans to join a meeting Wednesday evening at Meeting Room 5. (score=0.7893)"
+          ],
+          "threshold" : 0.74,
+          "validationBinary" : {
+            "accuracy" : 0.9859,
+            "f1" : 0.8712,
+            "falseNegative" : 38,
+            "falsePositive" : 4,
+            "precision" : 0.9726,
+            "recall" : 0.7889,
+            "total" : 2970,
+            "trueNegative" : 2786,
+            "truePositive" : 142
+          }
+        }
+      ],
+      "id" : "invitation",
+      "labels" : [
+        "notInvitation",
+        "invitation"
+      ],
+      "positiveLabel" : "invitation",
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "InvitationIntentClassifier.mlmodel"
+    },
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : true,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 5676,
+          "balancedValidationCount" : 720,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9912,
+              "f1" : 0.9628,
+              "falseNegative" : 12,
+              "falsePositive" : 1,
+              "precision" : 0.9941,
+              "recall" : 0.9333,
+              "total" : 1485,
+              "trueNegative" : 1304,
+              "truePositive" : 168
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9838,
+              "f1" : 0.9286,
+              "falseNegative" : 24,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.8667,
+              "total" : 1485,
+              "trueNegative" : 1305,
+              "truePositive" : 156
+            }
+          },
+          "confidenceThresholdsByLanguage" : {
+            "en" : 0.81,
+            "zh-Hans" : 0.75
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9841,
+            "f1" : 0.8,
+            "falseNegative" : 4,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.6667,
+            "total" : 252,
+            "trueNegative" : 240,
+            "truePositive" : 8
+          },
+          "goldenBinaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9921,
+              "f1" : 0.9091,
+              "falseNegative" : 1,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.8333,
+              "total" : 126,
+              "trueNegative" : 120,
+              "truePositive" : 5
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9762,
+              "f1" : 0.6667,
+              "falseNegative" : 3,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.5,
+              "total" : 126,
+              "trueNegative" : 120,
+              "truePositive" : 3
+            }
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] My account was locked for no reason. Can you restore it today? (score=0.5679)",
+            "[zh-Hans] 账号无故被锁了，能请你们今天恢复吗？ (score=0.5898)",
+            "[zh-Hans] 消息一直发送失败，请尽快给我一个解决方案。 (score=0.2716)",
+            "[zh-Hans] 客服已经三天没有回复了，请问什么时候能处理？ (score=0.7094)"
+          ],
+          "goldenFalsePositiveExamples" : [
+
+          ],
+          "modelBytes" : 237218,
+          "runtimeAssetIndependent" : true,
+          "testBinary" : {
+            "accuracy" : 0.9875,
+            "f1" : 0.946,
+            "falseNegative" : 36,
+            "falsePositive" : 1,
+            "precision" : 0.9969,
+            "recall" : 0.9,
+            "total" : 2970,
+            "trueNegative" : 2609,
+            "truePositive" : 324
+          },
+          "testFalseNegativeExamples" : [
+            "[en] Just to add, I need a clear answer: the page loads extremely slowly. How are you going to resolve it? (score=0.7947)",
+            "[en] Just to add, I need a clear answer: the app keeps crashing. How are you going to resolve it? (score=0.7263)",
+            "[en] Also, I need a clear answer: the app keeps crashing. How are you going to resolve it? (score=0.7735)",
+            "[en] A quick note: I need a clear answer: messages never send. How are you going to resolve it? (score=0.7561)",
+            "[en] A quick note: I need a clear answer: the item arrived damaged. How are you going to resolve it? (score=0.6045)",
+            "[en] One more thing: I need a clear answer: the app keeps crashing. How are you going to resolve it? (score=0.7651)",
+            "[en] Also, I need a clear answer: the invoice information is wrong. How are you going to resolve it? (score=0.6924)",
+            "[en] Just to add, I need a clear answer: the order was charged twice. How are you going to resolve it? (score=0.7845)",
+            "[en] A quick note: I need a clear answer: the app keeps crashing. How are you going to resolve it? (score=0.7391)",
+            "[en] Just to add, I need a clear answer: my reservation disappeared. How are you going to resolve it? (score=0.755)",
+            "[en] One more thing: I need a clear answer: the file will not open. How are you going to resolve it? (score=0.7641)",
+            "[en] Just to add, I need a clear answer: data synchronization fails. How are you going to resolve it? (score=0.7775)"
+          ],
+          "testFalsePositiveExamples" : [
+            "[en] Funny how things work out; I am still processing it, and It was quicker than expected. (score=0.8343)"
+          ],
+          "threshold" : 0.7,
+          "validationBinary" : {
+            "accuracy" : 0.9956,
+            "f1" : 0.9821,
+            "falseNegative" : 4,
+            "falsePositive" : 9,
+            "precision" : 0.9753,
+            "recall" : 0.9889,
+            "total" : 2970,
+            "trueNegative" : 2601,
+            "truePositive" : 356
+          }
+        }
+      ],
+      "id" : "complaint",
+      "labels" : [
+        "notComplaint",
+        "complaint"
+      ],
+      "positiveLabel" : "complaint",
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "ComplaintIntentClassifier.mlmodel"
+    },
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : false,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 728,
+          "balancedValidationCount" : 180,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9993,
+              "f1" : 0.989,
+              "falseNegative" : 0,
+              "falsePositive" : 1,
+              "precision" : 0.9783,
+              "recall" : 1,
+              "total" : 1485,
+              "trueNegative" : 1439,
+              "truePositive" : 45
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.996,
+              "f1" : 0.9348,
+              "falseNegative" : 2,
+              "falsePositive" : 4,
+              "precision" : 0.9149,
+              "recall" : 0.9556,
+              "total" : 1485,
+              "trueNegative" : 1436,
+              "truePositive" : 43
+            }
+          },
+          "confidenceThresholdsByLanguage" : {
+            "en" : 0.5,
+            "zh-Hans" : 0.5
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9762,
+            "f1" : 0.8571,
+            "falseNegative" : 2,
+            "falsePositive" : 4,
+            "precision" : 0.8182,
+            "recall" : 0.9,
+            "total" : 252,
+            "trueNegative" : 228,
+            "truePositive" : 18
+          },
+          "goldenBinaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9921,
+              "f1" : 0.9474,
+              "falseNegative" : 1,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.9,
+              "total" : 126,
+              "trueNegative" : 116,
+              "truePositive" : 9
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9603,
+              "f1" : 0.7826,
+              "falseNegative" : 1,
+              "falsePositive" : 4,
+              "precision" : 0.6923,
+              "recall" : 0.9,
+              "total" : 126,
+              "trueNegative" : 112,
+              "truePositive" : 9
+            }
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] I suggest a one-day delay, with Thursday as the new deadline. Thoughts? (score=0.4706)",
+            "[zh-Hans] 我提议延期一天，新的截止时间定在周四如何？ (score=0.4243)"
+          ],
+          "goldenFalsePositiveExamples" : [
+            "[zh-Hans] 记得把发票抬头改好以后重新提交。 (score=0.6062)",
+            "[zh-Hans] 你能明天上午把报价单核对一遍吗？ (score=0.6327)",
+            "[zh-Hans] 方便帮我约一下周三下午的会议室吗？ (score=0.7708)",
+            "[zh-Hans] 门店营业时间是上午九点到晚上十点。 (score=0.6345)"
+          ],
+          "modelBytes" : 17856,
+          "runtimeAssetIndependent" : true,
+          "testBinary" : {
+            "accuracy" : 0.9976,
+            "f1" : 0.9617,
+            "falseNegative" : 2,
+            "falsePositive" : 5,
+            "precision" : 0.9462,
+            "recall" : 0.9778,
+            "total" : 2970,
+            "trueNegative" : 2875,
+            "truePositive" : 88
+          },
+          "testFalseNegativeExamples" : [
+            "[zh-Hans] 还有一件事，关于看电影，我提议改期到下周一早上，你觉得呢？ (score=0.4479)",
+            "[zh-Hans] 另外，关于看电影，我提议改期到下周一早上，你觉得呢？ (score=0.4235)"
+          ],
+          "testFalsePositiveExamples" : [
+            "[en] Invitation confirmed for next Monday at noon at the station; can you join us to attend an appointment? (score=0.5179)",
+            "[zh-Hans] 真心祝愿王老师今后前程似锦！ (score=0.5)",
+            "[zh-Hans] 真心祝愿家人们今后阖家幸福！ (score=0.5)",
+            "[zh-Hans] 不知道你明天下午三点是否有空，要不要在线上会议室周末聚会？ (score=0.6596)",
+            "[zh-Hans] 不知道你周五上午是否有空，要不要在火车站开会？ (score=0.526)"
+          ],
+          "threshold" : 0.5,
+          "validationBinary" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 2970,
+            "trueNegative" : 2880,
+            "truePositive" : 90
+          }
+        }
+      ],
+      "id" : "scheduleNegotiation",
+      "labels" : [
+        "notScheduleNegotiation",
+        "scheduleNegotiation"
+      ],
+      "positiveLabel" : "scheduleNegotiation",
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "ScheduleNegotiationIntentClassifier.mlmodel"
+    },
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : true,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 1832,
+          "balancedValidationCount" : 360,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9535,
+              "f1" : 0.3784,
+              "falseNegative" : 69,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.2333,
+              "total" : 1485,
+              "trueNegative" : 1395,
+              "truePositive" : 21
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9609,
+              "f1" : 0.5246,
+              "falseNegative" : 58,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.3556,
+              "total" : 1485,
+              "trueNegative" : 1395,
+              "truePositive" : 32
+            }
+          },
+          "confidenceThresholdsByLanguage" : {
+            "en" : 0.99,
+            "zh-Hans" : 0.99
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9444,
+            "f1" : 0.4615,
+            "falseNegative" : 14,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.3,
+            "total" : 252,
+            "trueNegative" : 232,
+            "truePositive" : 6
+          },
+          "goldenBinaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9444,
+              "f1" : 0.4615,
+              "falseNegative" : 7,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.3,
+              "total" : 126,
+              "trueNegative" : 116,
+              "truePositive" : 3
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9444,
+              "f1" : 0.4615,
+              "falseNegative" : 7,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.3,
+              "total" : 126,
+              "trueNegative" : 116,
+              "truePositive" : 3
+            }
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] I approve the budget; procurement can begin. (score=0.9329)",
+            "[en] Final decision: use vendor B and stop comparing bids. (score=0.986)",
+            "[en] I confirm the monthly plan. Please proceed with the contract. (score=0.986)",
+            "[en] I approve this release scope; execute it as written. (score=0.9838)",
+            "[en] We will fix stability first and defer the other requests. (score=0.9718)",
+            "[en] Of the three candidates, I confirm Lee as the owner. (score=0.9775)",
+            "[en] You may sign it; I approve the final contract. (score=0.7411)",
+            "[zh-Hans] 预算我批准了，可以开始采购。 (score=0.597)",
+            "[zh-Hans] 最终拍板用供应商乙，不再比价。 (score=0.9851)",
+            "[zh-Hans] 我同意这个发布范围，照此执行。 (score=0.9107)",
+            "[zh-Hans] 决定先修稳定性问题，其他需求放到下个版本。 (score=0.4184)",
+            "[zh-Hans] 不用再讨论了，方案 A 正式通过。 (score=0.9868)"
+          ],
+          "goldenFalsePositiveExamples" : [
+
+          ],
+          "modelBytes" : 28059,
+          "runtimeAssetIndependent" : true,
+          "testBinary" : {
+            "accuracy" : 0.9572,
+            "f1" : 0.4549,
+            "falseNegative" : 127,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.2944,
+            "total" : 2970,
+            "trueNegative" : 2790,
+            "truePositive" : 53
+          },
+          "testFalseNegativeExamples" : [
+            "[en] One more thing: Final call: adopt the blue version and proceed tomorrow morning. (score=0.5417)",
+            "[en] Just to add, Final call: adopt the monthly plan and proceed before the next meeting. (score=0.1954)",
+            "[en] Final call: adopt the blue version and proceed before the end of today. (score=0.5924)",
+            "[en] Final call: adopt option A and proceed before the next meeting. (score=0.4492)",
+            "[en] A quick note: Final call: adopt vendor B and proceed after you receive this message. (score=0.2532)",
+            "[en] Final call: adopt the second design and proceed after you receive this message. (score=0.3279)",
+            "[en] Also, Final call: adopt the blue version and proceed this week. (score=0.4667)",
+            "[en] Just to add, Final call: adopt the basic release first and proceed this week. (score=0.4289)",
+            "[en] Final call: adopt the monthly plan and proceed this week. (score=0.5119)",
+            "[en] Final call: adopt option A and proceed this week. (score=0.6194)",
+            "[en] Just to add, Final call: adopt vendor B and proceed before 3 PM. (score=0.4389)",
+            "[en] Final call: adopt the basic release first and proceed by the end of the month. (score=0.5043)"
+          ],
+          "testFalsePositiveExamples" : [
+
+          ],
+          "threshold" : 0.99,
+          "validationBinary" : {
+            "accuracy" : 0.9505,
+            "f1" : 0.3099,
+            "falseNegative" : 147,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.1833,
+            "total" : 2970,
+            "trueNegative" : 2790,
+            "truePositive" : 33
+          }
+        }
+      ],
+      "id" : "confirmationDecision",
+      "labels" : [
+        "notConfirmationDecision",
+        "confirmationDecision"
+      ],
+      "positiveLabel" : "confirmationDecision",
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "ConfirmationDecisionIntentClassifier.mlmodel"
+    },
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : true,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 2910,
+          "balancedValidationCount" : 720,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9266,
+              "f1" : 0.5657,
+              "falseNegative" : 109,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.3944,
+              "total" : 1485,
+              "trueNegative" : 1305,
+              "truePositive" : 71
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9495,
+              "f1" : 0.7573,
+              "falseNegative" : 63,
+              "falsePositive" : 12,
+              "precision" : 0.907,
+              "recall" : 0.65,
+              "total" : 1485,
+              "trueNegative" : 1293,
+              "truePositive" : 117
+            }
+          },
+          "confidenceThresholdsByLanguage" : {
+            "en" : 0.95,
+            "zh-Hans" : 0.96
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9444,
+            "f1" : 0.6316,
+            "falseNegative" : 14,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.4615,
+            "total" : 252,
+            "trueNegative" : 226,
+            "truePositive" : 12
+          },
+          "goldenBinaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9444,
+              "f1" : 0.6316,
+              "falseNegative" : 7,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.4615,
+              "total" : 126,
+              "trueNegative" : 113,
+              "truePositive" : 6
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9444,
+              "f1" : 0.6316,
+              "falseNegative" : 7,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.4615,
+              "total" : 126,
+              "trueNegative" : 113,
+              "truePositive" : 6
+            }
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] Remember to correct the invoice name and submit it again. (score=0.6816)",
+            "[en] First confirm the delivery address with the client, then update the order. (score=0.1328)",
+            "[en] Once the client replies, send the final quote to Finance. (score=0.8917)",
+            "[en] After the meeting, summarize the three decisions in the project channel. (score=0.8568)",
+            "[en] When approval arrives, contact the applicant and explain the reason. (score=0.8088)",
+            "[en] Follow up with the vendor about the delivery date next Monday. (score=0.8891)",
+            "[en] Check the shipment again in three days and notify the customer. (score=0.8142)",
+            "[zh-Hans] 记得把发票抬头改好以后重新提交。 (score=0.7227)",
+            "[zh-Hans] 先记一下：月底前我自己联系客户。 (score=0.9131)",
+            "[zh-Hans] 明早九点提醒我给牙医打电话确认复诊。 (score=0.8677)",
+            "[zh-Hans] 客户回复后，下一步把最终报价发给财务。 (score=0.8496)",
+            "[zh-Hans] 会后需要整理三个决定并发到项目群。 (score=0.4708)"
+          ],
+          "goldenFalsePositiveExamples" : [
+
+          ],
+          "modelBytes" : 33271,
+          "runtimeAssetIndependent" : true,
+          "testBinary" : {
+            "accuracy" : 0.938,
+            "f1" : 0.6714,
+            "falseNegative" : 172,
+            "falsePositive" : 12,
+            "precision" : 0.94,
+            "recall" : 0.5222,
+            "total" : 2970,
+            "trueNegative" : 2598,
+            "truePositive" : 188
+          },
+          "testFalseNegativeExamples" : [
+            "[en] Also, Reminder: call the client back before the next meeting. (score=0.9247)",
+            "[en] One more thing: Reminder: book the follow-up visit by Friday. (score=0.9424)",
+            "[en] Reminder: check the invoice status by the end of the month. (score=0.9354)",
+            "[en] Reminder: call the client back by the end of the month. (score=0.923)",
+            "[en] A quick note: Reminder: call the client back before the end of today. (score=0.9072)",
+            "[en] One more thing: Reminder: create the release tag before 3 PM. (score=0.9424)",
+            "[en] Reminder: contact the applicant by the end of the month. (score=0.9176)",
+            "[en] Also, Make review the approval result the next action and do it by the end of the month. (score=0.8519)",
+            "[en] A quick note: Make check the vendor delivery date the next action and do it by the end of the month. (score=0.8754)",
+            "[en] Reminder: contact the applicant after you receive this message. (score=0.8851)",
+            "[en] Make summarize the meeting decisions the next action and do it after you receive this message. (score=0.7982)",
+            "[en] A quick note: Reminder: record my temperature tomorrow morning. (score=0.9306)"
+          ],
+          "testFalsePositiveExamples" : [
+            "[zh-Hans] 项目预算没有确定下一步，之后可能聊一下。 (score=0.9867)",
+            "[zh-Hans] 补充一下，活动规则没有确定下一步，之后可能聊一下。 (score=0.9791)",
+            "[zh-Hans] 还有一件事，活动规则没有确定下一步，之后可能聊一下。 (score=0.9737)",
+            "[zh-Hans] 账户权限没有确定下一步，之后可能聊一下。 (score=0.9894)",
+            "[zh-Hans] 活动规则没有确定下一步，之后可能聊一下。 (score=0.9848)",
+            "[zh-Hans] 顺便说一下，行程计划没有确定下一步，之后可能聊一下。 (score=0.9868)",
+            "[zh-Hans] 资料要求没有确定下一步，之后可能聊一下。 (score=0.9843)",
+            "[zh-Hans] 顺便说一下，资料要求没有确定下一步，之后可能聊一下。 (score=0.9772)",
+            "[zh-Hans] 请假制度没有确定下一步，以后有机会再联系。 (score=0.9699)",
+            "[zh-Hans] 顺便说一下，付款方式没有确定下一步，之后可能聊一下。 (score=0.9913)",
+            "[zh-Hans] 资料要求没有确定下一步，有空或许跟进。 (score=0.964)",
+            "[zh-Hans] 补充一下，活动规则没有确定下一步，以后有机会再联系。 (score=0.965)"
+          ],
+          "threshold" : 0.95,
+          "validationBinary" : {
+            "accuracy" : 0.9643,
+            "f1" : 0.8307,
+            "falseNegative" : 100,
+            "falsePositive" : 6,
+            "precision" : 0.9774,
+            "recall" : 0.7222,
+            "total" : 2970,
+            "trueNegative" : 2604,
+            "truePositive" : 260
+          }
+        }
+      ],
+      "id" : "followUpReminder",
+      "labels" : [
+        "notFollowUpReminder",
+        "followUpReminder"
+      ],
+      "positiveLabel" : "followUpReminder",
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "FollowUpReminderIntentClassifier.mlmodel"
+    },
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : true,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 720,
+          "balancedValidationCount" : 180,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 1,
+              "f1" : 1,
+              "falseNegative" : 0,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 1,
+              "total" : 1485,
+              "trueNegative" : 1440,
+              "truePositive" : 45
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9993,
+              "f1" : 0.9888,
+              "falseNegative" : 1,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.9778,
+              "total" : 1485,
+              "trueNegative" : 1440,
+              "truePositive" : 44
+            }
+          },
+          "confidenceThresholdsByLanguage" : {
+            "en" : 0.69,
+            "zh-Hans" : 0.77
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9881,
+            "f1" : 0.9189,
+            "falseNegative" : 3,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.85,
+            "total" : 252,
+            "trueNegative" : 232,
+            "truePositive" : 17
+          },
+          "goldenBinaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9921,
+              "f1" : 0.9474,
+              "falseNegative" : 1,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.9,
+              "total" : 126,
+              "trueNegative" : 116,
+              "truePositive" : 9
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9841,
+              "f1" : 0.8889,
+              "falseNegative" : 2,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.8,
+              "total" : 126,
+              "trueNegative" : 116,
+              "truePositive" : 8
+            }
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] Good luck with your exam tomorrow; I hope all your hard work pays off. (score=0.1198)",
+            "[zh-Hans] 中秋团圆，愿大家所念皆如愿，所行皆坦途。 (score=0.7188)",
+            "[zh-Hans] 祝宝宝健康成长，也祝新手爸妈每天都有好睡眠。 (score=0.7616)"
+          ],
+          "goldenFalsePositiveExamples" : [
+
+          ],
+          "modelBytes" : 18991,
+          "runtimeAssetIndependent" : true,
+          "testBinary" : {
+            "accuracy" : 0.9997,
+            "f1" : 0.9944,
+            "falseNegative" : 1,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.9889,
+            "total" : 2970,
+            "trueNegative" : 2880,
+            "truePositive" : 89
+          },
+          "testFalseNegativeExamples" : [
+            "[zh-Hans] 顺便说一下，中秋节之际，祝阿杰万事如意。 (score=0.7458)"
+          ],
+          "testFalsePositiveExamples" : [
+
+          ],
+          "threshold" : 0.69,
+          "validationBinary" : {
+            "accuracy" : 0.999,
+            "f1" : 0.9834,
+            "falseNegative" : 1,
+            "falsePositive" : 2,
+            "precision" : 0.978,
+            "recall" : 0.9889,
+            "total" : 2970,
+            "trueNegative" : 2878,
+            "truePositive" : 89
+          }
+        }
+      ],
+      "id" : "blessing",
+      "labels" : [
+        "notBlessing",
+        "blessing"
+      ],
+      "positiveLabel" : "blessing",
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "BlessingIntentClassifier.mlmodel"
+    },
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : true,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 7880,
+          "balancedValidationCount" : 2160,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.938,
+              "f1" : 0.9499,
+              "falseNegative" : 72,
+              "falsePositive" : 20,
+              "precision" : 0.9776,
+              "recall" : 0.9238,
+              "total" : 1485,
+              "trueNegative" : 520,
+              "truePositive" : 873
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9394,
+              "f1" : 0.95,
+              "falseNegative" : 90,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.9048,
+              "total" : 1485,
+              "trueNegative" : 540,
+              "truePositive" : 855
+            }
+          },
+          "confidenceThresholdsByLanguage" : {
+            "en" : 0.64,
+            "zh-Hans" : 0.74
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9008,
+            "f1" : 0.9104,
+            "falseNegative" : 13,
+            "falsePositive" : 12,
+            "precision" : 0.9137,
+            "recall" : 0.9071,
+            "total" : 252,
+            "trueNegative" : 100,
+            "truePositive" : 127
+          },
+          "goldenBinaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.8968,
+              "f1" : 0.9103,
+              "falseNegative" : 4,
+              "falsePositive" : 9,
+              "precision" : 0.88,
+              "recall" : 0.9429,
+              "total" : 126,
+              "trueNegative" : 47,
+              "truePositive" : 66
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9048,
+              "f1" : 0.9104,
+              "falseNegative" : 9,
+              "falsePositive" : 3,
+              "precision" : 0.9531,
+              "recall" : 0.8714,
+              "total" : 126,
+              "trueNegative" : 53,
+              "truePositive" : 61
+            }
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] My flight changed; can pickup move to nine tonight? (score=0.2486)",
+            "[en] The kickoff is fixed for Monday at nine; please attend on time. (score=0.2222)",
+            "[en] Between the two versions, I choose the second. Ship that one. (score=0.5425)",
+            "[en] After the meeting, summarize the three decisions in the project channel. (score=0.639)",
+            "[zh-Hans] 这些材料可以在月底前准备好吗？ (score=0.6485)",
+            "[zh-Hans] 客服已经三天没有回复了，请问什么时候能处理？ (score=0.5827)",
+            "[zh-Hans] 如果周五不行，我可以配合周六上午。 (score=0.487)",
+            "[zh-Hans] 预算我批准了，可以开始采购。 (score=0.3233)",
+            "[zh-Hans] 这三个候选里定小李负责，我确认。 (score=0.0204)",
+            "[zh-Hans] 会后需要整理三个决定并发到项目群。 (score=0.169)",
+            "[zh-Hans] 等审批结果出来，请联系申请人说明原因。 (score=0.5211)",
+            "[zh-Hans] 下周一跟进供应商的交货日期。 (score=0.2116)"
+          ],
+          "goldenFalsePositiveExamples" : [
+            "[en] Tomorrow I will check the invoice with Finance; you do not need to help. (score=0.7205)",
+            "[en] The store is open from nine in the morning until ten at night. (score=0.9846)",
+            "[en] Lunch is already booked for twelve thirty. (score=0.709)",
+            "[en] Sure, let us wait until everyone has discussed it. (score=0.8938)",
+            "[en] Thanks for explaining; I still need to compare them. (score=0.8631)",
+            "[en] We can consider whether to handle it in the future. (score=0.7691)",
+            "[en] Leave it for now and mention it whenever it comes up. (score=0.7969)",
+            "[en] There is no owner and no next step. (score=0.9928)",
+            "[en] It is Maya's birthday today, and the cake is already in the meeting room. (score=0.9847)",
+            "[zh-Hans] 明天我要去财务核对发票，不用你帮忙。 (score=0.9473)",
+            "[zh-Hans] 提醒目标是今晚把药吃完后记录体温。 (score=0.7975)",
+            "[zh-Hans] 没有负责人，也没有下一步。 (score=0.8226)"
+          ],
+          "modelBytes" : 32087,
+          "runtimeAssetIndependent" : true,
+          "testBinary" : {
+            "accuracy" : 0.9387,
+            "f1" : 0.95,
+            "falseNegative" : 162,
+            "falsePositive" : 20,
+            "precision" : 0.9886,
+            "recall" : 0.9143,
+            "total" : 2970,
+            "trueNegative" : 1060,
+            "truePositive" : 1728
+          },
+          "testFalseNegativeExamples" : [
+            "[en] Also, Reminder: call the client back before the next meeting. (score=0.5915)",
+            "[en] One more thing: Reminder: book the follow-up visit by Friday. (score=0.5778)",
+            "[en] One more thing: Reminder: create the release tag before 3 PM. (score=0.5789)",
+            "[en] Reminder: contact the applicant by the end of the month. (score=0.5524)",
+            "[en] Reminder: contact the applicant after you receive this message. (score=0.5702)",
+            "[en] A quick note: Reminder: verify the refund status before the next meeting. (score=0.5742)",
+            "[en] Reminder: verify the refund status this week. (score=0.6095)",
+            "[en] A quick note: Reminder: summarize the meeting decisions by the end of the month. (score=0.5468)",
+            "[en] A quick note: Reminder: create the release tag before the end of today. (score=0.5713)",
+            "[en] A quick note: Reminder: review the shipment status tomorrow morning. (score=0.4864)",
+            "[en] Reminder: review the shipment status before the next meeting. (score=0.4854)",
+            "[en] Reminder: create the release tag before 3 PM. (score=0.6066)"
+          ],
+          "testFalsePositiveExamples" : [
+            "[en] I need to remember to book the follow-up visit this week. (score=0.9538)",
+            "[en] One more thing: I need to remember to check the invoice status this week. (score=0.9614)",
+            "[en] I need to remember to summarize the meeting decisions before the end of today. (score=0.9515)",
+            "[en] A quick note: I need to remember to verify the refund status before the next meeting. (score=0.9488)",
+            "[en] I need to remember to check the invoice status before 3 PM. (score=0.971)",
+            "[en] Also, I need to remember to call the client back before the next meeting. (score=0.9521)",
+            "[en] I need to remember to book the follow-up visit by Friday. (score=0.9547)",
+            "[en] One more thing: I need to remember to book the follow-up visit before the next meeting. (score=0.9468)",
+            "[en] I need to remember to update the project channel this week. (score=0.9774)",
+            "[en] A quick note: I need to remember to record my temperature before the end of today. (score=0.9686)",
+            "[en] Also, I need to remember to check the vendor delivery date by the end of the month. (score=0.9661)",
+            "[en] I need to remember to check the vendor delivery date before the next meeting. (score=0.969)"
+          ],
+          "threshold" : 0.64,
+          "validationBinary" : {
+            "accuracy" : 0.9266,
+            "f1" : 0.9406,
+            "falseNegative" : 165,
+            "falsePositive" : 53,
+            "precision" : 0.9702,
+            "recall" : 0.9127,
+            "total" : 2970,
+            "trueNegative" : 1027,
+            "truePositive" : 1725
+          }
+        }
+      ],
+      "id" : "replyableMessage",
+      "labels" : [
+        "notReplyableMessage",
+        "replyableMessage"
+      ],
+      "positiveLabel" : "replyableMessage",
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "ConversationalReplyIntentClassifier.mlmodel"
+    },
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : true,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 4320,
+          "balancedValidationCount" : 540,
+          "goldenMulticlass" : {
+            "accuracy" : 0.9087,
+            "confusion" : {
+              "negative" : {
+                "negative" : 18,
+                "neutral" : 0,
+                "positive" : 0
+              },
+              "neutral" : {
+                "negative" : 11,
+                "neutral" : 185,
+                "positive" : 12
+              },
+              "positive" : {
+                "negative" : 0,
+                "neutral" : 0,
+                "positive" : 26
+              }
+            },
+            "macroF1" : 0.84,
+            "perLabel" : {
+              "negative" : {
+                "accuracy" : 0.9563,
+                "f1" : 0.766,
+                "falseNegative" : 0,
+                "falsePositive" : 11,
+                "precision" : 0.6207,
+                "recall" : 1,
+                "total" : 252,
+                "trueNegative" : 223,
+                "truePositive" : 18
+              },
+              "neutral" : {
+                "accuracy" : 0.9087,
+                "f1" : 0.9415,
+                "falseNegative" : 23,
+                "falsePositive" : 0,
+                "precision" : 1,
+                "recall" : 0.8894,
+                "total" : 252,
+                "trueNegative" : 44,
+                "truePositive" : 185
+              },
+              "positive" : {
+                "accuracy" : 0.9524,
+                "f1" : 0.8125,
+                "falseNegative" : 0,
+                "falsePositive" : 12,
+                "precision" : 0.6842,
+                "recall" : 1,
+                "total" : 252,
+                "trueNegative" : 214,
+                "truePositive" : 26
+              }
+            },
+            "total" : 252
+          },
+          "modelBytes" : 245294,
+          "multiclassByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9825,
+              "confusion" : {
+                "negative" : {
+                  "negative" : 220,
+                  "neutral" : 5,
+                  "positive" : 0
+                },
+                "neutral" : {
+                  "negative" : 4,
+                  "neutral" : 1149,
+                  "positive" : 17
+                },
+                "positive" : {
+                  "negative" : 0,
+                  "neutral" : 0,
+                  "positive" : 90
+                }
+              },
+              "macroF1" : 0.9608,
+              "perLabel" : {
+                "negative" : {
+                  "accuracy" : 0.9939,
+                  "f1" : 0.98,
+                  "falseNegative" : 5,
+                  "falsePositive" : 4,
+                  "precision" : 0.9821,
+                  "recall" : 0.9778,
+                  "total" : 1485,
+                  "trueNegative" : 1256,
+                  "truePositive" : 220
+                },
+                "neutral" : {
+                  "accuracy" : 0.9825,
+                  "f1" : 0.9888,
+                  "falseNegative" : 21,
+                  "falsePositive" : 5,
+                  "precision" : 0.9957,
+                  "recall" : 0.9821,
+                  "total" : 1485,
+                  "trueNegative" : 310,
+                  "truePositive" : 1149
+                },
+                "positive" : {
+                  "accuracy" : 0.9886,
+                  "f1" : 0.9137,
+                  "falseNegative" : 0,
+                  "falsePositive" : 17,
+                  "precision" : 0.8411,
+                  "recall" : 1,
+                  "total" : 1485,
+                  "trueNegative" : 1378,
+                  "truePositive" : 90
+                }
+              },
+              "total" : 1485
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9845,
+              "confusion" : {
+                "negative" : {
+                  "negative" : 214,
+                  "neutral" : 11,
+                  "positive" : 0
+                },
+                "neutral" : {
+                  "negative" : 3,
+                  "neutral" : 1165,
+                  "positive" : 2
+                },
+                "positive" : {
+                  "negative" : 1,
+                  "neutral" : 6,
+                  "positive" : 83
+                }
+              },
+              "macroF1" : 0.9684,
+              "perLabel" : {
+                "negative" : {
+                  "accuracy" : 0.9899,
+                  "f1" : 0.9661,
+                  "falseNegative" : 11,
+                  "falsePositive" : 4,
+                  "precision" : 0.9817,
+                  "recall" : 0.9511,
+                  "total" : 1485,
+                  "trueNegative" : 1256,
+                  "truePositive" : 214
+                },
+                "neutral" : {
+                  "accuracy" : 0.9852,
+                  "f1" : 0.9906,
+                  "falseNegative" : 5,
+                  "falsePositive" : 17,
+                  "precision" : 0.9856,
+                  "recall" : 0.9957,
+                  "total" : 1485,
+                  "trueNegative" : 298,
+                  "truePositive" : 1165
+                },
+                "positive" : {
+                  "accuracy" : 0.9939,
+                  "f1" : 0.9486,
+                  "falseNegative" : 7,
+                  "falsePositive" : 2,
+                  "precision" : 0.9765,
+                  "recall" : 0.9222,
+                  "total" : 1485,
+                  "trueNegative" : 1393,
+                  "truePositive" : 83
+                }
+              },
+              "total" : 1485
+            }
+          },
+          "runtimeAssetIndependent" : true,
+          "testMulticlass" : {
+            "accuracy" : 0.9835,
+            "confusion" : {
+              "negative" : {
+                "negative" : 434,
+                "neutral" : 16,
+                "positive" : 0
+              },
+              "neutral" : {
+                "negative" : 7,
+                "neutral" : 2314,
+                "positive" : 19
+              },
+              "positive" : {
+                "negative" : 1,
+                "neutral" : 6,
+                "positive" : 173
+              }
+            },
+            "macroF1" : 0.9643,
+            "perLabel" : {
+              "negative" : {
+                "accuracy" : 0.9919,
+                "f1" : 0.9731,
+                "falseNegative" : 16,
+                "falsePositive" : 8,
+                "precision" : 0.9819,
+                "recall" : 0.9644,
+                "total" : 2970,
+                "trueNegative" : 2512,
+                "truePositive" : 434
+              },
+              "neutral" : {
+                "accuracy" : 0.9838,
+                "f1" : 0.9897,
+                "falseNegative" : 26,
+                "falsePositive" : 22,
+                "precision" : 0.9906,
+                "recall" : 0.9889,
+                "total" : 2970,
+                "trueNegative" : 608,
+                "truePositive" : 2314
+              },
+              "positive" : {
+                "accuracy" : 0.9912,
+                "f1" : 0.9301,
+                "falseNegative" : 7,
+                "falsePositive" : 19,
+                "precision" : 0.901,
+                "recall" : 0.9611,
+                "total" : 2970,
+                "trueNegative" : 2771,
+                "truePositive" : 173
+              }
+            },
+            "total" : 2970
+          },
+          "validationMulticlass" : {
+            "accuracy" : 0.9771,
+            "confusion" : {
+              "negative" : {
+                "negative" : 444,
+                "neutral" : 6,
+                "positive" : 0
+              },
+              "neutral" : {
+                "negative" : 38,
+                "neutral" : 2278,
+                "positive" : 24
+              },
+              "positive" : {
+                "negative" : 0,
+                "neutral" : 0,
+                "positive" : 180
+              }
+            },
+            "macroF1" : 0.9585,
+            "perLabel" : {
+              "negative" : {
+                "accuracy" : 0.9852,
+                "f1" : 0.9528,
+                "falseNegative" : 6,
+                "falsePositive" : 38,
+                "precision" : 0.9212,
+                "recall" : 0.9867,
+                "total" : 2970,
+                "trueNegative" : 2482,
+                "truePositive" : 444
+              },
+              "neutral" : {
+                "accuracy" : 0.9771,
+                "f1" : 0.9853,
+                "falseNegative" : 62,
+                "falsePositive" : 6,
+                "precision" : 0.9974,
+                "recall" : 0.9735,
+                "total" : 2970,
+                "trueNegative" : 624,
+                "truePositive" : 2278
+              },
+              "positive" : {
+                "accuracy" : 0.9919,
+                "f1" : 0.9375,
+                "falseNegative" : 0,
+                "falsePositive" : 24,
+                "precision" : 0.8824,
+                "recall" : 1,
+                "total" : 2970,
+                "trueNegative" : 2766,
+                "truePositive" : 180
+              }
+            },
+            "total" : 2970
+          }
+        }
+      ],
+      "id" : "sentiment",
+      "labels" : [
+        "negative",
+        "neutral",
+        "positive"
+      ],
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "SentimentClassifier.mlmodel"
+    }
+  ],
+  "corpusCount" : 23918,
+  "corpusPath" : "/Users/rocky/Documents/OSGKeyboard/ModelTraining/ClipboardSemantics/combined-training-corpus.jsonl",
+  "generatedAt" : "2026-08-27T05:29:04Z",
+  "goldenCount" : 252,
+  "selectionPolicy" : "Open records with unknown labels are excluded per classifier, and source-balanced caps anchor each label to the reviewed generated corpus size. Validation only: global and per-language binary thresholds require precision >= 0.97, then maximize recall; languages with fewer than 20 examples per class fall back to the global threshold. sentiment prioritizes macro-F1. Automatic routing also requires a self-contained maxEnt model because BERT embedding assets are not guaranteed in extensions. Test and golden data gate deployment but never tune model weights.",
+  "testCount" : 2970,
+  "trainingCount" : 17726,
+  "validationCount" : 2970
+}

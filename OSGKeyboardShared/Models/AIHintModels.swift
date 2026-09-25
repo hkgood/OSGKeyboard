@@ -189,14 +189,28 @@ public enum AIHintFeedEndpoints {
 
 public enum AIHintLocaleResolver {
     /// Only `zh-Hans` uses the Chinese pack; everything else uses English.
+    ///
+    /// The in-app UI language override wins over the system preference: a user
+    /// on a Chinese device who switches the app to English must also get the
+    /// English idle carousel, not Chinese hint chips.
     public static func packLocale(
+        language: AppUILanguage? = nil,
         preferredLanguages: [String] = Locale.preferredLanguages
     ) -> String {
-        let primary = (preferredLanguages.first ?? "").lowercased()
-        if primary == "zh-hans" || primary.hasPrefix("zh-hans-") || primary.hasPrefix("zh-hans_") {
+        switch language ?? AppGroupStore().uiLanguage {
+        case .english:
+            return "en"
+        case .chinese:
             return "zh"
+        case .auto:
+            // Traditional Chinese deliberately falls back to the English pack —
+            // only a Simplified pack is authored.
+            let primary = (preferredLanguages.first ?? "").lowercased()
+            if primary == "zh-hans" || primary.hasPrefix("zh-hans-") || primary.hasPrefix("zh-hans_") {
+                return "zh"
+            }
+            return "en"
         }
-        return "en"
     }
 }
 

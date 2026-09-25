@@ -83,6 +83,24 @@ final class MacHotkeyService {
         if !enabled { cancelPress() }
     }
 
+    /// True once the *global* `.flagsChanged` monitor is attached, i.e. once
+    /// Option-hold works outside the app's own windows. False whenever
+    /// Accessibility was denied at the time `start()` ran.
+    var isGlobalMonitorActive: Bool { globalFlagsMonitor != nil }
+
+    /// Re-attaches the global monitor after Accessibility was granted.
+    ///
+    /// `start()` alone cannot do this: when Accessibility is denied,
+    /// `addGlobalMonitorForEvents` returns nil while the *local* monitor still
+    /// attaches, so its "already started" guard would short-circuit every
+    /// retry and the hotkey stayed dead until the next launch.
+    func restartIfGlobalMonitorMissing() {
+        guard isEnabled, globalFlagsMonitor == nil else { return }
+        guard MacTextInsertionService.isAccessibilityTrusted else { return }
+        stop()
+        start()
+    }
+
     func start() {
         guard globalFlagsMonitor == nil, localFlagsMonitor == nil else { return }
         // Global monitors require Accessibility; without it the call returns

@@ -37,7 +37,7 @@ struct HistoryView: View {
             }
         }
         .background(palette.background)
-        .navigationTitle("history.title")
+        .navigationTitle(AppL10n.string("history.title"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if !store.entries.isEmpty {
@@ -48,38 +48,38 @@ struct HistoryView: View {
                         Image(systemName: "trash")
                     }
                     .tint(palette.textPrimary)
-                    .accessibilityLabel("history.clear.button")
+                    .accessibilityLabel(AppL10n.string("history.clear.button"))
                     .confirmationDialog(
-                        "history.clear.title",
+                        AppL10n.string("history.clear.title"),
                         isPresented: $showClearConfirmation,
                         titleVisibility: .visible
                     ) {
-                        Button("history.clear.confirm", role: .destructive) {
+                        Button(AppL10n.string("history.clear.confirm"), role: .destructive) {
                             store.clearAll()
                         }
-                        Button("common.cancel", role: .cancel) {}
+                        Button(AppL10n.string("common.cancel"), role: .cancel) {}
                     } message: {
-                        Text("history.clear.message")
+                        Text(AppL10n.string("history.clear.message"))
                     }
                 }
             }
         }
         .confirmationDialog(
-            "history.clearDay.title",
+            AppL10n.string("history.clearDay.title"),
             isPresented: $showDeleteDayConfirmation,
             titleVisibility: .visible
         ) {
-            Button("history.clearDay.confirm", role: .destructive) {
+            Button(AppL10n.string("history.clearDay.confirm"), role: .destructive) {
                 if let day = dayPendingDelete {
                     store.deleteEntries(on: day)
                 }
                 dayPendingDelete = nil
             }
-            Button("common.cancel", role: .cancel) {
+            Button(AppL10n.string("common.cancel"), role: .cancel) {
                 dayPendingDelete = nil
             }
         } message: {
-            Text("history.clearDay.message")
+            Text(AppL10n.string("history.clearDay.message"))
         }
     }
 
@@ -97,7 +97,7 @@ struct HistoryView: View {
                                 historyRow(entry)
                                     .surfaceCard()
                                     .contextMenu {
-                                        Button("common.delete", role: .destructive) {
+                                        Button(AppL10n.string("common.delete"), role: .destructive) {
                                             delete(entry)
                                         }
                                     }
@@ -127,12 +127,12 @@ struct HistoryView: View {
                 dayPendingDelete = day
                 showDeleteDayConfirmation = true
             } label: {
-                Text("common.delete")
+                Text(AppL10n.string("common.delete"))
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.danger)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("history.clearDay.button")
+            .accessibilityLabel(AppL10n.string("history.clearDay.button"))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         // CardPageContent owns horizontal padding, so no row-specific
@@ -145,7 +145,7 @@ struct HistoryView: View {
             Spacer()
             MaterialIcon(name: .menuBook, size: 36)
                 .foregroundStyle(palette.textTertiary.opacity(0.5))
-            Text("history.empty")
+            Text(AppL10n.string("history.empty"))
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textSecondary)
                 .multilineTextAlignment(.center)

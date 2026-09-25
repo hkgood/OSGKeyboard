@@ -1,0 +1,132 @@
+{
+  "classifiers" : [
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : true,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 720,
+          "balancedValidationCount" : 180,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 1,
+              "f1" : 1,
+              "falseNegative" : 0,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 1,
+              "total" : 1485,
+              "trueNegative" : 1440,
+              "truePositive" : 45
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9993,
+              "f1" : 0.9888,
+              "falseNegative" : 1,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.9778,
+              "total" : 1485,
+              "trueNegative" : 1440,
+              "truePositive" : 44
+            }
+          },
+          "confidenceThresholdsByLanguage" : {
+            "en" : 0.69,
+            "zh-Hans" : 0.77
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9881,
+            "f1" : 0.9189,
+            "falseNegative" : 3,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.85,
+            "total" : 252,
+            "trueNegative" : 232,
+            "truePositive" : 17
+          },
+          "goldenBinaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9921,
+              "f1" : 0.9474,
+              "falseNegative" : 1,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.9,
+              "total" : 126,
+              "trueNegative" : 116,
+              "truePositive" : 9
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9841,
+              "f1" : 0.8889,
+              "falseNegative" : 2,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.8,
+              "total" : 126,
+              "trueNegative" : 116,
+              "truePositive" : 8
+            }
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] Good luck with your exam tomorrow; I hope all your hard work pays off. (score=0.1198)",
+            "[zh-Hans] 中秋团圆，愿大家所念皆如愿，所行皆坦途。 (score=0.7188)",
+            "[zh-Hans] 祝宝宝健康成长，也祝新手爸妈每天都有好睡眠。 (score=0.7616)"
+          ],
+          "goldenFalsePositiveExamples" : [
+
+          ],
+          "modelBytes" : 18991,
+          "runtimeAssetIndependent" : true,
+          "testBinary" : {
+            "accuracy" : 0.9997,
+            "f1" : 0.9944,
+            "falseNegative" : 1,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.9889,
+            "total" : 2970,
+            "trueNegative" : 2880,
+            "truePositive" : 89
+          },
+          "testFalseNegativeExamples" : [
+            "[zh-Hans] 顺便说一下，中秋节之际，祝阿杰万事如意。 (score=0.7458)"
+          ],
+          "testFalsePositiveExamples" : [
+
+          ],
+          "threshold" : 0.69,
+          "validationBinary" : {
+            "accuracy" : 0.999,
+            "f1" : 0.9834,
+            "falseNegative" : 1,
+            "falsePositive" : 2,
+            "precision" : 0.978,
+            "recall" : 0.9889,
+            "total" : 2970,
+            "trueNegative" : 2878,
+            "truePositive" : 89
+          }
+        }
+      ],
+      "id" : "blessing",
+      "labels" : [
+        "notBlessing",
+        "blessing"
+      ],
+      "positiveLabel" : "blessing",
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "BlessingIntentClassifier.mlmodel"
+    }
+  ],
+  "corpusCount" : 17692,
+  "corpusPath" : "ModelTraining/ClipboardSemantics/clipboard_semantic_corpus.jsonl",
+  "generatedAt" : "2026-08-27T01:58:55Z",
+  "goldenCount" : 252,
+  "selectionPolicy" : "Validation only: global and per-language binary thresholds require precision >= 0.97, then maximize recall; languages with fewer than 20 examples per class fall back to the global threshold. sentiment prioritizes macro-F1. Automatic routing also requires a self-contained maxEnt model because BERT embedding assets are not guaranteed in extensions. Test and golden data gate deployment but never tune model weights.",
+  "testCount" : 2970,
+  "trainingCount" : 11500,
+  "validationCount" : 2970
+}

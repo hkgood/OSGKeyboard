@@ -17,7 +17,10 @@ struct MacSettingsView: View {
     private var appearanceRaw = MacAppearancePreference.system.rawValue
     @AppStorage(MacOnboardingState.storageKey)
     private var hasCompletedMacOnboarding = true
-    @State private var accessibilityTrusted = MacTextInsertionService.isAccessibilityTrusted
+    // Accessibility is granted in System Settings, which sends no notification
+    // back. The monitor polls while this page is on screen so the status flips
+    // as soon as the user returns, instead of on the next app launch.
+    @StateObject private var permissions = MacPermissionMonitor()
 
     private var lang: AppUILanguage { viewModel.config.uiLanguage }
     private let recognitionLocales: [(id: String, key: String, fallback: String)] = [
@@ -39,7 +42,7 @@ struct MacSettingsView: View {
 
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: Spacing.xl) {
-                        supportSection
+                        MacAccountSettingsSection(language: lang)
                         generalSection
                         recognitionSection
                         if viewModel.config.engineMode == "cloud" {
@@ -63,7 +66,8 @@ struct MacSettingsView: View {
             }
             .background(palette.background)
         }
-        .onAppear { refreshAccessibilityState() }
+        .onAppear { permissions.start() }
+        .onDisappear { permissions.stop() }
     }
 
     // MARK: - General
@@ -320,27 +324,20 @@ struct MacSettingsView: View {
                         }
 
                         Label(
-                            accessibilityTrusted ? accessibilityStatusGranted : accessibilityStatusNeeded,
-                            systemImage: accessibilityTrusted ? "checkmark.circle.fill" : "exclamationmark.circle"
+                            permissions.isAccessibilityTrusted
+                                ? accessibilityStatusGranted
+                                : accessibilityStatusNeeded,
+                            systemImage: permissions.isAccessibilityTrusted
+                                ? "checkmark.circle.fill"
+                                : "exclamationmark.circle"
                         )
                         .font(TypeStyle.caption)
-                        .foregroundStyle(accessibilityTrusted ? palette.accent : palette.warning)
+                        .foregroundStyle(permissions.isAccessibilityTrusted ? palette.accent : palette.warning)
                         .contentTransition(.opacity)
-                        .animation(Motion.quick, value: accessibilityTrusted)
+                        .animation(Motion.quick, value: permissions.isAccessibilityTrusted)
                     }
                 }
             }
-        }
-    }
-
-    // MARK: - Support developer
-
-    private var supportSection: some View {
-        MacSettingsSection(
-            title: MacL10n.string("tip.title", language: lang),
-            footer: MacL10n.string("tip.consumableNotice", language: lang)
-        ) {
-            MacSupportDeveloperTipRows(language: lang)
         }
     }
 
@@ -361,12 +358,17 @@ struct MacSettingsView: View {
                     MacFormLinkRow(title: MacL10n.string("mac.settings.thirdPartyLicenses", language: lang))
                 }
                 .buttonStyle(.plain)
-                Button(MacL10n.string("mac.settings.restartOnboarding", language: lang)) {
+                Button {
                     hasCompletedMacOnboarding = false
+                } label: {
+                    // 与相邻的链接行同款排版：15pt 主文字 + 同样的行高与内边距。
+                    MacFormLinkRow(
+                        title: MacL10n.string("mac.settings.restartOnboarding", language: lang),
+                        showsChevron: false
+                    )
                 }
                 .buttonStyle(.plain)
-                .frame(maxWidth: .infinity, minHeight: MacMetrics.settingsRowMinHeight, alignment: .leading)
-                .padding(.horizontal, MacMetrics.settingsCardInset)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Read-only version row at the bottom of About.
                 MacInlineRow(title: MacL10n.string("mac.settings.version", language: lang)) {
@@ -582,20 +584,7 @@ struct MacSettingsView: View {
     // MARK: - AppKit actions (macOS only)
 
     private func openAccessibilitySettings() {
-        #if os(macOS)
-        _ = MacTextInsertionService.requestAccessibilityIfNeeded()
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-            NSWorkspace.shared.open(url)
-        }
-        refreshAccessibilityState()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            refreshAccessibilityState()
-        }
-        #endif
-    }
-
-    private func refreshAccessibilityState() {
-        accessibilityTrusted = MacTextInsertionService.isAccessibilityTrusted
+        permissions.openAccessibilitySettings()
     }
 
     private func localeLabel(_ locale: (id: String, key: String, fallback: String)) -> String {
@@ -609,10 +598,10 @@ struct MacSettingsView: View {
     }
 
     private var accessibilityStatusGranted: String {
-        lang.resolvedLanguageCode().hasPrefix("zh") ? "已授权" : "Granted"
+        MacL10n.string("mac.accessibility.status.granted", language: lang)
     }
 
     private var accessibilityStatusNeeded: String {
-        lang.resolvedLanguageCode().hasPrefix("zh") ? "未授权" : "Needed"
+        MacL10n.string("mac.accessibility.status.needed", language: lang)
     }
 }

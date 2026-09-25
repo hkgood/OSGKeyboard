@@ -14,6 +14,7 @@
       "platform": "ios",
       "tests": [
         "OSGKeyboardTests/AppGroupConfigurationTests",
+        "OSGKeyboardTests/AppDistributionChannelTests",
         "OSGKeyboardTests/AppGroupOnboardingStoreTests",
         "OSGKeyboardTests/ConfigurationStoreTests",
         "OSGKeyboardTests/KeychainTests",
@@ -42,7 +43,7 @@
       ]
     },
     "analytics": {
-      "description": "Privacy-safe analytics schema, durable queue, uploader, identity lifecycle, and anonymous extension runtime",
+      "description": "Privacy-safe analytics schema, durable queue, uploader, and identity lifecycle",
       "platform": "ios",
       "tests": [
         "OSGKeyboardTests/AnalyticsModelTests",
@@ -53,8 +54,7 @@
         "OSGKeyboardTests/AnalyticsAIOperationTests",
         "OSGKeyboardTests/KeyboardUsageModelTests",
         "OSGKeyboardTests/KeyboardUsageRepositoryTests",
-        "OSGKeyboardTests/KeyboardUsageUploadCoordinatorTests",
-        "OSGKeyboardExtTests/AnalyticsExtensionPrivacyTests"
+        "OSGKeyboardTests/KeyboardUsageUploadCoordinatorTests"
       ]
     },
     "sync": {
@@ -79,6 +79,7 @@
         "OSGKeyboardTests/PolishPromptComposerQuestionTests",
         "OSGKeyboardTests/PolishOutputValidatorTests",
         "OSGKeyboardTests/PolishStylePackTests",
+        "OSGKeyboardTests/PolishStyleCorpusExportStoreTests",
         "OSGKeyboardTests/PolishStyleLearningServiceTests",
         "OSGKeyboardTests/LLMClientTests",
         "OSGKeyboardTests/TranscriptLanguageDetectorTests",
@@ -142,8 +143,13 @@
       "platform": "ios",
       "tests": [
         "OSGKeyboardTests/FlowHandoffPolicyTests",
+        "OSGKeyboardTests/FlowFailureDiagnosticsTests",
+        "OSGKeyboardTests/FlowLevelStoreTests",
+        "OSGKeyboardTests/FlowPiPLossReportGateTests",
+        "OSGKeyboardTests/FlowSessionWarningReportGateTests",
         "OSGKeyboardTests/FlowHomePiPStatusPolicyTests",
         "OSGKeyboardTests/FlowPiPRecoveryPolicyTests",
+        "OSGKeyboardTests/FlowAdaptiveDownsamplerTests",
         "OSGKeyboardTests/FlowSessionBridgeTests",
         "OSGKeyboardTests/FlowSessionPolicyTests",
         "OSGKeyboardTests/FlowBudgetAndMergeTests",
@@ -154,6 +160,7 @@
         "OSGKeyboardTests/FlowKeyboardPoliciesTests",
         "OSGKeyboardTests/FlowReliabilityTests",
         "OSGKeyboardTests/FlowSessionManagerAnalyticsTests",
+        "OSGKeyboardTests/FlowFailureLogStoreTests",
         "OSGKeyboardTests/AISessionStateTests"
       ]
     },
@@ -193,6 +200,13 @@
         "OSGKeyboardTests/ClipboardHistoryPolicyTests",
         "OSGKeyboardTests/ClipboardHistoryStoreTests",
         "OSGKeyboardTests/KeyboardExtensionMemoryBudgetTests",
+        "OSGKeyboardTests/KeyboardInstallationProbeTests",
+        "OSGKeyboardTests/AIReplyVariantTests",
+        "OSGKeyboardTests/ClipboardReplyFeedbackStoreTests",
+        "OSGKeyboardTests/ClipboardSemanticShadowMetricsStoreTests",
+        "OSGKeyboardTests/KeyboardExtensionMemoryReliefTests",
+        "OSGKeyboardTests/InternalDiagnosticsUploaderTests",
+        "OSGKeyboardTests/AppL10nFallbackTests",
         "OSGKeyboardTests/OfficialSkillCatalogTests",
         "OSGKeyboardTests/FrequentTermStoreTests"
       ]
@@ -203,7 +217,6 @@
       "tests": [
         "OSGKeyboardTests/HostAppURLRegistryTests",
         "OSGKeyboardTests/PublicContentRefreshServiceTests",
-        "OSGKeyboardTests/TipProductTests",
         "OSGKeyboardTests/OpenSourceLicenseCatalogTests"
       ]
     },

@@ -90,7 +90,7 @@ public enum FlowHandoffPolicy {
         if let snapshotReason {
             switch snapshotReason {
             case .recording, .processing, .awaitingDelivery, .starting,
-                 .waitingForAudioProof, .audioEngineNotLive:
+                 .waitingForForeground, .waitingForAudioProof, .audioEngineNotLive:
                 return false
             case .ready, .noSession, .permissionMissing, .appGroupUnavailable,
                  .hostLost, .error:

@@ -13,11 +13,11 @@ import SwiftUI
 struct SettingsNavigationRow: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
-    private let localizedTitle: LocalizedStringKey?
+    private let localizedTitle: String?
     private let resolvedTitle: String?
     var subtitle: String?
 
-    init(title: LocalizedStringKey, subtitle: String? = nil) {
+    init(title: String, subtitle: String? = nil) {
         self.localizedTitle = title
         self.resolvedTitle = nil
         self.subtitle = subtitle
@@ -37,7 +37,7 @@ struct SettingsNavigationRow: View {
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
             } else if let localizedTitle {
-                Text(localizedTitle)
+                Text(AppL10n.string(localizedTitle))
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
             }
@@ -147,10 +147,10 @@ struct AppleASRPickerRow: View {
     var body: some View {
         Toggle(isOn: usesAppleRecognition) {
             VStack(alignment: .leading, spacing: Spacing.xxs) {
-                Text("settings.asr.apple.title")
+                Text(AppL10n.string("settings.asr.apple.title"))
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
-                Text("settings.asr.apple.subtitle")
+                Text(AppL10n.string("settings.asr.apple.subtitle"))
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textTertiary)
             }
@@ -181,7 +181,7 @@ struct SpeechRecognitionSettingsView: View {
     var body: some View {
         ScrollView {
             CardPageContent {
-                CardSection("settings.asrProvider.title") {
+                CardSection(title: AppL10n.string("settings.asrProvider.title")) {
                     CloudProviderSettingsCard {
                         AppleASRPickerRow(config: config)
 
@@ -199,14 +199,14 @@ struct SpeechRecognitionSettingsView: View {
                 }
 
                 if config.engineMode == "local" {
-                    CardSection("settings.localEngine.title") {
+                    CardSection(title: AppL10n.string("settings.localEngine.title")) {
                         LocalModelsGroup(config: config)
                     }
                 }
             }
         }
         .background(palette.background.ignoresSafeArea())
-        .navigationTitle("settings.speechRecognition.title")
+        .navigationTitle(AppL10n.string("settings.speechRecognition.title"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -220,7 +220,7 @@ struct TextPolishSettingsView: View {
     var body: some View {
         ScrollView {
             CardPageContent {
-                CardSection("settings.polishProvider.title") {
+                CardSection(title: AppL10n.string("settings.polishProvider.title")) {
                     CloudProviderSettingsCard {
                         ProviderPickerSection(config: config, role: .polish, showsSurface: false)
                         Divider().background(palette.divider)
@@ -230,7 +230,7 @@ struct TextPolishSettingsView: View {
             }
         }
         .background(palette.background.ignoresSafeArea())
-        .navigationTitle("settings.textPolish.title")
+        .navigationTitle(AppL10n.string("settings.textPolish.title"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -245,7 +245,7 @@ struct GeneralSettingsView: View {
     var body: some View {
         ScrollView {
             CardPageContent {
-                CardSection("settings.general.appearanceLanguage.title") {
+                CardSection(title: AppL10n.string("settings.general.appearanceLanguage.title")) {
                     VStack(spacing: 0) {
                         AppLanguagePickerRow(
                             selection: Binding(
@@ -259,7 +259,7 @@ struct GeneralSettingsView: View {
                     .surfaceCard()
                 }
 
-                CardSection("settings.general.keyboard.title") {
+                CardSection(title: AppL10n.string("settings.general.keyboard.title")) {
                     VStack(spacing: 0) {
                         DefaultInputModePickerRow(
                             selection: $typingConfiguration.defaultInputMode
@@ -304,7 +304,7 @@ struct GeneralSettingsView: View {
                     .surfaceCard()
                 }
 
-                CardSection("settings.general.sync.title") {
+                CardSection(title: AppL10n.string("settings.general.sync.title")) {
                     VStack(spacing: 0) {
                         SettingsICloudSyncRow()
                     }
@@ -313,7 +313,7 @@ struct GeneralSettingsView: View {
             }
         }
         .background(palette.background.ignoresSafeArea())
-        .navigationTitle("settings.general.title")
+        .navigationTitle(AppL10n.string("settings.general.title"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -327,9 +327,50 @@ struct AIAgentSettingsView: View {
     var body: some View {
         ScrollView {
             CardPageContent {
-                CardSection("settings.aiAgent.responseLength.section") {
+                CardSection(title: AppL10n.string("settings.aiAgent.responseLength.section")) {
                     VStack(spacing: 0) {
                         AIResponseLengthPickerRow(config: config)
+                        Divider().background(palette.divider)
+                        Toggle(isOn: $config.multipleReplyVariantsEnabled) {
+                            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                                Text(AppL10n.string("settings.aiAgent.multipleReplies.title"))
+                                    .font(TypeStyle.body)
+                                    .foregroundStyle(palette.textPrimary)
+                                Text(AppL10n.string("settings.aiAgent.multipleReplies.description"))
+                                    .font(TypeStyle.caption2)
+                                    .foregroundStyle(palette.textTertiary)
+                            }
+                        }
+                        .tint(palette.accent)
+                        .settingsListRow()
+                        .accessibilityIdentifier(
+                            "settings.aiAgent.multipleReplies.toggle"
+                        )
+                    }
+                    .surfaceCard()
+                }
+                CardSection(title: AppL10n.string("settings.aiAgent.autoMode.section")) {
+                    VStack(spacing: 0) {
+                        autoModeToggle(
+                            isOn: $config.clipboardAutoModeEnabled,
+                            titleKey: "settings.aiAgent.autoMode.title",
+                            descriptionKey: "settings.aiAgent.autoMode.description",
+                            identifier: "settings.aiAgent.autoMode.toggle"
+                        )
+                        Divider().background(palette.divider)
+                        autoModeToggle(
+                            isOn: $config.clipboardAutoTranslateEnabled,
+                            titleKey: "settings.aiAgent.autoTranslate.title",
+                            descriptionKey: "settings.aiAgent.autoTranslate.description",
+                            identifier: "settings.aiAgent.autoTranslate.toggle"
+                        )
+                        Divider().background(palette.divider)
+                        autoModeToggle(
+                            isOn: $config.clipboardAutoEmailReplyEnabled,
+                            titleKey: "settings.aiAgent.autoEmailReply.title",
+                            descriptionKey: "settings.aiAgent.autoEmailReply.description",
+                            identifier: "settings.aiAgent.autoEmailReply.toggle"
+                        )
                     }
                     .surfaceCard()
                 }
@@ -338,6 +379,27 @@ struct AIAgentSettingsView: View {
         .background(palette.background.ignoresSafeArea())
         .navigationTitle(AppL10n.string("settings.aiAgent.title", language: config.uiLanguage))
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func autoModeToggle(
+        isOn: Binding<Bool>,
+        titleKey: String,
+        descriptionKey: String,
+        identifier: String
+    ) -> some View {
+        Toggle(isOn: isOn) {
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text(AppL10n.string(titleKey))
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textPrimary)
+                Text(AppL10n.string(descriptionKey))
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.textTertiary)
+            }
+        }
+        .tint(palette.accent)
+        .settingsListRow()
+        .accessibilityIdentifier(identifier)
     }
 }
 
@@ -349,43 +411,24 @@ struct ClipboardSettingsView: View {
     @ObservedObject var config: ProviderConfig
     @ObservedObject private var history = ClipboardHistoryStore.shared
     @State private var showClearConfirmation = false
-    @State private var pasteAccessVerified = AppPermissions.hasVerifiedPasteAccess
-    @State private var pasteAccessNeedsRecovery = false
-    @State private var showPasteNoTextAlert = false
+    @StateObject private var pasteAccess = PasteAccessController()
 
     var body: some View {
         ScrollView {
             CardPageContent {
-                CardSection("settings.clipboard.section") {
+                CardSection(title: AppL10n.string("settings.clipboard.section")) {
                     VStack(spacing: 0) {
                         Toggle(isOn: $config.clipboardHistoryEnabled) {
                             VStack(alignment: .leading, spacing: Spacing.xxs) {
-                                Text("settings.clipboard.history.title")
+                                Text(AppL10n.string("settings.clipboard.history.title"))
                                     .font(TypeStyle.body)
                                     .foregroundStyle(palette.textPrimary)
-                                Text("settings.clipboard.history.footer")
+                                Text(AppL10n.string("settings.clipboard.history.footer"))
                                     .font(TypeStyle.caption2)
                                     .foregroundStyle(palette.textTertiary)
                             }
                         }
                         .tint(palette.accent)
-                        .settingsListRow()
-
-                        Divider().background(palette.divider)
-
-                        Toggle(isOn: clipboardCandidateBinding) {
-                            VStack(alignment: .leading, spacing: Spacing.xxs) {
-                                Text("settings.clipboard.candidate.title")
-                                    .font(TypeStyle.body)
-                                    .foregroundStyle(palette.textPrimary)
-                                Text("settings.clipboard.candidate.footer")
-                                    .font(TypeStyle.caption2)
-                                    .foregroundStyle(palette.textTertiary)
-                            }
-                        }
-                        .tint(palette.accent)
-                        .disabled(!config.clipboardHistoryEnabled)
-                        .opacity(config.clipboardHistoryEnabled ? 1 : 0.45)
                         .settingsListRow()
                     }
                     .surfaceCard()
@@ -393,16 +436,16 @@ struct ClipboardSettingsView: View {
 
                 // iOS asks per read unless the user flips the durable
                 // "Paste from Other Apps" permission to Allow.
-                CardSection("settings.clipboard.paste.section") {
+                CardSection(title: AppL10n.string("settings.clipboard.paste.section")) {
                     VStack(spacing: 0) {
                         HStack(alignment: .center, spacing: Spacing.sm) {
-                            Text("settings.clipboard.paste.body")
+                            Text(AppL10n.string("settings.clipboard.paste.body"))
                                 .font(TypeStyle.caption2)
                                 .foregroundStyle(palette.textSecondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                            if pasteAccessVerified {
+                            if pasteAccess.isVerified {
                                 Label(
-                                    "settings.clipboard.paste.verified",
+                                    AppL10n.string("settings.clipboard.paste.verified"),
                                     systemImage: "checkmark.circle.fill"
                                 )
                                 .font(TypeStyle.caption)
@@ -413,11 +456,11 @@ struct ClipboardSettingsView: View {
                         }
                         .settingsListRow()
 
-                        if !pasteAccessVerified {
+                        if !pasteAccess.isVerified {
                             Divider().background(palette.divider)
 
                             Button {
-                                verifyPasteAccess()
+                                pasteAccess.verify()
                             } label: {
                                 SettingsNavigationRow(
                                     titleText: AppL10n.string(
@@ -429,7 +472,7 @@ struct ClipboardSettingsView: View {
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("settings.clipboard.paste.verify")
 
-                            if pasteAccessNeedsRecovery {
+                            if pasteAccess.needsRecovery {
                                 Divider().background(palette.divider)
 
                                 Button {
@@ -450,9 +493,9 @@ struct ClipboardSettingsView: View {
                     .surfaceCard()
                 }
 
-                CardSection("settings.clipboard.storage.section") {
+                CardSection(title: AppL10n.string("settings.clipboard.storage.section")) {
                     VStack(spacing: 0) {
-                        Text("settings.clipboard.storage.body")
+                        Text(AppL10n.string("settings.clipboard.storage.body"))
                             .font(TypeStyle.caption2)
                             .foregroundStyle(palette.textSecondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -464,7 +507,7 @@ struct ClipboardSettingsView: View {
                             showClearConfirmation = true
                         } label: {
                             HStack(spacing: Spacing.sm) {
-                                Text("settings.clipboard.clear.button")
+                                Text(AppL10n.string("settings.clipboard.clear.button"))
                                     .font(TypeStyle.body)
                                 Spacer(minLength: Spacing.xs)
                                 Image(systemName: "trash")
@@ -485,68 +528,34 @@ struct ClipboardSettingsView: View {
         .background(palette.background.ignoresSafeArea())
         .navigationTitle(AppL10n.string("settings.clipboard.title", language: config.uiLanguage))
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog(
-            "settings.clipboard.clear.title",
-            isPresented: $showClearConfirmation,
-            titleVisibility: .visible
+        .alert(
+            AppL10n.string("settings.clipboard.clear.title"),
+            isPresented: $showClearConfirmation
         ) {
-            Button("settings.clipboard.clear.confirm", role: .destructive) {
+            Button(AppL10n.string("common.cancel"), role: .cancel) {}
+            Button(AppL10n.string("settings.clipboard.clear.confirm"), role: .destructive) {
                 history.clearAll()
+                ClipboardReplyFeedbackStore.shared.clear()
             }
-            Button("common.cancel", role: .cancel) {}
         } message: {
-            Text("settings.clipboard.clear.message")
+            Text(AppL10n.string("settings.clipboard.clear.message"))
         }
         .alert(
             AppL10n.string("clipboard.paste.noText.title", language: config.uiLanguage),
-            isPresented: $showPasteNoTextAlert
+            isPresented: $pasteAccess.showNoTextAlert
         ) {
-            Button("common.done") { showPasteNoTextAlert = false }
+            Button(AppL10n.string("common.done")) { pasteAccess.showNoTextAlert = false }
         } message: {
             Text(AppL10n.string("clipboard.paste.noText.message", language: config.uiLanguage))
         }
         .onAppear {
             history.reload()
-            refreshPasteAccessState()
+            pasteAccess.refresh()
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
-            refreshPasteAccessState()
-            pasteAccessNeedsRecovery = false
+            pasteAccess.refresh(clearRecovery: true)
         }
-        .onChange(of: config.clipboardHistoryEnabled) { _, enabled in
-            if !enabled {
-                config.clipboardCandidateBarEnabled = false
-            }
-        }
-    }
-
-    private var clipboardCandidateBinding: Binding<Bool> {
-        Binding(
-            get: { config.clipboardHistoryEnabled && config.clipboardCandidateBarEnabled },
-            set: { config.clipboardCandidateBarEnabled = $0 }
-        )
-    }
-
-    private func verifyPasteAccess() {
-        switch AppPermissions.requestPasteAccess() {
-        case .verified:
-            withAnimation(Motion.quick) {
-                pasteAccessVerified = true
-                pasteAccessNeedsRecovery = false
-            }
-        case .noTextAvailable:
-            showPasteNoTextAlert = true
-        case .unavailable:
-            withAnimation(Motion.quick) {
-                pasteAccessVerified = false
-                pasteAccessNeedsRecovery = true
-            }
-        }
-    }
-
-    private func refreshPasteAccessState() {
-        pasteAccessVerified = AppPermissions.hasVerifiedPasteAccess
     }
 }
 
@@ -561,7 +570,7 @@ struct AboutSettingsView: View {
     var body: some View {
         ScrollView {
             CardPageContent {
-                CardSection("settings.analytics.section") {
+                CardSection(title: AppL10n.string("settings.analytics.section")) {
                     VStack(alignment: .leading, spacing: 0) {
                         Toggle(
                             isOn: Binding(
@@ -569,7 +578,7 @@ struct AboutSettingsView: View {
                                 set: { analytics.setEnabled($0) }
                             )
                         ) {
-                            Text("settings.analytics.title")
+                            Text(AppL10n.string("settings.analytics.title"))
                                 .font(TypeStyle.body)
                                 .foregroundStyle(palette.textPrimary)
                         }
@@ -578,7 +587,7 @@ struct AboutSettingsView: View {
 
                         Divider().background(palette.divider)
 
-                        Text("settings.analytics.description")
+                        Text(AppL10n.string("settings.analytics.description"))
                             .font(TypeStyle.caption2)
                             .foregroundStyle(palette.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -587,7 +596,7 @@ struct AboutSettingsView: View {
                     .surfaceCard()
                 }
 
-                CardSection("settings.about.title") {
+                CardSection(title: AppL10n.string("settings.about.title")) {
                     VStack(spacing: 0) {
                         Button {
                             var transaction = Transaction()
@@ -625,7 +634,7 @@ struct AboutSettingsView: View {
                             openURL(LegalLinks.repositoryURL)
                         } label: {
                             HStack(spacing: Spacing.sm) {
-                                Text("settings.link.github")
+                                Text(AppL10n.string("settings.link.github"))
                                     .font(TypeStyle.body)
                                     .foregroundStyle(palette.textPrimary)
                                 Spacer()
@@ -651,7 +660,7 @@ struct AboutSettingsView: View {
             }
         }
         .background(palette.background.ignoresSafeArea())
-        .navigationTitle("settings.about.title")
+        .navigationTitle(AppL10n.string("settings.about.title"))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             analytics.refreshEnabledState()

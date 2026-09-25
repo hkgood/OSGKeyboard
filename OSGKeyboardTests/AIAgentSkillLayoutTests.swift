@@ -17,20 +17,53 @@ final class AIAgentSkillLayoutTests: XCTestCase {
         let defaults = makeDefaults()
         let layout = AppGroupStore(defaults: defaults).agentSkillLayout
         XCTAssertEqual(layout.enabledIDs, AIAgentSkillLayout.defaultEnabledIDs)
-        XCTAssertEqual(layout.enabledIDs, AIClipboardSkillCatalog.catalog.map(\.id))
+        XCTAssertEqual(
+            layout.enabledIDs,
+            AIClipboardSkillCatalog.catalog.filter(\.isDefault).map(\.id)
+        )
+        // "Speak as me" is included: it has no toggle of its own, and the
+        // personal-style gate keeps it off the keyboard until one is distilled.
+        XCTAssertTrue(layout.enabledIDs.contains(AIClipboardSkillCatalog.speakAsMeID))
         XCTAssertTrue(layout.confirmedShortcutIDs.isEmpty)
+    }
+
+    /// The skill has no switch of its own. It ships enabled, and distilling a
+    /// personal style is the single act that makes it reachable.
+    func testSpeakAsMeShipsEnabledAndIsGatedOnlyByThePersonalStyle() {
+        let store = AIAgentSkillLayoutStore(defaults: makeDefaults())
+        XCTAssertTrue(store.layout.isEnabled(AIClipboardSkillCatalog.speakAsMeID))
+
+        XCTAssertFalse(
+            AIClipboardSkillCatalog.availableEnabledIDs(
+                store.layout.enabledIDs,
+                layout: store.layout,
+                hasPersonalReplyStyle: false
+            ).contains(AIClipboardSkillCatalog.speakAsMeID)
+        )
+        XCTAssertTrue(
+            AIClipboardSkillCatalog.availableEnabledIDs(
+                store.layout.enabledIDs,
+                layout: store.layout,
+                hasPersonalReplyStyle: true
+            ).contains(AIClipboardSkillCatalog.speakAsMeID)
+        )
     }
 
     func testSystemSemanticSkillsStayEnabledButHiddenFromSkillManagement() {
         let store = AIAgentSkillLayoutStore(defaults: makeDefaults())
         let hiddenIDs = AIClipboardSkillCatalog.hiddenFromSkillManagementIDs
 
+        // "Hidden" means system action: always enabled, never user-managed.
         XCTAssertTrue(hiddenIDs.isSubset(of: Set(store.enabledSkills.map(\.id))))
+        // The lists additionally omit skills managed from elsewhere in the UI,
+        // which are not necessarily enabled.
+        let omittedIDs = AIClipboardSkillCatalog.managedOutsideSkillListIDs
+        XCTAssertTrue(hiddenIDs.isSubset(of: omittedIDs))
         XCTAssertTrue(
-            hiddenIDs.isDisjoint(with: Set(store.skillManagementEnabledSkills.map(\.id)))
+            omittedIDs.isDisjoint(with: Set(store.skillManagementEnabledSkills.map(\.id)))
         )
         XCTAssertTrue(
-            hiddenIDs.isDisjoint(with: Set(store.skillManagementAvailableSkills.map(\.id)))
+            omittedIDs.isDisjoint(with: Set(store.skillManagementAvailableSkills.map(\.id)))
         )
         XCTAssertTrue(
             store.skillManagementEnabledSkills.contains {
@@ -82,7 +115,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             [AIClipboardSkillCatalog.replyID, AIClipboardSkillCatalog.translateID]
         )
         XCTAssertTrue(migrated.enabledIDs.contains(AIClipboardSkillCatalog.summarizeID))
-        XCTAssertTrue(migrated.enabledIDs.contains(AIClipboardSkillCatalog.acceptInvitationID))
+        XCTAssertTrue(migrated.enabledIDs.contains(AIClipboardSkillCatalog.replyID))
         XCTAssertTrue(migrated.enabledIDs.contains(AIClipboardSkillCatalog.extractEventsID))
     }
 
@@ -107,16 +140,12 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             migrated.enabledIDs,
             [
                 AIClipboardSkillCatalog.replyID,
-                AIClipboardSkillCatalog.playfulReplyID,
                 AIClipboardSkillCatalog.translateID,
                 AIClipboardSkillCatalog.openLinkID,
                 AIClipboardSkillCatalog.summarizeWebPageID,
                 AIClipboardSkillCatalog.callPhoneID,
                 AIClipboardSkillCatalog.createContactID,
                 AIClipboardSkillCatalog.summarizeID,
-                AIClipboardSkillCatalog.declineInvitationID,
-                AIClipboardSkillCatalog.clarifyRequestID,
-                AIClipboardSkillCatalog.empathyReplyID,
                 AIClipboardSkillCatalog.organizeListID
             ]
         )
@@ -149,9 +178,6 @@ final class AIAgentSkillLayoutTests: XCTestCase {
                 AIClipboardSkillCatalog.callPhoneID,
                 AIClipboardSkillCatalog.createContactID,
                 AIClipboardSkillCatalog.summarizeID,
-                AIClipboardSkillCatalog.declineInvitationID,
-                AIClipboardSkillCatalog.clarifyRequestID,
-                AIClipboardSkillCatalog.empathyReplyID,
                 AIClipboardSkillCatalog.organizeListID
             ]
         )
@@ -182,9 +208,6 @@ final class AIAgentSkillLayoutTests: XCTestCase {
                 AIClipboardSkillCatalog.callPhoneID,
                 AIClipboardSkillCatalog.createContactID,
                 AIClipboardSkillCatalog.summarizeID,
-                AIClipboardSkillCatalog.declineInvitationID,
-                AIClipboardSkillCatalog.clarifyRequestID,
-                AIClipboardSkillCatalog.empathyReplyID,
                 AIClipboardSkillCatalog.organizeListID
             ]
         )
@@ -216,10 +239,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             [
                 AIClipboardSkillCatalog.replyID,
                 AIClipboardSkillCatalog.summarizeID,
-                AIClipboardSkillCatalog.clarifyRequestID,
                 AIClipboardSkillCatalog.translateID,
-                AIClipboardSkillCatalog.declineInvitationID,
-                AIClipboardSkillCatalog.empathyReplyID,
                 AIClipboardSkillCatalog.organizeListID
             ]
         )
@@ -227,7 +247,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             defaults.integer(
                 forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
             ),
-            7
+            11
         )
     }
 
@@ -250,13 +270,9 @@ final class AIAgentSkillLayoutTests: XCTestCase {
         XCTAssertEqual(
             store.agentSkillLayout.enabledIDs,
             [
-                AIClipboardSkillCatalog.playfulReplyID,
                 AIClipboardSkillCatalog.replyID,
                 AIClipboardSkillCatalog.translateID,
                 AIClipboardSkillCatalog.summarizeID,
-                AIClipboardSkillCatalog.declineInvitationID,
-                AIClipboardSkillCatalog.clarifyRequestID,
-                AIClipboardSkillCatalog.empathyReplyID,
                 AIClipboardSkillCatalog.organizeListID
             ]
         )
@@ -273,27 +289,214 @@ final class AIAgentSkillLayoutTests: XCTestCase {
         XCTAssertFalse(store.agentSkillLayout.isEnabled(AIClipboardSkillCatalog.replyID))
     }
 
+    func testVersionEightLayoutConsolidatesLegacyReplyIDsAndPersistsMigration() throws {
+        let defaults = makeDefaults()
+        let initial = AIAgentSkillLayout(
+            enabledIDs: [AIClipboardSkillCatalog.playfulReplyID],
+            confirmedShortcutIDs: []
+        )
+        defaults.set(
+            try JSONEncoder().encode(initial),
+            forKey: AppGroupConfiguration.Keys.agentSkillLayout
+        )
+        defaults.set(
+            8,
+            forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+        )
+
+        let migrated = AppGroupStore(defaults: defaults).agentSkillLayout
+
+        XCTAssertEqual(migrated.enabledIDs, [AIClipboardSkillCatalog.replyID])
+        XCTAssertEqual(
+            defaults.integer(
+                forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+            ),
+            11
+        )
+    }
+
+    func testVersionEightMigrationDoesNotRestoreDisabledReply() throws {
+        let defaults = makeDefaults()
+        let initial = AIAgentSkillLayout(
+            enabledIDs: [AIClipboardSkillCatalog.translateID],
+            confirmedShortcutIDs: []
+        )
+        defaults.set(
+            try JSONEncoder().encode(initial),
+            forKey: AppGroupConfiguration.Keys.agentSkillLayout
+        )
+        defaults.set(
+            8,
+            forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+        )
+
+        let store = AppGroupStore(defaults: defaults)
+
+        XCTAssertEqual(store.agentSkillLayout.enabledIDs, [AIClipboardSkillCatalog.translateID])
+        XCTAssertEqual(
+            defaults.integer(
+                forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+            ),
+            11
+        )
+        XCTAssertEqual(
+            AppGroupStore(defaults: defaults).agentSkillLayout.enabledIDs,
+            [AIClipboardSkillCatalog.translateID]
+        )
+    }
+
+    func testVersionNineLayoutConsolidatesEmpathyReplyAndPersistsMigration() throws {
+        let defaults = makeDefaults()
+        let initial = AIAgentSkillLayout(
+            enabledIDs: [
+                AIClipboardSkillCatalog.empathyReplyID,
+                AIClipboardSkillCatalog.translateID
+            ],
+            confirmedShortcutIDs: []
+        )
+        defaults.set(
+            try JSONEncoder().encode(initial),
+            forKey: AppGroupConfiguration.Keys.agentSkillLayout
+        )
+        defaults.set(
+            9,
+            forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+        )
+
+        let migrated = AppGroupStore(defaults: defaults).agentSkillLayout
+
+        XCTAssertEqual(
+            migrated.enabledIDs,
+            [AIClipboardSkillCatalog.replyID, AIClipboardSkillCatalog.translateID]
+        )
+        XCTAssertEqual(
+            defaults.integer(
+                forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+            ),
+            11
+        )
+    }
+
+    func testVersionTenLayoutConsolidatesDecisionRepliesWithoutRestoringDisabledReply() throws {
+        let enabledDefaults = makeDefaults()
+        let legacy = AIAgentSkillLayout(
+            enabledIDs: [
+                AIClipboardSkillCatalog.acceptInvitationID,
+                AIClipboardSkillCatalog.declineInvitationID,
+                AIClipboardSkillCatalog.acceptTaskID,
+                AIClipboardSkillCatalog.clarifyRequestID,
+                AIClipboardSkillCatalog.blessingReplyID
+            ],
+            confirmedShortcutIDs: []
+        )
+        enabledDefaults.set(
+            try JSONEncoder().encode(legacy),
+            forKey: AppGroupConfiguration.Keys.agentSkillLayout
+        )
+        enabledDefaults.set(
+            10,
+            forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+        )
+
+        XCTAssertEqual(
+            AppGroupStore(defaults: enabledDefaults).agentSkillLayout.enabledIDs,
+            [AIClipboardSkillCatalog.replyID]
+        )
+
+        let disabledDefaults = makeDefaults()
+        disabledDefaults.set(
+            try JSONEncoder().encode(
+                AIAgentSkillLayout(
+                    enabledIDs: [AIClipboardSkillCatalog.translateID],
+                    confirmedShortcutIDs: []
+                )
+            ),
+            forKey: AppGroupConfiguration.Keys.agentSkillLayout
+        )
+        disabledDefaults.set(
+            10,
+            forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+        )
+        XCTAssertEqual(
+            AppGroupStore(defaults: disabledDefaults).agentSkillLayout.enabledIDs,
+            [AIClipboardSkillCatalog.translateID]
+        )
+    }
+
+    func testLegacyReplyLookupRemainsAvailableButCanonicalizesForLayout() {
+        XCTAssertNotNil(
+            AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.playfulReplyID)
+        )
+        XCTAssertNotNil(
+            AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.businessReplyID)
+        )
+        XCTAssertNotNil(
+            AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.empathyReplyID)
+        )
+        XCTAssertEqual(
+            AIClipboardSkillCatalog.canonicalID(for: AIClipboardSkillCatalog.playfulReplyID),
+            AIClipboardSkillCatalog.replyID
+        )
+        XCTAssertEqual(
+            AIClipboardSkillCatalog.canonicalID(for: AIClipboardSkillCatalog.businessReplyID),
+            AIClipboardSkillCatalog.replyID
+        )
+        XCTAssertEqual(
+            AIClipboardSkillCatalog.canonicalID(for: AIClipboardSkillCatalog.empathyReplyID),
+            AIClipboardSkillCatalog.replyID
+        )
+        for id in [
+            AIClipboardSkillCatalog.acceptInvitationID,
+            AIClipboardSkillCatalog.declineInvitationID,
+            AIClipboardSkillCatalog.acceptTaskID,
+            AIClipboardSkillCatalog.clarifyRequestID,
+            AIClipboardSkillCatalog.blessingReplyID,
+            AIClipboardSkillCatalog.askForDetailsID
+        ] {
+            XCTAssertEqual(
+                AIClipboardSkillCatalog.canonicalID(for: id),
+                AIClipboardSkillCatalog.replyID
+            )
+            XCTAssertEqual(
+                AIClipboardSkillCatalog.skill(id: id)?.id,
+                AIClipboardSkillCatalog.replyID
+            )
+        }
+        XCTAssertFalse(
+            AIClipboardSkillCatalog.catalog.contains {
+                $0.id == AIClipboardSkillCatalog.playfulReplyID
+                    || $0.id == AIClipboardSkillCatalog.businessReplyID
+                    || $0.id == AIClipboardSkillCatalog.empathyReplyID
+                    || $0.id == AIClipboardSkillCatalog.acceptInvitationID
+                    || $0.id == AIClipboardSkillCatalog.declineInvitationID
+                    || $0.id == AIClipboardSkillCatalog.acceptTaskID
+                    || $0.id == AIClipboardSkillCatalog.clarifyRequestID
+                    || $0.id == AIClipboardSkillCatalog.blessingReplyID
+            }
+        )
+    }
+
     func testCannotEnableExportSkillBeforeShortcutConfirmation() {
         let store = AIAgentSkillLayoutStore(defaults: makeDefaults())
-        store.disable(AIClipboardSkillCatalog.extractTodosID)
+        store.disable(AIClipboardSkillCatalog.saveToNotesID)
         XCTAssertEqual(
-            store.enable(AIClipboardSkillCatalog.extractTodosID),
+            store.enable(AIClipboardSkillCatalog.saveToNotesID),
             .needsShortcut
         )
-        XCTAssertFalse(store.layout.isEnabled(AIClipboardSkillCatalog.extractTodosID))
+        XCTAssertFalse(store.layout.isEnabled(AIClipboardSkillCatalog.saveToNotesID))
     }
 
     func testConfirmShortcutAutoEnablesWhenSlotAvailable() {
         let store = AIAgentSkillLayoutStore(defaults: makeDefaults())
-        store.disable(AIClipboardSkillCatalog.extractTodosID)
+        store.disable(AIClipboardSkillCatalog.saveToNotesID)
         XCTAssertEqual(
-            store.confirmShortcutAndEnable(AIClipboardSkillCatalog.extractTodosID),
+            store.confirmShortcutAndEnable(AIClipboardSkillCatalog.saveToNotesID),
             .enabled
         )
-        XCTAssertTrue(store.layout.hasConfirmedShortcut(AIClipboardSkillCatalog.extractTodosID))
+        XCTAssertTrue(store.layout.hasConfirmedShortcut(AIClipboardSkillCatalog.saveToNotesID))
         XCTAssertEqual(
             store.layout.enabledIDs.last,
-            AIClipboardSkillCatalog.extractTodosID
+            AIClipboardSkillCatalog.saveToNotesID
         )
     }
 
@@ -317,6 +520,9 @@ final class AIAgentSkillLayoutTests: XCTestCase {
         let layout = AIAgentSkillLayout(
             enabledIDs: [
                 AIClipboardSkillCatalog.replyInSourceLanguageID,
+                AIClipboardSkillCatalog.playfulReplyID,
+                AIClipboardSkillCatalog.businessReplyID,
+                AIClipboardSkillCatalog.empathyReplyID,
                 AIClipboardSkillCatalog.replyID,
                 AIClipboardSkillCatalog.extractConclusionsID,
                 AIClipboardSkillCatalog.askForDetailsID
@@ -328,8 +534,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             layout.enabledIDs,
             [
                 AIClipboardSkillCatalog.replyID,
-                AIClipboardSkillCatalog.summarizeID,
-                AIClipboardSkillCatalog.clarifyRequestID
+                AIClipboardSkillCatalog.summarizeID
             ]
         )
     }
@@ -355,12 +560,12 @@ final class AIAgentSkillLayoutTests: XCTestCase {
 
     func testDisableKeepsShortcutConfirmation() {
         let store = AIAgentSkillLayoutStore(defaults: makeDefaults())
-        store.disable(AIClipboardSkillCatalog.extractTodosID)
-        _ = store.confirmShortcutAndEnable(AIClipboardSkillCatalog.extractTodosID)
-        store.disable(AIClipboardSkillCatalog.extractTodosID)
-        XCTAssertFalse(store.layout.isEnabled(AIClipboardSkillCatalog.extractTodosID))
-        XCTAssertTrue(store.layout.hasConfirmedShortcut(AIClipboardSkillCatalog.extractTodosID))
-        XCTAssertEqual(store.enable(AIClipboardSkillCatalog.extractTodosID), .enabled)
+        store.disable(AIClipboardSkillCatalog.saveToNotesID)
+        _ = store.confirmShortcutAndEnable(AIClipboardSkillCatalog.saveToNotesID)
+        store.disable(AIClipboardSkillCatalog.saveToNotesID)
+        XCTAssertFalse(store.layout.isEnabled(AIClipboardSkillCatalog.saveToNotesID))
+        XCTAssertTrue(store.layout.hasConfirmedShortcut(AIClipboardSkillCatalog.saveToNotesID))
+        XCTAssertEqual(store.enable(AIClipboardSkillCatalog.saveToNotesID), .enabled)
     }
 
     func testReorderMovesEnabledSkill() {
@@ -380,23 +585,21 @@ final class AIAgentSkillLayoutTests: XCTestCase {
 
     func testReorderMovesEnabledSkillToIndex() {
         let store = AIAgentSkillLayoutStore(defaults: makeDefaults())
+        // Derived from the default order rather than hardcoded: this asserts
+        // the move, not which skills happen to lead the catalog.
+        var others = AIAgentSkillLayout.defaultEnabledIDs
+        others.removeAll { $0 == AIClipboardSkillCatalog.summarizeID }
+        let leading = Array(others.prefix(2))
+
         store.moveEnabled(id: AIClipboardSkillCatalog.summarizeID, toIndex: 2)
         XCTAssertEqual(
             Array(store.layout.enabledIDs.prefix(3)),
-            [
-                AIClipboardSkillCatalog.replyID,
-                AIClipboardSkillCatalog.playfulReplyID,
-                AIClipboardSkillCatalog.summarizeID
-            ]
+            leading + [AIClipboardSkillCatalog.summarizeID]
         )
         store.moveEnabled(id: AIClipboardSkillCatalog.summarizeID, toIndex: 0)
         XCTAssertEqual(
             Array(store.layout.enabledIDs.prefix(3)),
-            [
-                AIClipboardSkillCatalog.summarizeID,
-                AIClipboardSkillCatalog.replyID,
-                AIClipboardSkillCatalog.playfulReplyID
-            ]
+            [AIClipboardSkillCatalog.summarizeID] + leading
         )
     }
 
@@ -483,12 +686,12 @@ final class AIAgentSkillLayoutTests: XCTestCase {
     }
 
     func testShortcutsRunURLIncludesNameAndText() {
-        let shortcutName = AIClipboardSkillCatalog.extractTodosShortcutName
+        let shortcutName = AIClipboardSkillCatalog.saveToNotesShortcutName
         let url = AIAgentShortcutRun.shortcutsRunURL(name: shortcutName, text: "买牛奶\n回邮件")
         XCTAssertEqual(url?.scheme, "shortcuts")
         XCTAssertEqual(url?.host, "run-shortcut")
         let items = URLComponents(url: url!, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        XCTAssertEqual(items.first { $0.name == "name" }?.value, "OSGExtractTodos")
+        XCTAssertEqual(items.first { $0.name == "name" }?.value, "OSGSaveToNotes")
         XCTAssertEqual(items.first { $0.name == "input" }?.value, "text")
         XCTAssertEqual(items.first { $0.name == "text" }?.value, "买牛奶\n回邮件")
         XCTAssertNil(items.first { $0.name == "x-success" })
@@ -496,7 +699,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
 
     func testXCallbackRunURLUsesCallbackHost() {
         let url = AIAgentShortcutRun.shortcutsRunURL(
-            name: AIClipboardSkillCatalog.extractTodosShortcutName,
+            name: AIClipboardSkillCatalog.saveToNotesShortcutName,
             text: "买牛奶",
             xSuccess: "osgkeyboard://skill/shortcut-result?status=success",
             xError: "osgkeyboard://skill/shortcut-result?status=error",
@@ -517,21 +720,25 @@ final class AIAgentSkillLayoutTests: XCTestCase {
         XCTAssertEqual(AIAgentShortcutRun.preview("买牛奶\n回邮件"), "买牛奶\\n回邮件")
     }
 
-    func testExtractTodosUsesBundledShortcut() {
+    func testExtractTodosIsNativeWithoutShortcut() {
+        // Reminders are created natively via EventKit in the host, so this
+        // built-in skill must not carry any companion Shortcut metadata.
         let skill = AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.extractTodosID)
         XCTAssertNil(skill?.shortcutICloudURL)
-        XCTAssertEqual(skill?.shortcutName, "OSGExtractTodos")
-        XCTAssertEqual(skill?.shortcutResourceName, "OSGExtractTodos")
+        XCTAssertNil(skill?.shortcutName)
+        XCTAssertNil(skill?.shortcutResourceName)
+        XCTAssertFalse(skill?.requiresShortcut ?? true)
+        XCTAssertEqual(skill?.kind, .export)
     }
 
-    func testExtractEventsUsesBundledShortcut() {
+    func testExtractEventsIsNativeWithoutShortcut() {
+        // Calendar events are created natively via EventKit in the host, so this
+        // built-in skill must not carry any companion Shortcut metadata.
         let skill = AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.extractEventsID)
         XCTAssertNil(skill?.shortcutICloudURL)
-        XCTAssertEqual(skill?.shortcutName, "OSGExtractEvents")
-        XCTAssertEqual(
-            skill?.shortcutResourceName,
-            "OSGExtractEvents"
-        )
+        XCTAssertNil(skill?.shortcutName)
+        XCTAssertNil(skill?.shortcutResourceName)
+        XCTAssertFalse(skill?.requiresShortcut ?? true)
         XCTAssertEqual(skill?.systemImage, "calendar")
         XCTAssertTrue(skill?.isDefault ?? false)
     }

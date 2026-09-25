@@ -89,14 +89,27 @@ public struct AppGroupStore: @unchecked Sendable {
     public var keyboardHapticIntensity: KeyboardHapticIntensity { configuration.keyboardHapticIntensity }
     public var polishIntensity: PolishIntensity { configuration.polishIntensity }
     public var aiResponseLength: AIResponseLength { configuration.aiResponseLength }
+    public var multipleReplyVariantsEnabled: Bool { configuration.multipleReplyVariantsEnabled }
     public var polishStyleCatalog: PolishStyleCatalog { configuration.polishStyleCatalog }
     public var activePolishStyleId: String { configuration.activePolishStyleId }
+    public var personalReplyStyleId: String { configuration.personalReplyStyleId }
+    /// Distilled personal style for AI replies, or nil when disabled or when
+    /// the pack no longer exists. Never falls back to the voice-polish style.
+    public var personalReplyStyle: PolishStylePack? {
+        PolishStylePackCatalog.resolvePersonalReplyStyle(
+            id: personalReplyStyleId,
+            userCatalog: polishStyleCatalog
+        )
+    }
     public var activePolishStyle: PolishStylePack {
         PolishStylePackCatalog.resolve(id: activePolishStyleId, userCatalog: polishStyleCatalog)
     }
     public var llmThinkingEnabled: Bool { configuration.llmThinkingEnabled }
     public var clipboardHistoryEnabled: Bool { configuration.clipboardHistoryEnabled }
     public var clipboardCandidateBarEnabled: Bool { configuration.clipboardCandidateBarEnabled }
+    public var clipboardAutoModeEnabled: Bool { configuration.clipboardAutoModeEnabled }
+    public var clipboardAutoTranslateEnabled: Bool { configuration.clipboardAutoTranslateEnabled }
+    public var clipboardAutoEmailReplyEnabled: Bool { configuration.clipboardAutoEmailReplyEnabled }
     public var isPolishKeyMissing: Bool { configuration.isPolishKeyMissing }
     public var isTranslationEffective: Bool { configuration.isTranslationEffective }
     public var isLocalEngine: Bool { configuration.isLocalEngine }
@@ -195,6 +208,11 @@ public struct AppGroupStore: @unchecked Sendable {
         AppGroupConfigDarwin.postConfigChanged()
     }
 
+    public func setMultipleReplyVariantsEnabled(_ enabled: Bool) {
+        mutateConfiguration { $0.multipleReplyVariantsEnabled = enabled }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
     // MARK: - Polish styles
 
     public func setPolishStyleCatalog(_ catalog: PolishStyleCatalog) {
@@ -212,11 +230,27 @@ public struct AppGroupStore: @unchecked Sendable {
         AppGroupConfigDarwin.postConfigChanged()
     }
 
+    /// Empty string disables personalized AI replies. A hand-written pack or a
+    /// missing ID is rejected the same way, so the field can only ever hold a
+    /// distilled personal style.
+    public func setPersonalReplyStyleId(_ id: String) {
+        mutateConfiguration { config in
+            config.personalReplyStyleId = PolishStylePackCatalog.resolvePersonalReplyStyle(
+                id: id,
+                userCatalog: config.polishStyleCatalog
+            )?.id ?? ""
+        }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
     public func deletePolishStylePack(id: String, at date: Date = Date()) {
         mutateConfiguration { config in
             config.polishStyleCatalog.recordDeletion(of: id, at: date)
             if config.activePolishStyleId == id {
                 config.activePolishStyleId = PolishStylePackCatalog.defaultID
+            }
+            if config.personalReplyStyleId == id {
+                config.personalReplyStyleId = ""
             }
         }
         AppGroupConfigDarwin.postConfigChanged()
@@ -234,6 +268,21 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setClipboardCandidateBarEnabled(_ enabled: Bool) {
         mutateConfiguration { $0.clipboardCandidateBarEnabled = enabled }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func setClipboardAutoModeEnabled(_ enabled: Bool) {
+        mutateConfiguration { $0.clipboardAutoModeEnabled = enabled }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func setClipboardAutoTranslateEnabled(_ enabled: Bool) {
+        mutateConfiguration { $0.clipboardAutoTranslateEnabled = enabled }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func setClipboardAutoEmailReplyEnabled(_ enabled: Bool) {
+        mutateConfiguration { $0.clipboardAutoEmailReplyEnabled = enabled }
         AppGroupConfigDarwin.postConfigChanged()
     }
 
@@ -446,6 +495,15 @@ public struct AppGroupStore: @unchecked Sendable {
                     AIClipboardSkillCatalog.organizeListID
                 ])
             }
+            if storedMigrationVersion < 8 {
+                additionIDs.insert(AIClipboardSkillCatalog.blessingReplyID)
+            }
+            // v9 consolidates playful and business reply into Reply. Do not
+            // add Reply here: `sanitized` preserves it only when any reply ID
+            // was enabled, so a user's explicit disabled state stays disabled.
+            // v10 applies the same canonical migration to Empathetic Reply.
+            // v11 folds invitation, task, blessing, and clarification replies
+            // into Reply. `sanitized` again preserves explicit disabled state.
             let additions = catalog.map(\.id).filter {
                 additionIDs.contains($0) && !decoded.enabledIDs.contains($0)
             }
@@ -471,7 +529,7 @@ public struct AppGroupStore: @unchecked Sendable {
         }
     }
 
-    private static let currentAgentSkillDefaultsMigrationVersion = 7
+    private static let currentAgentSkillDefaultsMigrationVersion = 11
 
     private static func decodeUserSkillCatalog(from defaults: UserDefaults) -> AIUserSkillCatalog {
         guard let data = defaults.data(forKey: AppGroupConfiguration.Keys.agentUserSkillCatalog) else {

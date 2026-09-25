@@ -229,6 +229,10 @@ private final class HardTimeoutRace<T: Sendable>: @unchecked Sendable {
     }
 }
 
+public enum HardTimeoutError: Error, Equatable, Sendable {
+    case timedOut
+}
+
 public enum HardTimeout {
     /// Returns at the deadline even when the losing operation ignores
     /// cooperative cancellation. The detached loser is still cancelled, but
@@ -252,7 +256,7 @@ public enum HardTimeout {
                         try await Task.sleep(
                             nanoseconds: UInt64(max(0, seconds) * 1_000_000_000)
                         )
-                        race.resolve(.failure(CancellationError()))
+                        race.resolve(.failure(HardTimeoutError.timedOut))
                     } catch {
                         // The operation won and cancelled this timer.
                     }

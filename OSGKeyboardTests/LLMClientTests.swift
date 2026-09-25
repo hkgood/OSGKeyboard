@@ -350,6 +350,85 @@ final class LLMClientTests: XCTestCase {
         }
     }
 
+    func testAppGroupStoreUsesSelectedCredentialChannelForStyleLearning() {
+        let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set(
+            CredentialSource.managed.rawValue,
+            forKey: AppGroupConfiguration.Keys.credentialSource
+        )
+        let managedStore = AppGroupStore(defaults: defaults)
+        let managedClient = managedStore.makeClient(taskKind: .customSkill)
+        XCTAssertEqual(
+            (managedClient as? ManagedLLMClient)?.capability,
+            .assistant
+        )
+
+        defaults.set(
+            CredentialSource.byok.rawValue,
+            forKey: AppGroupConfiguration.Keys.credentialSource
+        )
+        let byokStore = AppGroupStore(defaults: defaults)
+        XCTAssertFalse(
+            byokStore.makeClient(taskKind: .customSkill) is ManagedLLMClient
+        )
+    }
+
+    func testLiveConfigurationStoreSnapshotsAnyConfigurationStore() throws {
+        let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let config = ProviderConfig(defaults: defaults)
+        config.providerId = "openai"
+        config.baseURL = "https://snapshot.example/v1"
+        config.apiKey = "snapshot-key"
+        config.model = "snapshot-model"
+        config.credentialSource = .managed
+        config.polishIntensity = .heavy
+        config.llmThinkingEnabled = true
+
+        let source = AppGroupStore(defaults: defaults)
+        var catalog = PolishStyleCatalog()
+        let style = PolishStylePack(
+            id: "user.snapshot-config",
+            name: "Snapshot",
+            prompt: "Keep this style fixed."
+        )
+        try catalog.upsert(style)
+        source.setPolishStyleCatalog(catalog)
+        source.setActivePolishStyleId(style.id)
+
+        let captured = LiveConfigurationStore(store: source as any ConfigurationStore)
+
+        config.providerId = "deepseek"
+        config.baseURL = "https://changed.example/v1"
+        config.apiKey = "changed-key"
+        config.model = "changed-model"
+        config.credentialSource = .byok
+        config.polishIntensity = .light
+        config.llmThinkingEnabled = false
+        source.setActivePolishStyleId(PolishStylePackCatalog.defaultID)
+
+        XCTAssertEqual(captured.providerId, "openai")
+        XCTAssertEqual(captured.baseURL, "https://snapshot.example/v1")
+        XCTAssertEqual(captured.apiKey, "snapshot-key")
+        XCTAssertEqual(captured.model, "snapshot-model")
+        XCTAssertEqual(captured.credentialSource, .managed)
+        XCTAssertEqual(captured.polishIntensity, .heavy)
+        XCTAssertTrue(captured.llmThinkingEnabled)
+        XCTAssertEqual(captured.activePolishStyleId, style.id)
+        let capturedStyle = try XCTUnwrap(
+            captured.polishStyleCatalog.entries.first(where: { $0.id == style.id })
+        )
+        XCTAssertEqual(capturedStyle.name, style.name)
+        XCTAssertEqual(capturedStyle.prompt, style.prompt)
+    }
+
     // MARK: - TEST-2: cloud always polishes (legacy modeId ignored)
 
     /// Cloud engine must invoke the LLM even when a legacy `modeId == "off"`

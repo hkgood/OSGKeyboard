@@ -68,13 +68,16 @@ extension FlowSessionBridge {
         store.removeObject(forKey: FlowSessionKeys.flowStartTransactionPayload)
         store.removeObject(forKey: FlowSessionKeys.pendingKeyboardUtteranceId)
         if let sessionId {
+            // One load per lifecycle event — each load runs defaults migrations
+            // and backfills, so loading twice here doubles that churn.
+            let config = AppGroupConfiguration.load(fromAvailable: store)
             let snapshot = FlowReadySnapshot(
                 sessionId: sessionId,
                 ready: false,
                 reason: .starting,
                 heartbeatAt: now,
-                engineMode: AppGroupConfiguration.load(fromAvailable: store).engineMode,
-                localeId: AppGroupConfiguration.load(fromAvailable: store).localeId,
+                engineMode: config.engineMode,
+                localeId: config.localeId,
                 sessionExpiresAt: nil,
                 hostGeneration: store.string(forKey: FlowSessionKeys.hostGeneration)
             )
@@ -84,6 +87,27 @@ extension FlowSessionBridge {
         } else {
             store.removeObject(forKey: FlowSessionKeys.flowReadyPayload)
         }
+        FlowSessionBridgeStorage.flush(store)
+    }
+
+    /// Re-assert the App Group session flag for a host that is provably alive
+    /// (PiP up, fresh heartbeat) but whose flag was cleared out from under it.
+    ///
+    /// A host suspended after a PiP drop keeps `isActive` in memory but stops
+    /// writing heartbeats; the keyboard's `clearIfHostStale()` then reads that
+    /// frozen heartbeat as a dead host and clears `flowSessionActive`. When the
+    /// same process resumes it still owns the session, so it must republish the
+    /// flag — otherwise `isHostReachable()` (and thus `isHostReady()`) can never
+    /// go green again and every `startflow` is rejected. Unlike
+    /// `markSessionActivePersistent`, this preserves any pending command/result/
+    /// ack payloads so a resume mid-delivery is not wiped.
+    public static func reassertSessionActive(defaults: UserDefaults? = nil) {
+        let store = FlowSessionBridgeStorage.resolvedDefaults(defaults)
+        let now = Date().timeIntervalSince1970
+        store.set(true, forKey: FlowSessionKeys.flowSessionActive)
+        store.removeObject(forKey: FlowSessionKeys.flowSessionExpires)
+        store.set(now, forKey: FlowSessionKeys.lastActivityAt)
+        writeHeartbeat(defaults: store)
         FlowSessionBridgeStorage.flush(store)
     }
 
@@ -320,6 +344,31 @@ extension FlowSessionBridge {
         }
         guard isHostReachable(defaults: store) else { return false }
         return store.bool(forKey: FlowSessionKeys.flowHostReady)
+    }
+
+    /// The host published a *fresh* start-in-progress snapshot for the current
+    /// generation — proof it received the `startflow` request and is alive and
+    /// warming, even though it is not ready yet. A cold-launching host does not
+    /// refresh the heartbeat (see `writeReadySnapshot`), so this reads the
+    /// snapshot's own `heartbeatAt` rather than `isHostReachable()`. Returns the
+    /// starting reason so the caller can distinguish "warming in foreground"
+    /// from "parked waiting for the user to bring the app forward".
+    public static func hostStartInProgress(defaults: UserDefaults? = nil) -> FlowReadySnapshot.Reason? {
+        let store = FlowSessionBridgeStorage.resolvedDefaults(defaults)
+        guard let snapshot = readySnapshot(defaults: store), !snapshot.ready else { return nil }
+        if let snapshotGeneration = snapshot.hostGeneration,
+           let currentGeneration = store.string(forKey: FlowSessionKeys.hostGeneration),
+           snapshotGeneration != currentGeneration {
+            return nil
+        }
+        let age = Date().timeIntervalSince1970 - snapshot.heartbeatAt
+        guard age >= 0, age <= FlowSessionKeys.hostStartAckFreshInterval else { return nil }
+        switch snapshot.reason {
+        case .starting, .waitingForForeground, .waitingForAudioProof:
+            return snapshot.reason
+        default:
+            return nil
+        }
     }
 
     private static func clearHostReady(defaults: UserDefaults, notify: Bool) {

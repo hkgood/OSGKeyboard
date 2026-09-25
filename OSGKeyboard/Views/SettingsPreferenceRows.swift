@@ -288,7 +288,7 @@ struct LocalePickerRow: View {
 
     var body: some View {
         HStack {
-            Text("settings.asrLocale")
+            Text(AppL10n.string("settings.asrLocale"))
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textPrimary)
             Spacer()
@@ -305,7 +305,7 @@ struct LocalePickerRow: View {
                     // On-device badge for the currently selected locale.
                     if let current = locales.first(where: { $0.id == selection }), current.onDevice {
                         Image(systemName: "iphone")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(TypeStyle.caption2)
                             .foregroundStyle(palette.accent)
                     }
                     Text(currentLabel)

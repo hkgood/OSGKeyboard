@@ -254,6 +254,21 @@ final class ManagedGatewayTests: XCTestCase {
         XCTAssertEqual(taskKinds, cases.map { $0.1.rawValue })
     }
 
+    func testManagedTaskKindsResolveToMatchingCapabilities() {
+        XCTAssertEqual(
+            ManagedLLMClient.Capability.resolve(taskKind: .dictationPolish),
+            .polish
+        )
+        XCTAssertEqual(
+            ManagedLLMClient.Capability.resolve(taskKind: .customSkill),
+            .assistant
+        )
+        XCTAssertEqual(
+            ManagedLLMClient.Capability.resolve(taskKind: .agentPlanning),
+            .agent
+        )
+    }
+
     func testManagedHotwordSerializesSourceAndCurrentInformationIntent() async throws {
         let now = Date(timeIntervalSince1970: 3_600)
         let store = MemoryGrantStore(credentials(accessToken: "access", receivedAt: now))

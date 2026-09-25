@@ -439,15 +439,15 @@ public final class CustomLanguageModelManager: @unchecked Sendable {
         var errorDescription: String? {
             switch self {
             case .missingManifest:
-                return "Missing bundled custom language model manifest."
+                return SharedL10n.string("error.clm.missingManifest")
             case .missingTrainingAsset:
-                return "Missing bundled custom language model training asset."
+                return SharedL10n.string("error.clm.missingTrainingAsset")
             case .missingAppGroupContainer:
-                return "App Group container unavailable for custom language model preparation."
+                return SharedL10n.string("error.clm.missingAppGroupContainer")
             case .missingPreparedArtifacts:
-                return "Custom language model preparation did not produce LM/Vocab artifacts."
+                return SharedL10n.string("error.clm.missingPreparedArtifacts")
             case .retryBudgetExhausted:
-                return "Custom language model preparation retry budget exhausted."
+                return SharedL10n.string("error.clm.retryBudgetExhausted")
             }
         }
     }

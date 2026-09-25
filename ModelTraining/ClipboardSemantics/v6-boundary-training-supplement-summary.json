@@ -1,0 +1,121 @@
+{
+  "corpusSHA256": "5b435a564e5dae111898f2ac743c9fa6cc862525e9c0d45c7358069b7567297f",
+  "counts": {
+    "byBoundaryTargetAndLanguage": {
+      "en": {
+        "assistantCommand": 1000,
+        "informationQuery": 1000,
+        "question": 200,
+        "replyableMessage": 200,
+        "systemNotification": 1000,
+        "task": 200
+      },
+      "zh-Hans": {
+        "assistantCommand": 1000,
+        "informationQuery": 1000,
+        "question": 200,
+        "replyableMessage": 200,
+        "systemNotification": 1000,
+        "task": 200
+      }
+    },
+    "byDomain": {
+      "accountService": 600,
+      "calendar": 600,
+      "communication": 600,
+      "dining": 600,
+      "finance": 600,
+      "generalKnowledge": 600,
+      "health": 600,
+      "media": 600,
+      "shopping": 600,
+      "smartHome": 600,
+      "travel": 600,
+      "weather": 600
+    },
+    "byIntent": {
+      "assistantCommand": 2000,
+      "informationQuery": 2000,
+      "question": 400,
+      "replyableMessage": 800,
+      "systemNotification": 2000,
+      "task": 400
+    },
+    "byIntentAndLanguage": {
+      "en": {
+        "assistantCommand": 1000,
+        "informationQuery": 1000,
+        "question": 200,
+        "replyableMessage": 400,
+        "systemNotification": 1000,
+        "task": 200
+      },
+      "zh-Hans": {
+        "assistantCommand": 1000,
+        "informationQuery": 1000,
+        "question": 200,
+        "replyableMessage": 400,
+        "systemNotification": 1000,
+        "task": 200
+      }
+    },
+    "byLanguage": {
+      "en": 3600,
+      "zh-Hans": 3600
+    },
+    "byTemplateFamily": {
+      "v6_assistantCommand_en_template_1": 253,
+      "v6_assistantCommand_en_template_2": 233,
+      "v6_assistantCommand_en_template_3": 250,
+      "v6_assistantCommand_en_template_4": 264,
+      "v6_assistantCommand_zh-Hans_template_1": 247,
+      "v6_assistantCommand_zh-Hans_template_2": 250,
+      "v6_assistantCommand_zh-Hans_template_3": 253,
+      "v6_assistantCommand_zh-Hans_template_4": 250,
+      "v6_informationQuery_en_template_1": 243,
+      "v6_informationQuery_en_template_2": 240,
+      "v6_informationQuery_en_template_3": 256,
+      "v6_informationQuery_en_template_4": 261,
+      "v6_informationQuery_zh-Hans_template_1": 246,
+      "v6_informationQuery_zh-Hans_template_2": 254,
+      "v6_informationQuery_zh-Hans_template_3": 245,
+      "v6_informationQuery_zh-Hans_template_4": 255,
+      "v6_question_en_template_1": 52,
+      "v6_question_en_template_2": 54,
+      "v6_question_en_template_3": 44,
+      "v6_question_en_template_4": 50,
+      "v6_question_zh-Hans_template_1": 54,
+      "v6_question_zh-Hans_template_2": 42,
+      "v6_question_zh-Hans_template_3": 46,
+      "v6_question_zh-Hans_template_4": 58,
+      "v6_replyableMessage_en_template_1": 57,
+      "v6_replyableMessage_en_template_2": 40,
+      "v6_replyableMessage_en_template_3": 53,
+      "v6_replyableMessage_en_template_4": 50,
+      "v6_replyableMessage_zh-Hans_template_1": 51,
+      "v6_replyableMessage_zh-Hans_template_2": 46,
+      "v6_replyableMessage_zh-Hans_template_3": 50,
+      "v6_replyableMessage_zh-Hans_template_4": 53,
+      "v6_systemNotification_en_template_1": 243,
+      "v6_systemNotification_en_template_2": 250,
+      "v6_systemNotification_en_template_3": 261,
+      "v6_systemNotification_en_template_4": 246,
+      "v6_systemNotification_zh-Hans_template_1": 252,
+      "v6_systemNotification_zh-Hans_template_2": 238,
+      "v6_systemNotification_zh-Hans_template_3": 245,
+      "v6_systemNotification_zh-Hans_template_4": 265,
+      "v6_task_en_template_1": 38,
+      "v6_task_en_template_2": 51,
+      "v6_task_en_template_3": 60,
+      "v6_task_en_template_4": 51,
+      "v6_task_zh-Hans_template_1": 41,
+      "v6_task_zh-Hans_template_2": 52,
+      "v6_task_zh-Hans_template_3": 48,
+      "v6_task_zh-Hans_template_4": 59
+    }
+  },
+  "excludedHoldoutOverlap": 0,
+  "recordCount": 7200,
+  "schemaVersion": 1,
+  "sourceRevision": "v6-boundary-templates-1"
+}

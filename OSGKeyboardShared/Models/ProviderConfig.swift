@@ -251,6 +251,18 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         }
     }
 
+    /// Whether Reply may return several sendable variants. Default is on.
+    @Published public var multipleReplyVariantsEnabled: Bool {
+        didSet {
+            guard !isApplyingConfiguration,
+                  multipleReplyVariantsEnabled != configuration.multipleReplyVariantsEnabled else {
+                return
+            }
+            configuration.multipleReplyVariantsEnabled = multipleReplyVariantsEnabled
+            persistConfiguration(postConfigChanged: true)
+        }
+    }
+
     /// Whether the pipeline should run translate-and-polish (not just
     /// polish). Both engines honour the selected target locale.
     public var isTranslationEffective: Bool {
@@ -287,6 +299,39 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
             guard !isApplyingConfiguration,
                   clipboardCandidateBarEnabled != configuration.clipboardCandidateBarEnabled else { return }
             configuration.clipboardCandidateBarEnabled = clipboardCandidateBarEnabled
+            persistConfiguration(postConfigChanged: true)
+        }
+    }
+
+    /// When enabled (and history is on), a freshly copied replyable message is
+    /// auto-routed into the Reply flow when the keyboard opens. Default off.
+    @Published public var clipboardAutoModeEnabled: Bool {
+        didSet {
+            guard !isApplyingConfiguration,
+                  clipboardAutoModeEnabled != configuration.clipboardAutoModeEnabled else { return }
+            configuration.clipboardAutoModeEnabled = clipboardAutoModeEnabled
+            persistConfiguration(postConfigChanged: true)
+        }
+    }
+
+    /// When enabled (and history is on), a freshly copied non-system-language
+    /// paste is auto-translated on open. Default off.
+    @Published public var clipboardAutoTranslateEnabled: Bool {
+        didSet {
+            guard !isApplyingConfiguration,
+                  clipboardAutoTranslateEnabled != configuration.clipboardAutoTranslateEnabled else { return }
+            configuration.clipboardAutoTranslateEnabled = clipboardAutoTranslateEnabled
+            persistConfiguration(postConfigChanged: true)
+        }
+    }
+
+    /// When enabled (and history is on), a freshly copied email auto-drafts a
+    /// reply on open. Default off.
+    @Published public var clipboardAutoEmailReplyEnabled: Bool {
+        didSet {
+            guard !isApplyingConfiguration,
+                  clipboardAutoEmailReplyEnabled != configuration.clipboardAutoEmailReplyEnabled else { return }
+            configuration.clipboardAutoEmailReplyEnabled = clipboardAutoEmailReplyEnabled
             persistConfiguration(postConfigChanged: true)
         }
     }
@@ -438,9 +483,13 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         keyboardHapticIntensity = configuration.keyboardHapticIntensity
         polishIntensity = configuration.polishIntensity
         aiResponseLength = configuration.aiResponseLength
+        multipleReplyVariantsEnabled = configuration.multipleReplyVariantsEnabled
         llmThinkingEnabled = configuration.llmThinkingEnabled
         clipboardHistoryEnabled = configuration.clipboardHistoryEnabled
         clipboardCandidateBarEnabled = configuration.clipboardCandidateBarEnabled
+        clipboardAutoModeEnabled = configuration.clipboardAutoModeEnabled
+        clipboardAutoTranslateEnabled = configuration.clipboardAutoTranslateEnabled
+        clipboardAutoEmailReplyEnabled = configuration.clipboardAutoEmailReplyEnabled
         flowSkipAppSwitch = configuration.flowSkipAppSwitch
         flowInactivityDuration = configuration.flowInactivityDuration
         localASRCustomLanguageModelEnabled = configuration.localASRCustomLanguageModelEnabled
@@ -469,10 +518,14 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         keyboardHapticIntensity = .default
         polishIntensity = .default
         aiResponseLength = .default
+        multipleReplyVariantsEnabled = true
         localASRCustomLanguageModelEnabled = true
         llmThinkingEnabled = false
         clipboardHistoryEnabled = false
         clipboardCandidateBarEnabled = false
+        clipboardAutoModeEnabled = false
+        clipboardAutoTranslateEnabled = false
+        clipboardAutoEmailReplyEnabled = false
         hasAcknowledgedCloudSharing = false
         credentialSource = .byok
         configuration.providerId = polishPreset.id
@@ -485,10 +538,14 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         configuration.keyboardHapticIntensity = .default
         configuration.polishIntensity = .default
         configuration.aiResponseLength = .default
+        configuration.multipleReplyVariantsEnabled = true
         configuration.localASRCustomLanguageModelEnabled = true
         configuration.llmThinkingEnabled = false
         configuration.clipboardHistoryEnabled = false
         configuration.clipboardCandidateBarEnabled = false
+        configuration.clipboardAutoModeEnabled = false
+        configuration.clipboardAutoTranslateEnabled = false
+        configuration.clipboardAutoEmailReplyEnabled = false
         configuration.hasAcknowledgedCloudSharing = false
         configuration.credentialSource = .byok
         isApplyingConfiguration = false
@@ -543,9 +600,13 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         keyboardHapticIntensity = fresh.keyboardHapticIntensity
         polishIntensity = fresh.polishIntensity
         aiResponseLength = fresh.aiResponseLength
+        multipleReplyVariantsEnabled = fresh.multipleReplyVariantsEnabled
         llmThinkingEnabled = fresh.llmThinkingEnabled
         clipboardHistoryEnabled = fresh.clipboardHistoryEnabled
         clipboardCandidateBarEnabled = fresh.clipboardCandidateBarEnabled
+        clipboardAutoModeEnabled = fresh.clipboardAutoModeEnabled
+        clipboardAutoTranslateEnabled = fresh.clipboardAutoTranslateEnabled
+        clipboardAutoEmailReplyEnabled = fresh.clipboardAutoEmailReplyEnabled
         flowSkipAppSwitch = fresh.flowSkipAppSwitch
         flowInactivityDuration = fresh.flowInactivityDuration
         localASRCustomLanguageModelEnabled = fresh.localASRCustomLanguageModelEnabled

@@ -1,0 +1,3443 @@
+{
+  "binaryMacro" : {
+    "accuracy" : 0.9456,
+    "f1" : 0.5738,
+    "precision" : 0.8592,
+    "recall" : 0.4714
+  },
+  "binaryMacroByLanguage" : {
+    "en" : {
+      "accuracy" : 0.9382,
+      "f1" : 0.5313,
+      "precision" : 0.8532,
+      "recall" : 0.4313
+    },
+    "zh-Hans" : {
+      "accuracy" : 0.953,
+      "f1" : 0.6084,
+      "precision" : 0.8688,
+      "recall" : 0.5115
+    }
+  },
+  "classifiers" : [
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.9141,
+          "family" : "task_next_action",
+          "id" : "random-20260826-en-task_next_action-016",
+          "language" : "en",
+          "text" : "In short, Your next action is to prepare the test findings before the next review for Support."
+        },
+        {
+          "confidence" : 0.9138,
+          "family" : "follow_up_instruction",
+          "id" : "random-20260826-en-follow_up_instruction-001",
+          "language" : "en",
+          "text" : "For the record, Once the sample arrives, check with the doctor the next day about resolution progress."
+        },
+        {
+          "confidence" : 0.9127,
+          "family" : "follow_up_instruction",
+          "id" : "random-20260826-en-follow_up_instruction-009",
+          "language" : "en",
+          "text" : "One more thing: Once the contract is signed, check with the landlord the next day about the missing documents."
+        },
+        {
+          "confidence" : 0.8972,
+          "family" : "follow_up_instruction",
+          "id" : "random-20260826-zh-Hans-follow_up_instruction-002",
+          "language" : "zh-Hans",
+          "text" : "单独记一下，等补丁上线后第二天再找房东确认最终结论，别漏了。"
+        },
+        {
+          "confidence" : 0.8956,
+          "family" : "task_request",
+          "id" : "random-20260826-zh-Hans-task_request-008",
+          "language" : "zh-Hans",
+          "text" : "对了，项目负责人还缺测试结论，麻烦午休前补齐后在共享文档中留言。"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9614,
+          "family" : "fixed_invitation",
+          "id" : "random-20260826-en-fixed_invitation-018",
+          "language" : "en",
+          "text" : "By the way, I saved you a spot to attend the celebration Saturday evening at meeting room three; can you make it?"
+        },
+        {
+          "confidence" : 0.9407,
+          "family" : "fixed_invitation",
+          "id" : "random-20260826-en-fixed_invitation-016",
+          "language" : "en",
+          "text" : "For context, I saved you a spot to join a small review tomorrow at 10:30 at meeting room three; can you make it?"
+        }
+      ],
+      "id" : "task",
+      "metrics" : {
+        "accuracy" : 0.9397,
+        "f1" : 0.798,
+        "falseNegative" : 39,
+        "falsePositive" : 2,
+        "precision" : 0.9759,
+        "recall" : 0.675,
+        "total" : 680,
+        "trueNegative" : 558,
+        "truePositive" : 81
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9176,
+          "f1" : 0.7083,
+          "falseNegative" : 26,
+          "falsePositive" : 2,
+          "precision" : 0.9444,
+          "recall" : 0.5667,
+          "total" : 340,
+          "trueNegative" : 278,
+          "truePositive" : 34
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9618,
+          "f1" : 0.8785,
+          "falseNegative" : 13,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.7833,
+          "total" : 340,
+          "trueNegative" : 280,
+          "truePositive" : 47
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "complaint_support" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "confirmation_decision" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "conversation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "event_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "fixed_invitation" : {
+          "accuracy" : 0.95,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 2,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 38,
+          "truePositive" : 0
+        },
+        "follow_up_instruction" : {
+          "accuracy" : 0.775,
+          "f1" : 0.8732,
+          "falseNegative" : 9,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.775,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 31
+        },
+        "follow_up_personal_reminder" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "information_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "negative_news" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "quoted_question_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "schedule_negotiation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "task_next_action" : {
+          "accuracy" : 0.525,
+          "f1" : 0.6885,
+          "falseNegative" : 19,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.525,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 21
+        },
+        "task_request" : {
+          "accuracy" : 0.725,
+          "f1" : 0.8406,
+          "falseNegative" : 11,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.725,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 29
+        },
+        "vague_future_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9544,
+          "f1" : 0.8634,
+          "falseNegative" : 22,
+          "falsePositive" : 9,
+          "precision" : 0.9159,
+          "recall" : 0.8167,
+          "total" : 680,
+          "trueNegative" : 551,
+          "truePositive" : 98
+        },
+        "threshold" : 0.79
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9412,
+          "f1" : 0.8077,
+          "falseNegative" : 36,
+          "falsePositive" : 4,
+          "precision" : 0.9545,
+          "recall" : 0.7,
+          "total" : 680,
+          "trueNegative" : 556,
+          "truePositive" : 84
+        },
+        "threshold" : 0.9
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9206,
+            "f1" : 0.7327,
+            "falseNegative" : 23,
+            "falsePositive" : 4,
+            "precision" : 0.9024,
+            "recall" : 0.6167,
+            "total" : 340,
+            "trueNegative" : 276,
+            "truePositive" : 37
+          },
+          "threshold" : 0.9
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9765,
+            "f1" : 0.9333,
+            "falseNegative" : 4,
+            "falsePositive" : 4,
+            "precision" : 0.9333,
+            "recall" : 0.9333,
+            "total" : 340,
+            "trueNegative" : 276,
+            "truePositive" : 56
+          },
+          "threshold" : 0.59
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9147,
+            "f1" : 0.6882,
+            "falseNegative" : 28,
+            "falsePositive" : 1,
+            "precision" : 0.9697,
+            "recall" : 0.5333,
+            "total" : 340,
+            "trueNegative" : 279,
+            "truePositive" : 32
+          },
+          "threshold" : 0.95
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9735,
+            "f1" : 0.9217,
+            "falseNegative" : 7,
+            "falsePositive" : 2,
+            "precision" : 0.9636,
+            "recall" : 0.8833,
+            "total" : 340,
+            "trueNegative" : 278,
+            "truePositive" : 53
+          },
+          "threshold" : 0.79
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.9895,
+          "family" : "information_question",
+          "id" : "random-20260826-en-information_question-020",
+          "language" : "en",
+          "text" : "A quick note: Where does the release stand right now?"
+        },
+        {
+          "confidence" : 0.9891,
+          "family" : "fixed_invitation",
+          "id" : "random-20260826-zh-Hans-fixed_invitation-008",
+          "language" : "zh-Hans",
+          "text" : "先说重点，我给你留了位置，明天十点半到客户办公室看内部演示，能来不？"
+        },
+        {
+          "confidence" : 0.9889,
+          "family" : "schedule_negotiation",
+          "id" : "random-20260826-zh-Hans-schedule_negotiation-012",
+          "language" : "zh-Hans",
+          "text" : "对了，下周三午后赶不过去，换成周四午休后你觉得可行吗？"
+        },
+        {
+          "confidence" : 0.9886,
+          "family" : "complaint_support",
+          "id" : "random-20260826-zh-Hans-complaint_support-004",
+          "language" : "zh-Hans",
+          "text" : "顺便提一句，我已经重试三次，还是账号又被锁住，导致家人收不到商品。请问什么时候能处理？"
+        },
+        {
+          "confidence" : 0.9885,
+          "family" : "information_question",
+          "id" : "random-20260826-en-information_question-016",
+          "language" : "en",
+          "text" : "The main point is this: Where does the fee adjustment stand right now?"
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "question",
+      "metrics" : {
+        "accuracy" : 0.85,
+        "f1" : 0.5321,
+        "falseNegative" : 102,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.3625,
+        "total" : 680,
+        "trueNegative" : 520,
+        "truePositive" : 58
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.8176,
+          "f1" : 0.3673,
+          "falseNegative" : 62,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.225,
+          "total" : 340,
+          "trueNegative" : 260,
+          "truePositive" : 18
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.8824,
+          "f1" : 0.6667,
+          "falseNegative" : 40,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.5,
+          "total" : 340,
+          "trueNegative" : 260,
+          "truePositive" : 40
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "complaint_support" : {
+          "accuracy" : 0.275,
+          "f1" : 0.4314,
+          "falseNegative" : 29,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.275,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 11
+        },
+        "confirmation_decision" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "conversation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "event_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "fixed_invitation" : {
+          "accuracy" : 0.55,
+          "f1" : 0.7097,
+          "falseNegative" : 18,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.55,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 22
+        },
+        "follow_up_instruction" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "follow_up_personal_reminder" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "information_question" : {
+          "accuracy" : 0.525,
+          "f1" : 0.6885,
+          "falseNegative" : 19,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.525,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 21
+        },
+        "negative_news" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "quoted_question_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "schedule_negotiation" : {
+          "accuracy" : 0.1,
+          "f1" : 0.1818,
+          "falseNegative" : 36,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.1,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 4
+        },
+        "task_next_action" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "task_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "vague_future_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9426,
+          "f1" : 0.8746,
+          "falseNegative" : 24,
+          "falsePositive" : 15,
+          "precision" : 0.9007,
+          "recall" : 0.85,
+          "total" : 680,
+          "trueNegative" : 505,
+          "truePositive" : 136
+        },
+        "threshold" : 0.48
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9309,
+          "f1" : 0.8351,
+          "falseNegative" : 41,
+          "falsePositive" : 6,
+          "precision" : 0.952,
+          "recall" : 0.7438,
+          "total" : 680,
+          "trueNegative" : 514,
+          "truePositive" : 119
+        },
+        "threshold" : 0.71
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.8882,
+            "f1" : 0.7121,
+            "falseNegative" : 33,
+            "falsePositive" : 5,
+            "precision" : 0.9038,
+            "recall" : 0.5875,
+            "total" : 340,
+            "trueNegative" : 255,
+            "truePositive" : 47
+          },
+          "threshold" : 0.72
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9882,
+            "f1" : 0.9756,
+            "falseNegative" : 0,
+            "falsePositive" : 4,
+            "precision" : 0.9524,
+            "recall" : 1,
+            "total" : 340,
+            "trueNegative" : 256,
+            "truePositive" : 80
+          },
+          "threshold" : 0.16
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.8735,
+            "f1" : 0.6446,
+            "falseNegative" : 41,
+            "falsePositive" : 2,
+            "precision" : 0.9512,
+            "recall" : 0.4875,
+            "total" : 340,
+            "trueNegative" : 258,
+            "truePositive" : 39
+          },
+          "threshold" : 0.87
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9882,
+            "f1" : 0.9756,
+            "falseNegative" : 0,
+            "falsePositive" : 4,
+            "precision" : 0.9524,
+            "recall" : 1,
+            "total" : 340,
+            "trueNegative" : 256,
+            "truePositive" : 80
+          },
+          "threshold" : 0.16
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7672,
+          "family" : "fixed_invitation",
+          "id" : "random-20260826-zh-Hans-fixed_invitation-004",
+          "language" : "zh-Hans",
+          "text" : "刚想到，我给你留了位置，下周三午后到客户办公室参加小范围评审，能来不？"
+        },
+        {
+          "confidence" : 0.7556,
+          "family" : "fixed_invitation",
+          "id" : "random-20260826-zh-Hans-fixed_invitation-015",
+          "language" : "zh-Hans",
+          "text" : "补充一下，我给你留了位置，明天十点半到三号会议室参加小范围评审，能来不？"
+        },
+        {
+          "confidence" : 0.7004,
+          "family" : "fixed_invitation",
+          "id" : "random-20260826-zh-Hans-fixed_invitation-003",
+          "language" : "zh-Hans",
+          "text" : "我给你留了位置，周六傍晚到楼下咖啡店碰面聊方案，能来不？"
+        },
+        {
+          "confidence" : 0.6708,
+          "family" : "fixed_invitation",
+          "id" : "random-20260826-zh-Hans-fixed_invitation-001",
+          "language" : "zh-Hans",
+          "text" : "简单说，我给你留了位置，今晚九点到园区北门参加庆功会，能来不？"
+        },
+        {
+          "confidence" : 0.6481,
+          "family" : "fixed_invitation",
+          "id" : "random-20260826-en-fixed_invitation-005",
+          "language" : "en",
+          "text" : "Just to add, I saved you a spot to meet to discuss the proposal Saturday evening at the client office; can you make it?"
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "invitation",
+      "metrics" : {
+        "accuracy" : 0.9706,
+        "f1" : 0.6667,
+        "falseNegative" : 20,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.5,
+        "total" : 680,
+        "trueNegative" : 640,
+        "truePositive" : 20
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9676,
+          "f1" : 0.6207,
+          "falseNegative" : 11,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.45,
+          "total" : 340,
+          "trueNegative" : 320,
+          "truePositive" : 9
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9735,
+          "f1" : 0.7097,
+          "falseNegative" : 9,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.55,
+          "total" : 340,
+          "trueNegative" : 320,
+          "truePositive" : 11
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "complaint_support" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "confirmation_decision" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "conversation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "event_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "fixed_invitation" : {
+          "accuracy" : 0.5,
+          "f1" : 0.6667,
+          "falseNegative" : 20,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.5,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 20
+        },
+        "follow_up_instruction" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "follow_up_personal_reminder" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "information_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "negative_news" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "quoted_question_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "schedule_negotiation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "task_next_action" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "task_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "vague_future_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9824,
+          "f1" : 0.8378,
+          "falseNegative" : 9,
+          "falsePositive" : 3,
+          "precision" : 0.9118,
+          "recall" : 0.775,
+          "total" : 680,
+          "trueNegative" : 637,
+          "truePositive" : 31
+        },
+        "threshold" : 0.4
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9824,
+          "f1" : 0.8286,
+          "falseNegative" : 11,
+          "falsePositive" : 1,
+          "precision" : 0.9667,
+          "recall" : 0.725,
+          "total" : 680,
+          "trueNegative" : 639,
+          "truePositive" : 29
+        },
+        "threshold" : 0.49
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 340,
+            "trueNegative" : 320,
+            "truePositive" : 20
+          },
+          "threshold" : 0.13
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9853,
+            "f1" : 0.8649,
+            "falseNegative" : 4,
+            "falsePositive" : 1,
+            "precision" : 0.9412,
+            "recall" : 0.8,
+            "total" : 340,
+            "trueNegative" : 319,
+            "truePositive" : 16
+          },
+          "threshold" : 0.49
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 340,
+            "trueNegative" : 320,
+            "truePositive" : 20
+          },
+          "threshold" : 0.13
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9853,
+            "f1" : 0.8571,
+            "falseNegative" : 5,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.75,
+            "total" : 340,
+            "trueNegative" : 320,
+            "truePositive" : 15
+          },
+          "threshold" : 0.58
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7414,
+          "family" : "complaint_support",
+          "id" : "random-20260826-en-complaint_support-009",
+          "language" : "en",
+          "text" : "Also, I have tried three times and tracking has not moved for five days; I cannot continue. When will this be fixed?"
+        },
+        {
+          "confidence" : 0.7278,
+          "family" : "complaint_support",
+          "id" : "random-20260826-en-complaint_support-016",
+          "language" : "en",
+          "text" : "A quick note: the account is locked again is still unresolved and delivery is now delayed. Can I get a clear answer?"
+        },
+        {
+          "confidence" : 0.721,
+          "family" : "complaint_support",
+          "id" : "random-20260826-zh-Hans-complaint_support-017",
+          "language" : "zh-Hans",
+          "text" : "顺便提一句，账号又被锁住到现在没解决，客户已经在催，能给一个明确答复吗？"
+        },
+        {
+          "confidence" : 0.6589,
+          "family" : "complaint_support",
+          "id" : "random-20260826-zh-Hans-complaint_support-020",
+          "language" : "zh-Hans",
+          "text" : "先说重点，付款结果重复扣款到现在没解决，客户已经在催，能给一个明确答复吗？"
+        },
+        {
+          "confidence" : 0.6338,
+          "family" : "complaint_support",
+          "id" : "random-20260826-en-complaint_support-006",
+          "language" : "en",
+          "text" : "For context, I have tried three times and the page stays blank; delivery is now delayed. When will this be fixed?"
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "complaint",
+      "metrics" : {
+        "accuracy" : 0.9735,
+        "f1" : 0.7097,
+        "falseNegative" : 18,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.55,
+        "total" : 680,
+        "trueNegative" : 640,
+        "truePositive" : 22
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9647,
+          "f1" : 0.5714,
+          "falseNegative" : 12,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.4,
+          "total" : 340,
+          "trueNegative" : 320,
+          "truePositive" : 8
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9824,
+          "f1" : 0.8235,
+          "falseNegative" : 6,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.7,
+          "total" : 340,
+          "trueNegative" : 320,
+          "truePositive" : 14
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "complaint_support" : {
+          "accuracy" : 0.55,
+          "f1" : 0.7097,
+          "falseNegative" : 18,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.55,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 22
+        },
+        "confirmation_decision" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "conversation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "event_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "fixed_invitation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "follow_up_instruction" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "follow_up_personal_reminder" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "information_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "negative_news" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "quoted_question_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "schedule_negotiation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "task_next_action" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "task_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "vague_future_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9824,
+          "f1" : 0.8378,
+          "falseNegative" : 9,
+          "falsePositive" : 3,
+          "precision" : 0.9118,
+          "recall" : 0.775,
+          "total" : 680,
+          "trueNegative" : 637,
+          "truePositive" : 31
+        },
+        "threshold" : 0.52
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9824,
+          "f1" : 0.8286,
+          "falseNegative" : 11,
+          "falsePositive" : 1,
+          "precision" : 0.9667,
+          "recall" : 0.725,
+          "total" : 680,
+          "trueNegative" : 639,
+          "truePositive" : 29
+        },
+        "threshold" : 0.56
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9794,
+            "f1" : 0.8,
+            "falseNegative" : 6,
+            "falsePositive" : 1,
+            "precision" : 0.9333,
+            "recall" : 0.7,
+            "total" : 340,
+            "trueNegative" : 319,
+            "truePositive" : 14
+          },
+          "threshold" : 0.5
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9882,
+            "f1" : 0.8947,
+            "falseNegative" : 3,
+            "falsePositive" : 1,
+            "precision" : 0.9444,
+            "recall" : 0.85,
+            "total" : 340,
+            "trueNegative" : 319,
+            "truePositive" : 17
+          },
+          "threshold" : 0.54
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9765,
+            "f1" : 0.75,
+            "falseNegative" : 8,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.6,
+            "total" : 340,
+            "trueNegative" : 320,
+            "truePositive" : 12
+          },
+          "threshold" : 0.56
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9882,
+            "f1" : 0.8889,
+            "falseNegative" : 4,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.8,
+            "total" : 340,
+            "trueNegative" : 320,
+            "truePositive" : 16
+          },
+          "threshold" : 0.64
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.4229,
+          "family" : "schedule_negotiation",
+          "id" : "random-20260826-zh-Hans-schedule_negotiation-002",
+          "language" : "zh-Hans",
+          "text" : "单独记一下，原来的时段卡住了，我只能周五临下班前，能不能对调？"
+        },
+        {
+          "confidence" : 0.4084,
+          "family" : "schedule_negotiation",
+          "id" : "random-20260826-zh-Hans-schedule_negotiation-018",
+          "language" : "zh-Hans",
+          "text" : "原来的时段卡住了，我只能周四午休后，能不能对调？"
+        },
+        {
+          "confidence" : 0.4037,
+          "family" : "schedule_negotiation",
+          "id" : "random-20260826-zh-Hans-schedule_negotiation-001",
+          "language" : "zh-Hans",
+          "text" : "先说重点，周一早会后赶不过去，换成周五临下班前你觉得可行吗？"
+        },
+        {
+          "confidence" : 0.3942,
+          "family" : "schedule_negotiation",
+          "id" : "random-20260826-zh-Hans-schedule_negotiation-007",
+          "language" : "zh-Hans",
+          "text" : "补充一下，原来的时段卡住了，我只能周五临下班前，能不能对调？"
+        },
+        {
+          "confidence" : 0.3468,
+          "family" : "schedule_negotiation",
+          "id" : "random-20260826-en-schedule_negotiation-018",
+          "language" : "en",
+          "text" : "By the way, The original slot is blocked for me; could we swap to next Monday afternoon?"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.6646,
+          "family" : "conversation",
+          "id" : "random-20260826-en-conversation-004",
+          "language" : "en",
+          "text" : "Just letting you know, the demo went better than expected; we can talk later."
+        },
+        {
+          "confidence" : 0.6627,
+          "family" : "conversation",
+          "id" : "random-20260826-en-conversation-010",
+          "language" : "en",
+          "text" : "Just to add, Just letting you know, the demo went better than expected; we can talk later."
+        },
+        {
+          "confidence" : 0.5963,
+          "family" : "conversation",
+          "id" : "random-20260826-en-conversation-012",
+          "language" : "en",
+          "text" : "Also, Just letting you know, the demo went better than expected; we can talk later."
+        },
+        {
+          "confidence" : 0.5892,
+          "family" : "conversation",
+          "id" : "random-20260826-en-conversation-017",
+          "language" : "en",
+          "text" : "A quick note: Just letting you know, the demo went better than expected; we can talk later."
+        },
+        {
+          "confidence" : 0.5281,
+          "family" : "complaint_support",
+          "id" : "random-20260826-zh-Hans-complaint_support-018",
+          "language" : "zh-Hans",
+          "text" : "补充一下，附件始终打不开到现在没解决，我无法继续操作，能给一个明确答复吗？"
+        }
+      ],
+      "id" : "scheduleNegotiation",
+      "metrics" : {
+        "accuracy" : 0.9721,
+        "f1" : 0.7397,
+        "falseNegative" : 13,
+        "falsePositive" : 6,
+        "precision" : 0.8182,
+        "recall" : 0.675,
+        "total" : 680,
+        "trueNegative" : 634,
+        "truePositive" : 27
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9706,
+          "f1" : 0.75,
+          "falseNegative" : 5,
+          "falsePositive" : 5,
+          "precision" : 0.75,
+          "recall" : 0.75,
+          "total" : 340,
+          "trueNegative" : 315,
+          "truePositive" : 15
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9735,
+          "f1" : 0.7273,
+          "falseNegative" : 8,
+          "falsePositive" : 1,
+          "precision" : 0.9231,
+          "recall" : 0.6,
+          "total" : 340,
+          "trueNegative" : 319,
+          "truePositive" : 12
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "complaint_support" : {
+          "accuracy" : 0.975,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 39,
+          "truePositive" : 0
+        },
+        "confirmation_decision" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "conversation" : {
+          "accuracy" : 0.9,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 4,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 36,
+          "truePositive" : 0
+        },
+        "event_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "fixed_invitation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "follow_up_instruction" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "follow_up_personal_reminder" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "information_question" : {
+          "accuracy" : 0.975,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 39,
+          "truePositive" : 0
+        },
+        "negative_news" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "quoted_question_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "schedule_negotiation" : {
+          "accuracy" : 0.675,
+          "f1" : 0.806,
+          "falseNegative" : 13,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.675,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 27
+        },
+        "task_next_action" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "task_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "vague_future_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9691,
+          "f1" : 0.6667,
+          "falseNegative" : 19,
+          "falsePositive" : 2,
+          "precision" : 0.913,
+          "recall" : 0.525,
+          "total" : 680,
+          "trueNegative" : 638,
+          "truePositive" : 21
+        },
+        "threshold" : 0.6
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9618,
+          "f1" : 0.5185,
+          "falseNegative" : 26,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.35,
+          "total" : 680,
+          "trueNegative" : 640,
+          "truePositive" : 14
+        },
+        "threshold" : 0.67
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9588,
+            "f1" : 0.4615,
+            "falseNegative" : 14,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.3,
+            "total" : 340,
+            "trueNegative" : 320,
+            "truePositive" : 6
+          },
+          "threshold" : 0.67
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9882,
+            "f1" : 0.9,
+            "falseNegative" : 2,
+            "falsePositive" : 2,
+            "precision" : 0.9,
+            "recall" : 0.9,
+            "total" : 340,
+            "trueNegative" : 318,
+            "truePositive" : 18
+          },
+          "threshold" : 0.32
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9588,
+            "f1" : 0.4615,
+            "falseNegative" : 14,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.3,
+            "total" : 340,
+            "trueNegative" : 320,
+            "truePositive" : 6
+          },
+          "threshold" : 0.67
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9765,
+            "f1" : 0.75,
+            "falseNegative" : 8,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.6,
+            "total" : 340,
+            "trueNegative" : 320,
+            "truePositive" : 12
+          },
+          "threshold" : 0.53
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.9897,
+          "family" : "confirmation_decision",
+          "id" : "random-20260826-zh-Hans-confirmation_decision-011",
+          "language" : "zh-Hans",
+          "text" : "顺便提一句，不用再比较了，就选线下处理方案，后续都按这个口径走。"
+        },
+        {
+          "confidence" : 0.9883,
+          "family" : "confirmation_decision",
+          "id" : "random-20260826-zh-Hans-confirmation_decision-014",
+          "language" : "zh-Hans",
+          "text" : "先说重点，不用再比较了，就选线下处理方案，后续都按这个口径走。"
+        },
+        {
+          "confidence" : 0.9883,
+          "family" : "confirmation_decision",
+          "id" : "random-20260826-zh-Hans-confirmation_decision-007",
+          "language" : "zh-Hans",
+          "text" : "单独记一下，不用再比较了，就选线下处理方案，后续都按这个口径走。"
+        },
+        {
+          "confidence" : 0.9848,
+          "family" : "confirmation_decision",
+          "id" : "random-20260826-en-confirmation_decision-002",
+          "language" : "en",
+          "text" : "No more comparisons: choose the second quote and use it as the final direction."
+        },
+        {
+          "confidence" : 0.9828,
+          "family" : "confirmation_decision",
+          "id" : "random-20260826-en-confirmation_decision-013",
+          "language" : "en",
+          "text" : "For the record, No more comparisons: choose a limited rollout first and use it as the final direction."
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "confirmationDecision",
+      "metrics" : {
+        "accuracy" : 0.9456,
+        "f1" : 0.1395,
+        "falseNegative" : 37,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.075,
+        "total" : 680,
+        "trueNegative" : 640,
+        "truePositive" : 3
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9471,
+          "f1" : 0.1818,
+          "falseNegative" : 18,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.1,
+          "total" : 340,
+          "trueNegative" : 320,
+          "truePositive" : 2
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9441,
+          "f1" : 0.0952,
+          "falseNegative" : 19,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.05,
+          "total" : 340,
+          "trueNegative" : 320,
+          "truePositive" : 1
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "complaint_support" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "confirmation_decision" : {
+          "accuracy" : 0.075,
+          "f1" : 0.1395,
+          "falseNegative" : 37,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.075,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 3
+        },
+        "conversation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "event_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "fixed_invitation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "follow_up_instruction" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "follow_up_personal_reminder" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "information_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "negative_news" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "quoted_question_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "schedule_negotiation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "task_next_action" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "task_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "vague_future_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9603,
+          "f1" : 0.4906,
+          "falseNegative" : 27,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.325,
+          "total" : 680,
+          "trueNegative" : 640,
+          "truePositive" : 13
+        },
+        "threshold" : 0.97
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9603,
+          "f1" : 0.4906,
+          "falseNegative" : 27,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.325,
+          "total" : 680,
+          "trueNegative" : 640,
+          "truePositive" : 13
+        },
+        "threshold" : 0.97
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9647,
+            "f1" : 0.5714,
+            "falseNegative" : 12,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.4,
+            "total" : 340,
+            "trueNegative" : 320,
+            "truePositive" : 8
+          },
+          "threshold" : 0.97
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9853,
+            "f1" : 0.8649,
+            "falseNegative" : 4,
+            "falsePositive" : 1,
+            "precision" : 0.9412,
+            "recall" : 0.8,
+            "total" : 340,
+            "trueNegative" : 319,
+            "truePositive" : 16
+          },
+          "threshold" : 0.5
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9647,
+            "f1" : 0.5714,
+            "falseNegative" : 12,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.4,
+            "total" : 340,
+            "trueNegative" : 320,
+            "truePositive" : 8
+          },
+          "threshold" : 0.97
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9794,
+            "f1" : 0.7879,
+            "falseNegative" : 7,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.65,
+            "total" : 340,
+            "trueNegative" : 320,
+            "truePositive" : 13
+          },
+          "threshold" : 0.56
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.9529,
+          "family" : "follow_up_personal_reminder",
+          "id" : "random-20260826-zh-Hans-follow_up_personal_reminder-009",
+          "language" : "zh-Hans",
+          "text" : "另外，个人备忘：提醒我下次评审前联系医生，追一下处理进度。"
+        },
+        {
+          "confidence" : 0.9461,
+          "family" : "follow_up_personal_reminder",
+          "id" : "random-20260826-zh-Hans-follow_up_personal_reminder-008",
+          "language" : "zh-Hans",
+          "text" : "顺便提一句，个人备忘：提醒我午休前联系医生，追一下到账情况。"
+        },
+        {
+          "confidence" : 0.9458,
+          "family" : "follow_up_personal_reminder",
+          "id" : "random-20260826-zh-Hans-follow_up_personal_reminder-001",
+          "language" : "zh-Hans",
+          "text" : "简单说，个人备忘：提醒我明晚之前联系招聘方，追一下处理进度。"
+        },
+        {
+          "confidence" : 0.9455,
+          "family" : "task_next_action",
+          "id" : "random-20260826-en-task_next_action-009",
+          "language" : "en",
+          "text" : "Also, Your next action is to prepare the acceptance screenshots before lunch for Finance."
+        },
+        {
+          "confidence" : 0.9437,
+          "family" : "task_next_action",
+          "id" : "random-20260826-en-task_next_action-019",
+          "language" : "en",
+          "text" : "For the record, Your next action is to prepare the acceptance screenshots as this week closes for the vendor."
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.982,
+          "family" : "vague_future_boundary",
+          "id" : "random-20260826-zh-Hans-vague_future_boundary-016",
+          "language" : "zh-Hans",
+          "text" : "补充一下，哪天有心情再找医生聊下一步安排吧。"
+        },
+        {
+          "confidence" : 0.9791,
+          "family" : "vague_future_boundary",
+          "id" : "random-20260826-zh-Hans-vague_future_boundary-011",
+          "language" : "zh-Hans",
+          "text" : "另外，哪天有心情再找法务聊下一步安排吧。"
+        }
+      ],
+      "id" : "followUpReminder",
+      "metrics" : {
+        "accuracy" : 0.9,
+        "f1" : 0.6136,
+        "falseNegative" : 66,
+        "falsePositive" : 2,
+        "precision" : 0.9643,
+        "recall" : 0.45,
+        "total" : 680,
+        "trueNegative" : 558,
+        "truePositive" : 54
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9029,
+          "f1" : 0.6207,
+          "falseNegative" : 33,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.45,
+          "total" : 340,
+          "trueNegative" : 280,
+          "truePositive" : 27
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.8971,
+          "f1" : 0.6067,
+          "falseNegative" : 33,
+          "falsePositive" : 2,
+          "precision" : 0.931,
+          "recall" : 0.45,
+          "total" : 340,
+          "trueNegative" : 278,
+          "truePositive" : 27
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "complaint_support" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "confirmation_decision" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "conversation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "event_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "fixed_invitation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "follow_up_instruction" : {
+          "accuracy" : 0.5,
+          "f1" : 0.6667,
+          "falseNegative" : 20,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.5,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 20
+        },
+        "follow_up_personal_reminder" : {
+          "accuracy" : 0.6,
+          "f1" : 0.75,
+          "falseNegative" : 16,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.6,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 24
+        },
+        "information_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "negative_news" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "quoted_question_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "schedule_negotiation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "task_next_action" : {
+          "accuracy" : 0.25,
+          "f1" : 0.4,
+          "falseNegative" : 30,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.25,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 10
+        },
+        "task_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "vague_future_boundary" : {
+          "accuracy" : 0.95,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 2,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 38,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9794,
+          "f1" : 0.944,
+          "falseNegative" : 2,
+          "falsePositive" : 12,
+          "precision" : 0.9077,
+          "recall" : 0.9833,
+          "total" : 680,
+          "trueNegative" : 548,
+          "truePositive" : 118
+        },
+        "threshold" : 0.33
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9588,
+          "f1" : 0.8739,
+          "falseNegative" : 23,
+          "falsePositive" : 5,
+          "precision" : 0.951,
+          "recall" : 0.8083,
+          "total" : 680,
+          "trueNegative" : 555,
+          "truePositive" : 97
+        },
+        "threshold" : 0.64
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9824,
+            "f1" : 0.9524,
+            "falseNegative" : 0,
+            "falsePositive" : 6,
+            "precision" : 0.9091,
+            "recall" : 1,
+            "total" : 340,
+            "trueNegative" : 274,
+            "truePositive" : 60
+          },
+          "threshold" : 0.3
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9765,
+            "f1" : 0.9355,
+            "falseNegative" : 2,
+            "falsePositive" : 6,
+            "precision" : 0.9063,
+            "recall" : 0.9667,
+            "total" : 340,
+            "trueNegative" : 274,
+            "truePositive" : 58
+          },
+          "threshold" : 0.33
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9647,
+            "f1" : 0.8929,
+            "falseNegative" : 10,
+            "falsePositive" : 2,
+            "precision" : 0.9615,
+            "recall" : 0.8333,
+            "total" : 340,
+            "trueNegative" : 278,
+            "truePositive" : 50
+          },
+          "threshold" : 0.64
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.8882,
+            "f1" : 0.5476,
+            "falseNegative" : 37,
+            "falsePositive" : 1,
+            "precision" : 0.9583,
+            "recall" : 0.3833,
+            "total" : 340,
+            "trueNegative" : 279,
+            "truePositive" : 23
+          },
+          "threshold" : 0.98
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "blessing",
+      "metrics" : {
+        "accuracy" : 1,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 0,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 680,
+        "trueNegative" : 680,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 340,
+          "trueNegative" : 340,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 340,
+          "trueNegative" : 340,
+          "truePositive" : 0
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "complaint_support" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "confirmation_decision" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "conversation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "event_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "fixed_invitation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "follow_up_instruction" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "follow_up_personal_reminder" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "information_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "negative_news" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "quoted_question_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "schedule_negotiation" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "task_next_action" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "task_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "vague_future_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.6418,
+          "family" : "conversation",
+          "id" : "random-20260826-zh-Hans-conversation-020",
+          "language" : "zh-Hans",
+          "text" : "另外，路上有点堵，突然想到你可能会想知道。"
+        },
+        {
+          "confidence" : 0.623,
+          "family" : "confirmation_decision",
+          "id" : "random-20260826-en-confirmation_decision-001",
+          "language" : "en",
+          "text" : "A quick note: No more comparisons: choose quarterly billing and use it as the final direction."
+        },
+        {
+          "confidence" : 0.6078,
+          "family" : "follow_up_instruction",
+          "id" : "random-20260826-en-follow_up_instruction-006",
+          "language" : "en",
+          "text" : "For the record, Once the payment lands, check with the account manager the next day about the final decision."
+        },
+        {
+          "confidence" : 0.6069,
+          "family" : "task_next_action",
+          "id" : "random-20260826-en-task_next_action-009",
+          "language" : "en",
+          "text" : "Also, Your next action is to prepare the acceptance screenshots before lunch for Finance."
+        },
+        {
+          "confidence" : 0.5751,
+          "family" : "task_next_action",
+          "id" : "random-20260826-en-task_next_action-006",
+          "language" : "en",
+          "text" : "One more thing: Your next action is to prepare the test findings within two business days for Operations."
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9797,
+          "family" : "follow_up_personal_reminder",
+          "id" : "random-20260826-zh-Hans-follow_up_personal_reminder-004",
+          "language" : "zh-Hans",
+          "text" : "刚想到，个人备忘：提醒我两个工作日内联系客户经理，追一下到账情况。"
+        },
+        {
+          "confidence" : 0.9447,
+          "family" : "negative_news",
+          "id" : "random-20260826-en-negative_news-006",
+          "language" : "en",
+          "text" : "By the way, Data shows that many flights were delayed overnight, with no request for support."
+        },
+        {
+          "confidence" : 0.9364,
+          "family" : "vague_future_boundary",
+          "id" : "random-20260826-zh-Hans-vague_future_boundary-010",
+          "language" : "zh-Hans",
+          "text" : "刚想到，哪天有心情再找客户经理聊交付日期吧。"
+        },
+        {
+          "confidence" : 0.9273,
+          "family" : "event_boundary",
+          "id" : "random-20260826-zh-Hans-event_boundary-007",
+          "language" : "zh-Hans",
+          "text" : "刚想到，历史行程显示他们曾在园区北门碰面聊方案，没有邀请任何人。"
+        },
+        {
+          "confidence" : 0.9268,
+          "family" : "vague_future_boundary",
+          "id" : "random-20260826-zh-Hans-vague_future_boundary-006",
+          "language" : "zh-Hans",
+          "text" : "刚想到，哪天有心情再找医生聊交付日期吧。"
+        }
+      ],
+      "id" : "replyableMessage",
+      "metrics" : {
+        "accuracy" : 0.9588,
+        "f1" : 0.9646,
+        "falseNegative" : 18,
+        "falsePositive" : 10,
+        "precision" : 0.9745,
+        "recall" : 0.955,
+        "total" : 680,
+        "trueNegative" : 270,
+        "truePositive" : 382
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9559,
+          "f1" : 0.9616,
+          "falseNegative" : 12,
+          "falsePositive" : 3,
+          "precision" : 0.9843,
+          "recall" : 0.94,
+          "total" : 340,
+          "trueNegative" : 137,
+          "truePositive" : 188
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9618,
+          "f1" : 0.9676,
+          "falseNegative" : 6,
+          "falsePositive" : 7,
+          "precision" : 0.9652,
+          "recall" : 0.97,
+          "total" : 340,
+          "trueNegative" : 133,
+          "truePositive" : 194
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "complaint_support" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 40
+        },
+        "confirmation_decision" : {
+          "accuracy" : 0.975,
+          "f1" : 0.9873,
+          "falseNegative" : 1,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.975,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 39
+        },
+        "conversation" : {
+          "accuracy" : 0.85,
+          "f1" : 0.9189,
+          "falseNegative" : 6,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.85,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 34
+        },
+        "event_boundary" : {
+          "accuracy" : 0.975,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 39,
+          "truePositive" : 0
+        },
+        "fixed_invitation" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 40
+        },
+        "follow_up_instruction" : {
+          "accuracy" : 0.975,
+          "f1" : 0.9873,
+          "falseNegative" : 1,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.975,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 39
+        },
+        "follow_up_personal_reminder" : {
+          "accuracy" : 0.975,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 39,
+          "truePositive" : 0
+        },
+        "information_question" : {
+          "accuracy" : 0.95,
+          "f1" : 0.9744,
+          "falseNegative" : 2,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.95,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 38
+        },
+        "negative_news" : {
+          "accuracy" : 0.95,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 2,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 38,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 0.925,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 3,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 37,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 40
+        },
+        "quoted_question_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 40,
+          "truePositive" : 0
+        },
+        "schedule_negotiation" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 40
+        },
+        "task_next_action" : {
+          "accuracy" : 0.8,
+          "f1" : 0.8889,
+          "falseNegative" : 8,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.8,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 32
+        },
+        "task_request" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 40,
+          "trueNegative" : 0,
+          "truePositive" : 40
+        },
+        "vague_future_boundary" : {
+          "accuracy" : 0.925,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 3,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 40,
+          "trueNegative" : 37,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9353,
+          "f1" : 0.9474,
+          "falseNegative" : 4,
+          "falsePositive" : 40,
+          "precision" : 0.9083,
+          "recall" : 0.99,
+          "total" : 680,
+          "trueNegative" : 240,
+          "truePositive" : 396
+        },
+        "threshold" : 0.29
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9529,
+          "f1" : 0.9603,
+          "falseNegative" : 13,
+          "falsePositive" : 19,
+          "precision" : 0.9532,
+          "recall" : 0.9675,
+          "total" : 680,
+          "trueNegative" : 261,
+          "truePositive" : 387
+        },
+        "threshold" : 0.57
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9412,
+            "f1" : 0.9522,
+            "falseNegative" : 1,
+            "falsePositive" : 19,
+            "precision" : 0.9128,
+            "recall" : 0.995,
+            "total" : 340,
+            "trueNegative" : 121,
+            "truePositive" : 199
+          },
+          "threshold" : 0.23
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9353,
+            "f1" : 0.9474,
+            "falseNegative" : 2,
+            "falsePositive" : 20,
+            "precision" : 0.9083,
+            "recall" : 0.99,
+            "total" : 340,
+            "trueNegative" : 120,
+            "truePositive" : 198
+          },
+          "threshold" : 0.38
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9588,
+            "f1" : 0.9653,
+            "falseNegative" : 5,
+            "falsePositive" : 9,
+            "precision" : 0.9559,
+            "recall" : 0.975,
+            "total" : 340,
+            "trueNegative" : 131,
+            "truePositive" : 195
+          },
+          "threshold" : 0.52
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9706,
+            "f1" : 0.9749,
+            "falseNegative" : 6,
+            "falsePositive" : 4,
+            "precision" : 0.9798,
+            "recall" : 0.97,
+            "total" : 340,
+            "trueNegative" : 136,
+            "truePositive" : 194
+          },
+          "threshold" : 0.86
+        }
+      }
+    }
+  ],
+  "corpusRecordCount" : 680,
+  "exactTrainingOverlapCount" : 0,
+  "familyCount" : 17,
+  "generatedAt" : "2026-08-27T05:29:37Z",
+  "languageCounts" : {
+    "en" : 340,
+    "zh-Hans" : 340
+  },
+  "manifestSchemaVersion" : 2,
+  "seed" : 20260826,
+  "sentiment" : {
+    "accuracy" : 0.8471,
+    "correct" : 576,
+    "macroF1" : 0.7142,
+    "perLabelF1" : {
+      "negative" : 0.5273,
+      "neutral" : 0.9486,
+      "positive" : 0.6667
+    },
+    "total" : 680,
+    "unknown" : 78,
+    "unknownRate" : 0.1147
+  },
+  "sentimentBySource" : {
+    "acknowledgment_boundary" : {
+      "accuracy" : 0.9,
+      "correct" : 36,
+      "macroF1" : 0.3158,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.9474,
+        "positive" : 0
+      },
+      "total" : 40,
+      "unknown" : 4,
+      "unknownRate" : 0.1
+    },
+    "complaint_support" : {
+      "accuracy" : 0.5,
+      "correct" : 20,
+      "macroF1" : 0.2222,
+      "perLabelF1" : {
+        "negative" : 0.6667,
+        "neutral" : 0,
+        "positive" : 0
+      },
+      "total" : 40,
+      "unknown" : 5,
+      "unknownRate" : 0.125
+    },
+    "confirmation_decision" : {
+      "accuracy" : 0.825,
+      "correct" : 33,
+      "macroF1" : 0.3014,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.9041,
+        "positive" : 0
+      },
+      "total" : 40,
+      "unknown" : 7,
+      "unknownRate" : 0.175
+    },
+    "conversation" : {
+      "accuracy" : 0.85,
+      "correct" : 34,
+      "macroF1" : 0.3063,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.9189,
+        "positive" : 0
+      },
+      "total" : 40,
+      "unknown" : 5,
+      "unknownRate" : 0.125
+    },
+    "event_boundary" : {
+      "accuracy" : 1,
+      "correct" : 40,
+      "macroF1" : 0.3333,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 1,
+        "positive" : 0
+      },
+      "total" : 40,
+      "unknown" : 0,
+      "unknownRate" : 0
+    },
+    "fixed_invitation" : {
+      "accuracy" : 0.95,
+      "correct" : 38,
+      "macroF1" : 0.3248,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.9744,
+        "positive" : 0
+      },
+      "total" : 40,
+      "unknown" : 2,
+      "unknownRate" : 0.05
+    },
+    "follow_up_instruction" : {
+      "accuracy" : 1,
+      "correct" : 40,
+      "macroF1" : 0.3333,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 1,
+        "positive" : 0
+      },
+      "total" : 40,
+      "unknown" : 0,
+      "unknownRate" : 0
+    },
+    "follow_up_personal_reminder" : {
+      "accuracy" : 1,
+      "correct" : 40,
+      "macroF1" : 0.3333,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 1,
+        "positive" : 0
+      },
+      "total" : 40,
+      "unknown" : 0,
+      "unknownRate" : 0
+    },
+    "information_question" : {
+      "accuracy" : 0.925,
+      "correct" : 37,
+      "macroF1" : 0.3203,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.961,
+        "positive" : 0
+      },
+      "total" : 40,
+      "unknown" : 3,
+      "unknownRate" : 0.075
+    },
+    "negative_news" : {
+      "accuracy" : 0.225,
+      "correct" : 9,
+      "macroF1" : 0.1224,
+      "perLabelF1" : {
+        "negative" : 0.3673,
+        "neutral" : 0,
+        "positive" : 0
+      },
+      "total" : 40,
+      "unknown" : 24,
+      "unknownRate" : 0.6
+    },
+    "neutral_fact" : {
+      "accuracy" : 0.85,
+      "correct" : 34,
+      "macroF1" : 0.3063,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.9189,
+        "positive" : 0
+      },
+      "total" : 40,
+      "unknown" : 6,
+      "unknownRate" : 0.15
+    },
+    "positive_feedback" : {
+      "accuracy" : 0.525,
+      "correct" : 21,
+      "macroF1" : 0.2295,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0,
+        "positive" : 0.6885
+      },
+      "total" : 40,
+      "unknown" : 16,
+      "unknownRate" : 0.4
+    },
+    "quoted_question_boundary" : {
+      "accuracy" : 0.925,
+      "correct" : 37,
+      "macroF1" : 0.3203,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.961,
+        "positive" : 0
+      },
+      "total" : 40,
+      "unknown" : 3,
+      "unknownRate" : 0.075
+    },
+    "schedule_negotiation" : {
+      "accuracy" : 1,
+      "correct" : 40,
+      "macroF1" : 0.3333,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 1,
+        "positive" : 0
+      },
+      "total" : 40,
+      "unknown" : 0,
+      "unknownRate" : 0
+    },
+    "task_next_action" : {
+      "accuracy" : 1,
+      "correct" : 40,
+      "macroF1" : 0.3333,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 1,
+        "positive" : 0
+      },
+      "total" : 40,
+      "unknown" : 0,
+      "unknownRate" : 0
+    },
+    "task_request" : {
+      "accuracy" : 1,
+      "correct" : 40,
+      "macroF1" : 0.3333,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 1,
+        "positive" : 0
+      },
+      "total" : 40,
+      "unknown" : 0,
+      "unknownRate" : 0
+    },
+    "vague_future_boundary" : {
+      "accuracy" : 0.925,
+      "correct" : 37,
+      "macroF1" : 0.3203,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.961,
+        "positive" : 0
+      },
+      "total" : 40,
+      "unknown" : 3,
+      "unknownRate" : 0.075
+    }
+  }
+}

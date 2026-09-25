@@ -29,7 +29,10 @@ public struct AIAgentSkillLayout: Codable, Equatable, Sendable {
     }
 
     public func isEnabled(_ id: String) -> Bool {
-        enabledIDs.contains(id)
+        let canonical = AIClipboardSkillCatalog.canonicalID(for: id)
+        return enabledIDs.contains {
+            AIClipboardSkillCatalog.canonicalID(for: $0) == canonical
+        }
     }
 
     public func hasConfirmedShortcut(_ id: String) -> Bool {

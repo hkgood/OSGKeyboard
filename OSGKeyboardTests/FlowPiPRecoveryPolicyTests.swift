@@ -147,3 +147,84 @@ final class FlowPiPRecoveryPolicyTests: XCTestCase {
         )
     }
 }
+
+final class FlowPiPLossReportGateTests: XCTestCase {
+    /// The backgrounded heartbeat re-evaluates a lost PiP every second. One
+    /// incident must produce one report, not one per tick.
+    func testRepeatedLossChecksWithinOneEpisodeReportOnce() {
+        var gate = FlowPiPLossReportGate()
+        XCTAssertTrue(gate.shouldReport())
+        for _ in 0..<30 {
+            XCTAssertFalse(gate.shouldReport())
+        }
+    }
+
+    func testPiPBecomingActiveOpensANewEpisode() {
+        var gate = FlowPiPLossReportGate()
+        XCTAssertTrue(gate.shouldReport())
+        XCTAssertFalse(gate.shouldReport())
+
+        gate.pipBecameActive()
+        XCTAssertTrue(gate.shouldReport())
+    }
+}
+
+final class FlowSessionWarningReportGateTests: XCTestCase {
+    /// The whole point: a toast raised by a path nobody instrumented must still
+    /// produce a report.
+    func testUninstrumentedWarningIsReported() {
+        var gate = FlowSessionWarningReportGate()
+        XCTAssertTrue(
+            gate.shouldReport(
+                warning: "cannot start voice session",
+                lastExplicitReportAt: nil,
+                now: Date()
+            )
+        )
+    }
+
+    /// A path that already wrote a precise report must not be double-counted.
+    func testWarningIsSuppressedWhenAnExplicitReportJustLanded() {
+        var gate = FlowSessionWarningReportGate()
+        let now = Date()
+        XCTAssertFalse(
+            gate.shouldReport(
+                warning: "permissions missing",
+                lastExplicitReportAt: now.addingTimeInterval(-0.2),
+                now: now
+            )
+        )
+    }
+
+    func testOlderExplicitReportDoesNotSuppressANewWarning() {
+        var gate = FlowSessionWarningReportGate()
+        let now = Date()
+        XCTAssertTrue(
+            gate.shouldReport(
+                warning: "cannot start voice session",
+                lastExplicitReportAt: now.addingTimeInterval(
+                    -(FlowSessionWarningReportGate.duplicateGrace + 1)
+                ),
+                now: now
+            )
+        )
+    }
+
+    /// A toast that stays up must not re-report on every state republish.
+    func testSameWarningReportsOnlyOncePerEpisode() {
+        var gate = FlowSessionWarningReportGate()
+        let now = Date()
+        XCTAssertTrue(
+            gate.shouldReport(warning: "same", lastExplicitReportAt: nil, now: now)
+        )
+        XCTAssertFalse(
+            gate.shouldReport(warning: "same", lastExplicitReportAt: nil, now: now)
+        )
+
+        // Cleared and shown again is a genuinely new toast.
+        gate.warningCleared()
+        XCTAssertTrue(
+            gate.shouldReport(warning: "same", lastExplicitReportAt: nil, now: now)
+        )
+    }
+}

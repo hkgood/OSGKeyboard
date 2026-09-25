@@ -75,7 +75,7 @@ struct SettingsView: View {
                 }
             }
             .background(palette.background)
-            .navigationTitle("settings.title")
+            .navigationTitle(AppL10n.string("settings.title"))
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 if presentation == .sheet {
@@ -155,14 +155,14 @@ struct SettingsView: View {
     // MARK: - Optional account
 
     private var accountEntrySection: some View {
-        CardSection("account.settings.section") {
+        CardSection(title: AppL10n.string("account.settings.section")) {
             Group {
                 switch accountSession.sessionPhase {
                 case .restoring:
                     HStack(spacing: Spacing.sm) {
                         ProgressView()
                             .tint(palette.accent)
-                        Text("account.settings.restoring")
+                        Text(AppL10n.string("account.settings.restoring"))
                             .font(TypeStyle.body)
                             .foregroundStyle(palette.textSecondary)
                         Spacer()
@@ -171,10 +171,10 @@ struct SettingsView: View {
                 case .signedOut:
                     VStack(alignment: .leading, spacing: Spacing.md) {
                         VStack(alignment: .leading, spacing: Spacing.xxs) {
-                            Text("account.signedOut.title")
+                            Text(AppL10n.string("account.signedOut.title"))
                                 .font(TypeStyle.headline)
                                 .foregroundStyle(palette.textPrimary)
-                            Text("account.signedOut.body")
+                            Text(AppL10n.string("account.signedOut.body"))
                                 .font(TypeStyle.footnote)
                                 .foregroundStyle(palette.textSecondary)
                         }
@@ -210,14 +210,14 @@ struct SettingsView: View {
 
                             Spacer(minLength: Spacing.xs)
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(TypeStyle.caption.weight(.semibold))
                                 .foregroundStyle(palette.textTertiary)
                         }
                         .settingsListRow()
                         .contentShape(Rectangle())
                         .accessibilityLabel(
                             Text(
-                                "\(Text("account.settings.signedIn")) \(session.accountID.uuidString)"
+                                "\(Text(AppL10n.string("account.settings.signedIn"))) \(session.accountID.uuidString)"
                             )
                         )
                     }
@@ -242,7 +242,7 @@ struct SettingsView: View {
     // MARK: - Daily (high-frequency)
 
     private var dailySection: some View {
-        CardSection("settings.daily.title") {
+        CardSection(title: AppL10n.string("settings.daily.title")) {
             VStack(spacing: 0) {
                 settingsRouteButton(.general, title: "settings.general.title")
 
@@ -336,7 +336,7 @@ struct SettingsView: View {
 
     private func settingsRouteButton(
         _ route: SettingsRoute,
-        title: LocalizedStringKey,
+        title: String,
         subtitle: String? = nil
     ) -> some View {
         Button {
@@ -366,7 +366,7 @@ private struct SettingsSheetDismissButton: View {
     @Environment(\.themePalette) private var palette
 
     var body: some View {
-        Button("common.done") { dismiss() }
+        Button(AppL10n.string("common.done")) { dismiss() }
             .tint(palette.textPrimary)
     }
 }

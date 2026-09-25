@@ -450,15 +450,16 @@ struct PromptCloudASRClient: CloudASRTranscribing {
         let urlString = "\(trimmedBase)/chat/completions"
         guard let url = URL(string: urlString) else { throw CloudASRError.invalidURL }
 
-        var userContent: [[String: Any]] = []
-        let prompt = dictionary.asrPromptBias()
-        if !prompt.isEmpty {
-            userContent.append(["type": "text", "text": prompt])
-        }
-        userContent.append([
-            "type": "input_audio",
-            "input_audio": ["data": dataURI]
-        ])
+        // MiMo-V2.5-ASR is an end-to-end ASR model: the `content` array must
+        // hold the single `input_audio` part and nothing else. Adding a text
+        // prompt (personal-dictionary bias) makes the API reject the request
+        // with HTTP 400 "param incorrect", so we never send prompt bias here.
+        let userContent: [[String: Any]] = [
+            [
+                "type": "input_audio",
+                "input_audio": ["data": dataURI]
+            ]
+        ]
 
         let body: [String: Any] = [
             "model": model,

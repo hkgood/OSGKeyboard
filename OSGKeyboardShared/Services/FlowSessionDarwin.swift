@@ -14,6 +14,9 @@ public enum FlowSessionDarwin {
     public static let transcriptionNotificationName = "com.osgkeyboard.flow.transcription.changed"
     /// Posted when the host app publishes or clears the ready contract.
     public static let hostReadyNotificationName = "com.osgkeyboard.flow.host.ready.changed"
+    /// Posted when the keyboard records a terminal start failure and wants the
+    /// host — if it is still alive — to persist its own breadcrumb window.
+    public static let diagnosticsDumpNotificationName = "com.osgkeyboard.flow.diagnostics.dump"
 
     public static func postSessionChanged() {
         CFNotificationCenterPostNotification(
@@ -39,6 +42,16 @@ public enum FlowSessionDarwin {
         CFNotificationCenterPostNotification(
             CFNotificationCenterGetDarwinNotifyCenter(),
             CFNotificationName(transcriptionNotificationName as CFString),
+            nil,
+            nil,
+            true
+        )
+    }
+
+    public static func postDiagnosticsDumpRequested() {
+        CFNotificationCenterPostNotification(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            CFNotificationName(diagnosticsDumpNotificationName as CFString),
             nil,
             nil,
             true

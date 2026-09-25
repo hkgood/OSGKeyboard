@@ -150,7 +150,7 @@ public actor AccountSignInCoordinator {
     }
 
     @discardableResult
-    public func signIn() async throws -> AccountSession {
+    public func signIn() async throws -> AccountTokenSession {
         let nonce = try nonceGenerator.makeNonce()
         let credential = try await appleAuthorization.authorize(nonceSHA256: nonce.sha256Hex)
         let evidence = try await integrity.evidenceForAppleSignIn(

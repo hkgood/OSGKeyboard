@@ -114,6 +114,24 @@ final class IntelligentPolishTests: XCTestCase {
         XCTAssertFalse(captured.lastPrompt.contains("趣味风格共享格式化"))
     }
 
+    func testCallerSuppliedOptionsReachLLMClientUnchanged() async throws {
+        let captured = CapturingLLMClient()
+        let service = PolishingService(store: store, client: captured)
+        let options = LLMGenerationOptions(
+            temperature: 0.42,
+            topP: 0.73,
+            maxTokens: 777
+        )
+
+        _ = try await service.polish(
+            "分析这些风格学习样本",
+            systemPrompt: "Return structured evidence.",
+            options: options
+        )
+
+        XCTAssertEqual(captured.lastOptions, options)
+    }
+
     func testPersonalDictionaryUpsertManual() {
         var dict = PersonalDictionary.empty
         let entry = dict.upsertManual(term: "Kubernetes")
@@ -315,14 +333,71 @@ final class IntelligentPolishTests: XCTestCase {
         )
     }
 
-    func testPolishServiceCapsTimeoutAt120() async throws {
+    func testPolishServiceDefaultsToKeyboardTimeoutCap() async throws {
         store.setEngineMode("local")
         let captured = CapturingLLMClient()
-        let service = PolishingService(store: store, client: captured, timeout: 15)
+        let service = PolishingService(store: store, client: captured)
         let veryLong = String(repeating: "测试", count: 2000)
         _ = try await service.polish(veryLong, context: PolishContext())
         let passedTimeout = try XCTUnwrap(captured.lastTimeout)
-        XCTAssertLessThanOrEqual(passedTimeout, 120)
+        XCTAssertEqual(passedTimeout, FlowSessionKeys.maxPolishTimeout)
+    }
+
+    func testPolishServiceAllowsExplicit45SecondTimeoutCap() async throws {
+        let captured = CapturingLLMClient()
+        let service = PolishingService(
+            store: store,
+            client: captured,
+            timeout: 45,
+            maximumTimeout: 45
+        )
+
+        _ = try await service.polish(
+            "分析这些风格学习样本",
+            systemPrompt: "Return structured evidence."
+        )
+
+        XCTAssertEqual(captured.lastTimeout, 45)
+    }
+
+    func testPolishServicePropagatesCallerCancellation() async {
+        let gate = LLMRequestGate()
+        let service = PolishingService(
+            store: store,
+            client: SuspendingLLMClient(gate: gate)
+        )
+        let task = Task {
+            try await service.polish(
+                "分析这些风格学习样本",
+                systemPrompt: "Return structured evidence."
+            )
+        }
+
+        await gate.waitUntilStarted()
+        task.cancel()
+
+        do {
+            _ = try await task.value
+            XCTFail("Expected caller cancellation")
+        } catch {
+            XCTAssertTrue(error is CancellationError, "Unexpected error: \(error)")
+        }
+    }
+
+    func testPolishServicePreservesProviderCancellationError() async {
+        let service = PolishingService(store: store, client: ThrowingLLMClient())
+
+        do {
+            _ = try await service.polish(
+                "分析这些风格学习样本",
+                systemPrompt: "Return structured evidence."
+            )
+            XCTFail("Expected provider cancellation")
+        } catch let error as LLMError {
+            XCTAssertEqual(error, .cancelled)
+        } catch {
+            XCTFail("Expected LLMError.cancelled, got \(error)")
+        }
     }
 
     func testPolishServiceUsesChineseForChineseProviders() async throws {
@@ -776,6 +851,36 @@ private final class ThrowingLLMClient: LLMClient, @unchecked Sendable {
     let requestTimeout: TimeInterval = 15
     func polish(_ text: String, systemPrompt: String, timeout: TimeInterval?) async throws -> String {
         throw LLMError.cancelled
+    }
+}
+
+private actor LLMRequestGate {
+    private var started = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func markStarted() {
+        started = true
+        let pending = waiters
+        waiters.removeAll()
+        pending.forEach { $0.resume() }
+    }
+
+    func waitUntilStarted() async {
+        if started { return }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+}
+
+private struct SuspendingLLMClient: LLMClient {
+    let gate: LLMRequestGate
+    let requestTimeout: TimeInterval = 15
+
+    func polish(_ text: String, systemPrompt: String, timeout: TimeInterval?) async throws -> String {
+        await gate.markStarted()
+        try await Task.sleep(nanoseconds: 10_000_000_000)
+        return text
     }
 }
 

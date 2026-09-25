@@ -5,7 +5,9 @@
 // the local cache keeps the permanent invitation link visible when offline.
 
 import Foundation
+#if canImport(OSGKeyboardHostSupport)
 import OSGKeyboardHostSupport
+#endif
 
 @MainActor
 final class ReferralProfileViewModel: ObservableObject {

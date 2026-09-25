@@ -125,12 +125,33 @@ struct TypingRootView: View {
         } else if state.canShowClipboardEntry,
                   let suggestion = state.clipboardSuggestionText,
                   !suggestion.isEmpty {
-            // Same slot as logo + capsule tabs — hide chrome until dismissed.
-            ClipboardSuggestionBar(
-                text: suggestion,
-                onInsert: { state.insertClipboardText(suggestion) },
-                onDismiss: state.dismissClipboardSuggestion
-            )
+            // A fresh copy: a "Paste" glass capsule (matching the assistant
+            // surface) replaces the input tabs until inserted or dismissed.
+            HStack(spacing: 6) {
+                Button {
+                    state.insertClipboardText(suggestion)
+                } label: {
+                    Text(ExtL10n.string("keyboard.clipboard.paste"))
+                        .font(TypeStyle.footnote.weight(.semibold))
+                        .foregroundStyle(palette.textPrimary)
+                        .lineLimit(1)
+                        .padding(.horizontal, 14)
+                        .frame(height: 30)
+                        .glassEffect(.regular.interactive(), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("typing.clipboard.paste")
+                .accessibilityLabel(ExtL10n.text("keyboard.clipboard.paste"))
+
+                Spacer(minLength: 0)
+
+                KeyboardCancelButton(
+                    action: state.dismissClipboardSuggestion,
+                    accessibilityLabel: ExtL10n.text("keyboard.assistant.dismissClipboard"),
+                    accessibilityHint: ExtL10n.text("keyboard.assistant.dismissClipboardHint"),
+                    accessibilityIdentifier: "typing.clipboard.dismiss"
+                )
+            }
             .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
         } else {
             idleTopBar
@@ -191,7 +212,7 @@ struct TypingRootView: View {
             Button(action: state.openInputMethodSetup) {
                 HStack(spacing: 2) {
                     Text(message)
-                        .font(.system(size: 11))
+                        .font(TypeStyle.caption2.weight(.regular))
                         .lineLimit(1)
                     Image(systemName: "arrow.up.right")
                         .font(.system(size: 9, weight: .semibold))
@@ -203,7 +224,7 @@ struct TypingRootView: View {
             .accessibilityHint(ExtL10n.text("keyboard.typing.setupA11yHint"))
         } else {
             Text(message)
-                .font(.system(size: 11))
+                .font(TypeStyle.caption2.weight(.regular))
                 .foregroundStyle(palette.danger)
                 .lineLimit(1)
         }
@@ -316,7 +337,7 @@ struct TypingRootView: View {
                             }
                         } else {
                             Text(candidate.text)
-                                .font(.system(size: 20, weight: .regular))
+                                .font(TypeStyle.title3.weight(.regular))
                                 .foregroundStyle(palette.textPrimary)
                                 .padding(.horizontal, 10)
                                 .frame(height: 40)
@@ -339,6 +360,9 @@ struct TypingRootView: View {
             .padding(.trailing, Spacing.xs)
         }
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        // iOS 26+ 默认给 ScrollView 加边缘效果（soft = 渐进模糊+压暗），在键盘
+        // 顶栏会把候选文字整段糊掉（顶部更糊、底部较清）。候选条不需要它。
+        .scrollEdgeEffectHidden()
     }
 
     /// Opaque chip like the translation control so ▼ never shares pixels with text.
@@ -367,7 +391,13 @@ struct TypingRootView: View {
         }
         .buttonStyle(.plain)
         .padding(.trailing, KeyboardTopBarMetrics.nestedHorizontalInset)
-        .accessibilityLabel(typing.isCandidatePanelExpanded ? "收起候选" : "更多候选")
+        .accessibilityLabel(
+            ExtL10n.string(
+                typing.isCandidatePanelExpanded
+                    ? "keyboard.typing.candidates.collapseA11y"
+                    : "keyboard.typing.candidates.expandA11y"
+            )
+        )
     }
 
     private var expandChevronFill: Color {
@@ -414,7 +444,7 @@ struct TypingRootView: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: 15, weight: .medium))
+                .font(TypeStyle.bodyEmph)
                 .foregroundStyle(enabled ? palette.textSecondary : palette.textTertiary)
                 .frame(width: 34, height: 34)
                 .background(enabled ? editingToolbarButtonFill : .clear, in: Circle())
@@ -595,7 +625,7 @@ struct TypingRootView: View {
         Group {
             if key.label == "⌫" {
                 Image(systemName: "delete.left")
-                    .font(.system(size: 20, weight: .medium))
+                    .font(TypeStyle.title3.weight(.medium))
                     .foregroundStyle(keyTextColor)
             } else if key.label == "⇧" {
                 Image(systemName: typing.isShiftEnabled ? "shift.fill" : "shift")
@@ -684,8 +714,8 @@ struct TypingRootView: View {
         case TypingKeyLayoutBuilder.BottomKeyID.space.rawValue:
             return key.label
         default:
-            if key.label == "⇧" { return "shift" }
-            if key.label == "⌫" { return "delete" }
+            if key.label == "⇧" { return ExtL10n.string("keyboard.key.shiftA11y") }
+            if key.label == "⌫" { return ExtL10n.string("keyboard.key.deleteA11y") }
             return key.label
         }
     }
@@ -722,7 +752,7 @@ struct TypingRootView: View {
     private var returnKeyLabel: some View {
         if state.returnKeyRole.usesActionFill {
             ExtL10n.text(state.returnKeyRole.titleKey)
-                .font(.system(size: 15, weight: .semibold))
+                .font(TypeStyle.body.weight(.semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
         } else {
@@ -803,7 +833,7 @@ struct TypingRootView: View {
         if state.returnKeyRole.usesActionFill {
             return ExtL10n.string(state.returnKeyRole.titleKey)
         }
-        return "return"
+        return ExtL10n.string("keyboard.key.returnA11y")
     }
 
     private var returnKeyTextColor: Color {

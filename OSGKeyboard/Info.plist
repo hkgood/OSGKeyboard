@@ -102,10 +102,14 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
 	</dict>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>OSGKeyboard adds calendar events only when you choose Extract Events for copied text.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>OSGKeyboard uses Contacts only when you choose Create Contact for a copied phone number.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>OSGKeyboard uses the microphone for voice dictation, including active Flow sessions while you type in other apps.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>OSGKeyboard adds reminders only when you choose Extract To-dos for copied text.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>OSGKeyboard uses speech recognition to transcribe your voice. Audio is processed on-device by default, or sent to your configured speech provider only when you enable cloud recognition.</string>
 	<key>OSGPrivateKeychainAccessGroup</key>

@@ -16,7 +16,7 @@
 "onboarding.api.localReady.body" = "Recognition works on-device. Add an API key in Settings for AI polish.";
 "keyboard.onboarding.practice.mic" = "Tap the mic, then tap again when done";
 "keyboard.onboarding.practice.translate" = "Tap Translate, then insert the generated text";
-"keyboard.onboarding.practice.reply" = "Tap Reply and let AI draft a response";
+"keyboard.onboarding.practice.reply" = "AI is drafting a ready-to-send reply for you";
 "keyboard.onboarding.practice.askAI" = "Hold the mic and ask your question";
 
 /* Common navigation */
@@ -219,6 +219,7 @@
 "keyboard.clipboard.clear.confirm" = "Clear history";
 "keyboard.clipboard.suggestion.dismissA11y" = "Dismiss clipboard suggestion";
 "keyboard.clipboard.suggestion.dismissHint" = "Hide this clipboard suggestion strip.";
+"keyboard.clipboard.paste" = "Paste";
 "keyboard.voice.cancel" = "Cancel voice input";
 "keyboard.voice.cancelHint" = "Discard the current recording, recognition, and polish result.";
 "keyboard.scenario.a11y" = "Polish scenario";
@@ -228,9 +229,6 @@
 "mode.off" = "Off";
 "mode.transcribe" = "Transcribe";
 "mode.polish" = "Polish";
-
-/* Locale chip labels (preview stub) */
-"locale.zh-Hans" = "ZH-Hans";
 
 /* Locale menu items (settings) */
 "locale.auto"     = "Auto";
@@ -301,6 +299,11 @@
 "keyboard.ai.startA11y" = "Start asking AI";
 "keyboard.ai.stopA11y" = "Finish the question and send it to AI";
 "keyboard.assistant.longPressCoach" = "Tap to dictate · Hold to ask AI";
+"keyboard.assistant.autoReply.guidance.cta" = "Try AI auto-reply";
+"keyboard.assistant.autoReply.guide.title" = "Let AI reply for you";
+"keyboard.assistant.autoReply.guide.body" = "Turn on auto-reply and the keyboard drafts a ready-to-send reply the moment you copy a message.";
+"keyboard.assistant.autoReply.guide.close" = "Not now";
+"keyboard.assistant.autoReply.guide.closeHint" = "Dismiss the auto-reply suggestion.";
 "keyboard.assistant.micA11y" = "Voice and AI";
 "keyboard.assistant.micHint" = "Tap to dictate. Hold to ask AI.";
 "keyboard.assistant.dictationAction" = "Start voice dictation";
@@ -309,10 +312,47 @@
 "keyboard.assistant.delete" = "Delete";
 "keyboard.assistant.sendHint" = "Performs the current field's Send, Search, Done, or Go action.";
 "keyboard.assistant.insertPending" = "Insert retained AI answer";
+"keyboard.assistant.insertTranslation" = "Insert translation";
+"keyboard.assistant.insertReply" = "Insert reply";
 "keyboard.assistant.discardPending" = "Discard AI answer";
 "keyboard.assistant.discardPendingHint" = "Discard the answer retained because the cursor or input field changed.";
+"keyboard.ai.replyVariant.ordinary" = "Ordinary";
+"keyboard.ai.replyVariant.formal" = "Formal";
+"keyboard.ai.replyVariant.playful" = "Relaxed & playful";
+"keyboard.ai.replyVariant.invitationAccept" = "Accept";
+"keyboard.ai.replyVariant.invitationDecline" = "Decline";
+"keyboard.ai.replyVariant.invitationTentative" = "Decide later";
+"keyboard.ai.replyVariant.taskAcknowledge" = "Acknowledge";
+"keyboard.ai.replyVariant.taskClarify" = "Clarify";
+"keyboard.ai.replyVariant.taskNegotiate" = "Negotiate";
+"keyboard.ai.replyVariant.blessingReturn" = "Thank & return wish";
+"keyboard.ai.replyVariant.blessingWarm" = "Warm";
+"keyboard.ai.replyVariant.blessingPlayful" = "Lighthearted";
+"keyboard.ai.replyVariant.clarificationDirect" = "Direct reply";
+"keyboard.ai.replyVariant.clarificationQuestion" = "Ask key detail";
+"keyboard.ai.replyVariant.clarificationConfirm" = "Confirm & ask";
+"keyboard.ai.replyVariant.answerAffirmative" = "Yes";
+"keyboard.ai.replyVariant.answerNegative" = "No";
+"keyboard.ai.replyVariant.answerConditional" = "It depends";
+"keyboard.ai.replyVariant.answerDefer" = "Need to check";
+"keyboard.ai.replyVariant.insertHint" = "Insert this complete reply.";
 "keyboard.assistant.dismissClipboard" = "Dismiss clipboard suggestions";
 "keyboard.assistant.dismissClipboardHint" = "Hide the current clipboard summary and skills.";
+"keyboard.semantic.intent.assistantCommand" = "Assistant command";
+"keyboard.semantic.intent.informationQuery" = "Information query";
+"keyboard.semantic.intent.systemNotification" = "System notification";
+"keyboard.semantic.domain.finance" = "Finance";
+"keyboard.semantic.domain.travel" = "Travel";
+"keyboard.semantic.domain.calendar" = "Calendar";
+"keyboard.semantic.domain.communication" = "Communication";
+"keyboard.semantic.domain.media" = "Media";
+"keyboard.semantic.domain.smartHome" = "Smart home";
+"keyboard.semantic.domain.shopping" = "Shopping";
+"keyboard.semantic.domain.dining" = "Dining";
+"keyboard.semantic.domain.health" = "Health";
+"keyboard.semantic.domain.weather" = "Weather";
+"keyboard.semantic.domain.accountService" = "Account & service";
+"keyboard.semantic.domain.generalKnowledge" = "General knowledge";
 "keyboard.ai.error.missingAPIKey" = "Configure an AI service in the main app first";
 "keyboard.ai.error.pipelineBusy" = "Voice input is busy. Try again shortly";
 "keyboard.ai.error.startTimeout" = "Microphone startup timed out. Try again";
@@ -320,9 +360,10 @@
 "keyboard.ai.error.requestFailed" = "AI response failed. Try again";
 "keyboard.ai.error.clipboardUnavailable" = "This clipboard suggestion expired. Copy the text again";
 "keyboard.ai.skill.reply" = "Reply";
+"keyboard.ai.skill.speakAsMe" = "My words";
 "keyboard.ai.skill.playfulReply" = "Playful";
 "keyboard.ai.skill.replyInSourceLanguage" = "Reply";
-"keyboard.ai.skill.summarize" = "Key points";
+"keyboard.ai.skill.summarize" = "Summary";
 "keyboard.ai.skill.openLink" = "Open";
 "keyboard.ai.skill.summarizeWebPage" = "Web summary";
 "keyboard.ai.skill.callPhone" = "Call";
@@ -333,7 +374,8 @@
 "keyboard.ai.skill.declineInvitation" = "Decline";
 "keyboard.ai.skill.acceptTask" = "Acknowledge";
 "keyboard.ai.skill.clarifyRequest" = "Clarify";
-"keyboard.ai.skill.empathyReply" = "Empathize";
+"keyboard.ai.skill.empathyReply" = "Empathy";
+"keyboard.ai.skill.blessingReply" = "Reply to wishes";
 "keyboard.ai.skill.askForDetails" = "Ask details";
 "keyboard.ai.skill.businessReply" = "Business";
 "keyboard.ai.skill.organizeList" = "Organize";
@@ -354,9 +396,18 @@
 "keyboard.ai.skill.extractingAddress" = "Finding an address…";
 "keyboard.ai.skill.namingNote" = "Naming the note…";
 "keyboard.ai.skill.runningShortcut" = "Running Shortcut…";
+"keyboard.ai.skill.savingReminders" = "Adding to Reminders…";
+"keyboard.ai.skill.savingEvents" = "Adding to Calendar…";
 "keyboard.ai.skill.openingMaps" = "Opening Maps…";
 "keyboard.ai.skill.shortcutMissing" = "Companion Shortcut not found. Reinstall it in Skills";
 "keyboard.ai.skill.handoffFailed" = "Couldn’t open the app to run the Shortcut";
 "keyboard.ai.skill.openLinkFailed" = "Couldn’t open this link";
 "keyboard.ai.skill.callPhoneFailed" = "Couldn’t start this call";
 "keyboard.ai.skill.createContactFailed" = "Couldn’t open the new contact form";
+
+/* Key / panel accessibility labels */
+"keyboard.typing.candidates.collapseA11y" = "Collapse candidates";
+"keyboard.typing.candidates.expandA11y" = "More candidates";
+"keyboard.key.shiftA11y" = "Shift";
+"keyboard.key.deleteA11y" = "Delete";
+"keyboard.key.returnA11y" = "Return";

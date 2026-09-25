@@ -1,0 +1,4006 @@
+{
+  "binaryMacro" : {
+    "accuracy" : 0.9528,
+    "f1" : 0.7488,
+    "precision" : 0.9414,
+    "recall" : 0.6528
+  },
+  "binaryMacroByLanguage" : {
+    "en" : {
+      "accuracy" : 0.9533,
+      "f1" : 0.7582,
+      "precision" : 0.9756,
+      "recall" : 0.6573
+    },
+    "zh-Hans" : {
+      "accuracy" : 0.9524,
+      "f1" : 0.7309,
+      "precision" : 0.9189,
+      "recall" : 0.6482
+    }
+  },
+  "classifiers" : [
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.9079,
+          "family" : "follow_up_reminder_golden",
+          "id" : "golden-en-0185",
+          "language" : "en",
+          "text" : "Do not forget to check whether the refund arrives on Friday."
+        },
+        {
+          "confidence" : 0.8882,
+          "family" : "task_question",
+          "id" : "golden-zh-Hans-0007",
+          "language" : "zh-Hans",
+          "text" : "这些材料可以在月底前准备好吗？"
+        },
+        {
+          "confidence" : 0.8873,
+          "family" : "follow_up_reminder_golden",
+          "id" : "golden-zh-Hans-0181",
+          "language" : "zh-Hans",
+          "text" : "这是下一项行动：测试通过后创建发布标签。"
+        },
+        {
+          "confidence" : 0.8627,
+          "family" : "task_question",
+          "id" : "golden-en-0053",
+          "language" : "en",
+          "text" : "Could these documents be ready by the end of the month?"
+        },
+        {
+          "confidence" : 0.8291,
+          "family" : "task_statement",
+          "id" : "golden-en-0048",
+          "language" : "en",
+          "text" : "Alex owns the meeting notes and should post them in the project channel today."
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9909,
+          "family" : "self_plan",
+          "id" : "golden-zh-Hans-0021",
+          "language" : "zh-Hans",
+          "text" : "明天我要去财务核对发票，不用你帮忙。"
+        },
+        {
+          "confidence" : 0.9212,
+          "family" : "invitation_question",
+          "id" : "golden-zh-Hans-0013",
+          "language" : "zh-Hans",
+          "text" : "下班后要不要一起喝杯咖啡？"
+        }
+      ],
+      "id" : "task",
+      "metrics" : {
+        "accuracy" : 0.9325,
+        "f1" : 0.6383,
+        "falseNegative" : 15,
+        "falsePositive" : 2,
+        "precision" : 0.8824,
+        "recall" : 0.5,
+        "total" : 252,
+        "trueNegative" : 220,
+        "truePositive" : 15
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9524,
+          "f1" : 0.75,
+          "falseNegative" : 6,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.6,
+          "total" : 126,
+          "trueNegative" : 111,
+          "truePositive" : 9
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9127,
+          "f1" : 0.5217,
+          "falseNegative" : 9,
+          "falsePositive" : 2,
+          "precision" : 0.75,
+          "recall" : 0.4,
+          "total" : 126,
+          "trueNegative" : 109,
+          "truePositive" : 6
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "blessing_boundary" : {
+          "accuracy" : 0.9,
+          "f1" : 0,
+          "falseNegative" : 2,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 18,
+          "truePositive" : 0
+        },
+        "blessing_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "complaint_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "complaint_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "confirmation_decision_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "confirmation_decision_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "conversational_message" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 10,
+          "trueNegative" : 10,
+          "truePositive" : 0
+        },
+        "event_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_golden" : {
+          "accuracy" : 0.6,
+          "f1" : 0.6,
+          "falseNegative" : 8,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.4286,
+          "total" : 20,
+          "trueNegative" : 6,
+          "truePositive" : 6
+        },
+        "information_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "invitation_question" : {
+          "accuracy" : 0.875,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 7,
+          "truePositive" : 0
+        },
+        "negative_news" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 10,
+          "trueNegative" : 10,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "quoted_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "schedule_negotiation_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "schedule_negotiation_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "self_plan" : {
+          "accuracy" : 0.8333,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 5,
+          "truePositive" : 0
+        },
+        "task_question" : {
+          "accuracy" : 0.5,
+          "f1" : 0.6667,
+          "falseNegative" : 3,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.5,
+          "total" : 6,
+          "trueNegative" : 0,
+          "truePositive" : 3
+        },
+        "task_statement" : {
+          "accuracy" : 0.75,
+          "f1" : 0.8571,
+          "falseNegative" : 2,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.75,
+          "total" : 8,
+          "trueNegative" : 0,
+          "truePositive" : 6
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9365,
+          "f1" : 0.6522,
+          "falseNegative" : 15,
+          "falsePositive" : 1,
+          "precision" : 0.9375,
+          "recall" : 0.5,
+          "total" : 252,
+          "trueNegative" : 221,
+          "truePositive" : 15
+        },
+        "threshold" : 0.93
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9524,
+            "f1" : 0.7692,
+            "falseNegative" : 5,
+            "falsePositive" : 1,
+            "precision" : 0.9091,
+            "recall" : 0.6667,
+            "total" : 126,
+            "trueNegative" : 110,
+            "truePositive" : 10
+          },
+          "threshold" : 0.89
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9524,
+            "f1" : 0.75,
+            "falseNegative" : 6,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.6,
+            "total" : 126,
+            "trueNegative" : 111,
+            "truePositive" : 9
+          },
+          "threshold" : 0.91
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.9881,
+          "family" : "information_question",
+          "id" : "golden-en-0054",
+          "language" : "en",
+          "text" : "Which documents are required for this refund?"
+        },
+        {
+          "confidence" : 0.9847,
+          "family" : "invitation_question",
+          "id" : "golden-zh-Hans-0013",
+          "language" : "zh-Hans",
+          "text" : "下班后要不要一起喝杯咖啡？"
+        },
+        {
+          "confidence" : 0.9827,
+          "family" : "schedule_negotiation_golden",
+          "id" : "golden-en-0105",
+          "language" : "en",
+          "text" : "Two or three works for me. Which time suits you better?"
+        },
+        {
+          "confidence" : 0.9801,
+          "family" : "schedule_negotiation_golden",
+          "id" : "golden-zh-Hans-0097",
+          "language" : "zh-Hans",
+          "text" : "这个时段太早了，晚半小时是否方便？"
+        },
+        {
+          "confidence" : 0.9638,
+          "family" : "schedule_negotiation_golden",
+          "id" : "golden-en-0106",
+          "language" : "en",
+          "text" : "The client is unavailable, so how about next Monday afternoon instead?"
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "question",
+      "metrics" : {
+        "accuracy" : 0.9365,
+        "f1" : 0.7895,
+        "falseNegative" : 16,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.6522,
+        "total" : 252,
+        "trueNegative" : 206,
+        "truePositive" : 30
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9048,
+          "f1" : 0.6471,
+          "falseNegative" : 12,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.4783,
+          "total" : 126,
+          "trueNegative" : 103,
+          "truePositive" : 11
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9683,
+          "f1" : 0.9048,
+          "falseNegative" : 4,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.8261,
+          "total" : 126,
+          "trueNegative" : 103,
+          "truePositive" : 19
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "blessing_boundary" : {
+          "accuracy" : 0.9,
+          "f1" : 0,
+          "falseNegative" : 2,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 18,
+          "truePositive" : 0
+        },
+        "blessing_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "complaint_request" : {
+          "accuracy" : 0.6667,
+          "f1" : 0.6667,
+          "falseNegative" : 2,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.5,
+          "total" : 6,
+          "trueNegative" : 2,
+          "truePositive" : 2
+        },
+        "complaint_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "confirmation_decision_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "confirmation_decision_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "conversational_message" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 10,
+          "trueNegative" : 10,
+          "truePositive" : 0
+        },
+        "event_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "information_question" : {
+          "accuracy" : 0.5,
+          "f1" : 0.6667,
+          "falseNegative" : 2,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.5,
+          "total" : 4,
+          "trueNegative" : 0,
+          "truePositive" : 2
+        },
+        "invitation_question" : {
+          "accuracy" : 0.75,
+          "f1" : 0.8571,
+          "falseNegative" : 2,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.75,
+          "total" : 8,
+          "trueNegative" : 0,
+          "truePositive" : 6
+        },
+        "negative_news" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 10,
+          "trueNegative" : 10,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "quoted_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "schedule_negotiation_boundary" : {
+          "accuracy" : 0.95,
+          "f1" : 0.8571,
+          "falseNegative" : 1,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.75,
+          "total" : 20,
+          "trueNegative" : 16,
+          "truePositive" : 3
+        },
+        "schedule_negotiation_golden" : {
+          "accuracy" : 0.65,
+          "f1" : 0.7586,
+          "falseNegative" : 7,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.6111,
+          "total" : 20,
+          "trueNegative" : 2,
+          "truePositive" : 11
+        },
+        "self_plan" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "task_question" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 6,
+          "trueNegative" : 0,
+          "truePositive" : 6
+        },
+        "task_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9802,
+          "f1" : 0.9462,
+          "falseNegative" : 2,
+          "falsePositive" : 3,
+          "precision" : 0.9362,
+          "recall" : 0.9565,
+          "total" : 252,
+          "trueNegative" : 203,
+          "truePositive" : 44
+        },
+        "threshold" : 0.76
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9722,
+          "f1" : 0.9213,
+          "falseNegative" : 5,
+          "falsePositive" : 2,
+          "precision" : 0.9535,
+          "recall" : 0.8913,
+          "total" : 252,
+          "trueNegative" : 204,
+          "truePositive" : 41
+        },
+        "threshold" : 0.87
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9762,
+            "f1" : 0.9362,
+            "falseNegative" : 1,
+            "falsePositive" : 2,
+            "precision" : 0.9167,
+            "recall" : 0.9565,
+            "total" : 126,
+            "trueNegative" : 101,
+            "truePositive" : 22
+          },
+          "threshold" : 0.74
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9841,
+            "f1" : 0.9565,
+            "falseNegative" : 1,
+            "falsePositive" : 1,
+            "precision" : 0.9565,
+            "recall" : 0.9565,
+            "total" : 126,
+            "trueNegative" : 102,
+            "truePositive" : 22
+          },
+          "threshold" : 0.76
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9603,
+            "f1" : 0.8837,
+            "falseNegative" : 4,
+            "falsePositive" : 1,
+            "precision" : 0.95,
+            "recall" : 0.8261,
+            "total" : 126,
+            "trueNegative" : 102,
+            "truePositive" : 19
+          },
+          "threshold" : 0.87
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9841,
+            "f1" : 0.9565,
+            "falseNegative" : 1,
+            "falsePositive" : 1,
+            "precision" : 0.9565,
+            "recall" : 0.9565,
+            "total" : 126,
+            "trueNegative" : 102,
+            "truePositive" : 22
+          },
+          "threshold" : 0.76
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7467,
+          "family" : "invitation_question",
+          "id" : "golden-en-0059",
+          "language" : "en",
+          "text" : "Would you like to get coffee after work?"
+        },
+        {
+          "confidence" : 0.4502,
+          "family" : "schedule_negotiation_boundary",
+          "id" : "golden-en-0123",
+          "language" : "en",
+          "text" : "The kickoff is fixed for Monday at nine; please attend on time."
+        },
+        {
+          "confidence" : 0.4117,
+          "family" : "schedule_negotiation_boundary",
+          "id" : "golden-en-0132",
+          "language" : "en",
+          "text" : "Want to see a movie this weekend? The tickets are for Saturday at eight."
+        },
+        {
+          "confidence" : 0.3534,
+          "family" : "schedule_negotiation_boundary",
+          "id" : "golden-zh-Hans-0122",
+          "language" : "zh-Hans",
+          "text" : "周末一起看电影吗？票是周六晚八点的。"
+        },
+        {
+          "confidence" : 0.3085,
+          "family" : "invitation_question",
+          "id" : "golden-en-0058",
+          "language" : "en",
+          "text" : "I'd like to invite you to Monday's project kickoff. Are you available?"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.8146,
+          "family" : "schedule_negotiation_golden",
+          "id" : "golden-zh-Hans-0096",
+          "language" : "zh-Hans",
+          "text" : "客户临时有事，咱们另约下周一下午怎么样？"
+        }
+      ],
+      "id" : "invitation",
+      "metrics" : {
+        "accuracy" : 0.9762,
+        "f1" : 0.7857,
+        "falseNegative" : 5,
+        "falsePositive" : 1,
+        "precision" : 0.9167,
+        "recall" : 0.6875,
+        "total" : 252,
+        "trueNegative" : 235,
+        "truePositive" : 11
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9683,
+          "f1" : 0.6667,
+          "falseNegative" : 4,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.5,
+          "total" : 126,
+          "trueNegative" : 118,
+          "truePositive" : 4
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9841,
+          "f1" : 0.875,
+          "falseNegative" : 1,
+          "falsePositive" : 1,
+          "precision" : 0.875,
+          "recall" : 0.875,
+          "total" : 126,
+          "trueNegative" : 117,
+          "truePositive" : 7
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "blessing_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "blessing_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "complaint_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "complaint_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "confirmation_decision_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "confirmation_decision_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "conversational_message" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 10,
+          "trueNegative" : 10,
+          "truePositive" : 0
+        },
+        "event_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "information_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "invitation_question" : {
+          "accuracy" : 0.75,
+          "f1" : 0.8571,
+          "falseNegative" : 2,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.75,
+          "total" : 8,
+          "trueNegative" : 0,
+          "truePositive" : 6
+        },
+        "negative_news" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 10,
+          "trueNegative" : 10,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "quoted_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "schedule_negotiation_boundary" : {
+          "accuracy" : 0.85,
+          "f1" : 0.7692,
+          "falseNegative" : 3,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.625,
+          "total" : 20,
+          "trueNegative" : 12,
+          "truePositive" : 5
+        },
+        "schedule_negotiation_golden" : {
+          "accuracy" : 0.95,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 19,
+          "truePositive" : 0
+        },
+        "self_plan" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "task_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "task_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9802,
+          "f1" : 0.8276,
+          "falseNegative" : 4,
+          "falsePositive" : 1,
+          "precision" : 0.9231,
+          "recall" : 0.75,
+          "total" : 252,
+          "trueNegative" : 235,
+          "truePositive" : 12
+        },
+        "threshold" : 0.64
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9802,
+          "f1" : 0.8148,
+          "falseNegative" : 5,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.6875,
+          "total" : 252,
+          "trueNegative" : 236,
+          "truePositive" : 11
+        },
+        "threshold" : 0.82
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9762,
+            "f1" : 0.7692,
+            "falseNegative" : 3,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.625,
+            "total" : 126,
+            "trueNegative" : 118,
+            "truePositive" : 5
+          },
+          "threshold" : 0.47
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9921,
+            "f1" : 0.9333,
+            "falseNegative" : 1,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.875,
+            "total" : 126,
+            "trueNegative" : 118,
+            "truePositive" : 7
+          },
+          "threshold" : 0.82
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9762,
+            "f1" : 0.7692,
+            "falseNegative" : 3,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.625,
+            "total" : 126,
+            "trueNegative" : 118,
+            "truePositive" : 5
+          },
+          "threshold" : 0.47
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9921,
+            "f1" : 0.9333,
+            "falseNegative" : 1,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.875,
+            "total" : 126,
+            "trueNegative" : 118,
+            "truePositive" : 7
+          },
+          "threshold" : 0.82
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7094,
+          "family" : "complaint_request",
+          "id" : "golden-zh-Hans-0019",
+          "language" : "zh-Hans",
+          "text" : "客服已经三天没有回复了，请问什么时候能处理？"
+        },
+        {
+          "confidence" : 0.5898,
+          "family" : "complaint_request",
+          "id" : "golden-zh-Hans-0017",
+          "language" : "zh-Hans",
+          "text" : "账号无故被锁了，能请你们今天恢复吗？"
+        },
+        {
+          "confidence" : 0.5679,
+          "family" : "complaint_request",
+          "id" : "golden-en-0063",
+          "language" : "en",
+          "text" : "My account was locked for no reason. Can you restore it today?"
+        },
+        {
+          "confidence" : 0.2716,
+          "family" : "complaint_request",
+          "id" : "golden-zh-Hans-0018",
+          "language" : "zh-Hans",
+          "text" : "消息一直发送失败，请尽快给我一个解决方案。"
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "complaint",
+      "metrics" : {
+        "accuracy" : 0.9841,
+        "f1" : 0.8,
+        "falseNegative" : 4,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.6667,
+        "total" : 252,
+        "trueNegative" : 240,
+        "truePositive" : 8
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9921,
+          "f1" : 0.9091,
+          "falseNegative" : 1,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.8333,
+          "total" : 126,
+          "trueNegative" : 120,
+          "truePositive" : 5
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9762,
+          "f1" : 0.6667,
+          "falseNegative" : 3,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.5,
+          "total" : 126,
+          "trueNegative" : 120,
+          "truePositive" : 3
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "blessing_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "blessing_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "complaint_request" : {
+          "accuracy" : 0.3333,
+          "f1" : 0.5,
+          "falseNegative" : 4,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.3333,
+          "total" : 6,
+          "trueNegative" : 0,
+          "truePositive" : 2
+        },
+        "complaint_statement" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 6,
+          "trueNegative" : 0,
+          "truePositive" : 6
+        },
+        "confirmation_decision_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "confirmation_decision_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "conversational_message" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 10,
+          "trueNegative" : 10,
+          "truePositive" : 0
+        },
+        "event_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "information_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "invitation_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "negative_news" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 10,
+          "trueNegative" : 10,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "quoted_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "schedule_negotiation_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "schedule_negotiation_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "self_plan" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "task_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "task_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9841,
+          "f1" : 0.8,
+          "falseNegative" : 4,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.6667,
+          "total" : 252,
+          "trueNegative" : 240,
+          "truePositive" : 8
+        },
+        "threshold" : 0.74
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9841,
+          "f1" : 0.8,
+          "falseNegative" : 4,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.6667,
+          "total" : 252,
+          "trueNegative" : 240,
+          "truePositive" : 8
+        },
+        "threshold" : 0.74
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9921,
+            "f1" : 0.9091,
+            "falseNegative" : 1,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.8333,
+            "total" : 126,
+            "trueNegative" : 120,
+            "truePositive" : 5
+          },
+          "threshold" : 0.74
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9841,
+            "f1" : 0.8,
+            "falseNegative" : 2,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.6667,
+            "total" : 126,
+            "trueNegative" : 120,
+            "truePositive" : 4
+          },
+          "threshold" : 0.67
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9921,
+            "f1" : 0.9091,
+            "falseNegative" : 1,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.8333,
+            "total" : 126,
+            "trueNegative" : 120,
+            "truePositive" : 5
+          },
+          "threshold" : 0.74
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9841,
+            "f1" : 0.8,
+            "falseNegative" : 2,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.6667,
+            "total" : 126,
+            "trueNegative" : 120,
+            "truePositive" : 4
+          },
+          "threshold" : 0.67
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.4706,
+          "family" : "schedule_negotiation_golden",
+          "id" : "golden-en-0112",
+          "language" : "en",
+          "text" : "I suggest a one-day delay, with Thursday as the new deadline. Thoughts?"
+        },
+        {
+          "confidence" : 0.4243,
+          "family" : "schedule_negotiation_golden",
+          "id" : "golden-zh-Hans-0102",
+          "language" : "zh-Hans",
+          "text" : "我提议延期一天，新的截止时间定在周四如何？"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.7708,
+          "family" : "task_question",
+          "id" : "golden-zh-Hans-0006",
+          "language" : "zh-Hans",
+          "text" : "方便帮我约一下周三下午的会议室吗？"
+        },
+        {
+          "confidence" : 0.6345,
+          "family" : "neutral_fact",
+          "id" : "golden-zh-Hans-0033",
+          "language" : "zh-Hans",
+          "text" : "门店营业时间是上午九点到晚上十点。"
+        },
+        {
+          "confidence" : 0.6327,
+          "family" : "task_question",
+          "id" : "golden-zh-Hans-0005",
+          "language" : "zh-Hans",
+          "text" : "你能明天上午把报价单核对一遍吗？"
+        },
+        {
+          "confidence" : 0.6062,
+          "family" : "task_statement",
+          "id" : "golden-zh-Hans-0003",
+          "language" : "zh-Hans",
+          "text" : "记得把发票抬头改好以后重新提交。"
+        }
+      ],
+      "id" : "scheduleNegotiation",
+      "metrics" : {
+        "accuracy" : 0.9762,
+        "f1" : 0.8571,
+        "falseNegative" : 2,
+        "falsePositive" : 4,
+        "precision" : 0.8182,
+        "recall" : 0.9,
+        "total" : 252,
+        "trueNegative" : 228,
+        "truePositive" : 18
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9921,
+          "f1" : 0.9474,
+          "falseNegative" : 1,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.9,
+          "total" : 126,
+          "trueNegative" : 116,
+          "truePositive" : 9
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9603,
+          "f1" : 0.7826,
+          "falseNegative" : 1,
+          "falsePositive" : 4,
+          "precision" : 0.6923,
+          "recall" : 0.9,
+          "total" : 126,
+          "trueNegative" : 112,
+          "truePositive" : 9
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "blessing_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "blessing_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "complaint_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "complaint_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "confirmation_decision_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "confirmation_decision_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "conversational_message" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 10,
+          "trueNegative" : 10,
+          "truePositive" : 0
+        },
+        "event_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "information_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "invitation_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "negative_news" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 0.9,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 10,
+          "trueNegative" : 9,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "quoted_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "schedule_negotiation_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "schedule_negotiation_golden" : {
+          "accuracy" : 0.9,
+          "f1" : 0.9474,
+          "falseNegative" : 2,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.9,
+          "total" : 20,
+          "trueNegative" : 0,
+          "truePositive" : 18
+        },
+        "self_plan" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "task_question" : {
+          "accuracy" : 0.6667,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 2,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "task_statement" : {
+          "accuracy" : 0.875,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 7,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9881,
+          "f1" : 0.9231,
+          "falseNegative" : 2,
+          "falsePositive" : 1,
+          "precision" : 0.9474,
+          "recall" : 0.9,
+          "total" : 252,
+          "trueNegative" : 231,
+          "truePositive" : 18
+        },
+        "threshold" : 0.64
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9802,
+          "f1" : 0.8571,
+          "falseNegative" : 5,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.75,
+          "total" : 252,
+          "trueNegative" : 232,
+          "truePositive" : 15
+        },
+        "threshold" : 0.78
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 126,
+            "trueNegative" : 116,
+            "truePositive" : 10
+          },
+          "threshold" : 0.47
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9841,
+            "f1" : 0.9,
+            "falseNegative" : 1,
+            "falsePositive" : 1,
+            "precision" : 0.9,
+            "recall" : 0.9,
+            "total" : 126,
+            "trueNegative" : 115,
+            "truePositive" : 9
+          },
+          "threshold" : 0.64
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 126,
+            "trueNegative" : 116,
+            "truePositive" : 10
+          },
+          "threshold" : 0.47
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9841,
+            "f1" : 0.8889,
+            "falseNegative" : 2,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.8,
+            "total" : 126,
+            "trueNegative" : 116,
+            "truePositive" : 8
+          },
+          "threshold" : 0.78
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.9868,
+          "family" : "confirmation_decision_golden",
+          "id" : "golden-zh-Hans-0140",
+          "language" : "zh-Hans",
+          "text" : "不用再讨论了，方案 A 正式通过。"
+        },
+        {
+          "confidence" : 0.986,
+          "family" : "confirmation_decision_golden",
+          "id" : "golden-en-0145",
+          "language" : "en",
+          "text" : "Final decision: use vendor B and stop comparing bids."
+        },
+        {
+          "confidence" : 0.986,
+          "family" : "confirmation_decision_golden",
+          "id" : "golden-en-0146",
+          "language" : "en",
+          "text" : "I confirm the monthly plan. Please proceed with the contract."
+        },
+        {
+          "confidence" : 0.9851,
+          "family" : "confirmation_decision_golden",
+          "id" : "golden-zh-Hans-0135",
+          "language" : "zh-Hans",
+          "text" : "最终拍板用供应商乙，不再比价。"
+        },
+        {
+          "confidence" : 0.9838,
+          "family" : "confirmation_decision_golden",
+          "id" : "golden-en-0147",
+          "language" : "en",
+          "text" : "I approve this release scope; execute it as written."
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "confirmationDecision",
+      "metrics" : {
+        "accuracy" : 0.9444,
+        "f1" : 0.4615,
+        "falseNegative" : 14,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.3,
+        "total" : 252,
+        "trueNegative" : 232,
+        "truePositive" : 6
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9444,
+          "f1" : 0.4615,
+          "falseNegative" : 7,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.3,
+          "total" : 126,
+          "trueNegative" : 116,
+          "truePositive" : 3
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9444,
+          "f1" : 0.4615,
+          "falseNegative" : 7,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.3,
+          "total" : 126,
+          "trueNegative" : 116,
+          "truePositive" : 3
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "blessing_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "blessing_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "complaint_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "complaint_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "confirmation_decision_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "confirmation_decision_golden" : {
+          "accuracy" : 0.3,
+          "f1" : 0.4615,
+          "falseNegative" : 14,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.3,
+          "total" : 20,
+          "trueNegative" : 0,
+          "truePositive" : 6
+        },
+        "conversational_message" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 10,
+          "trueNegative" : 10,
+          "truePositive" : 0
+        },
+        "event_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "information_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "invitation_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "negative_news" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 10,
+          "trueNegative" : 10,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "quoted_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "schedule_negotiation_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "schedule_negotiation_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "self_plan" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "task_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "task_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9683,
+          "f1" : 0.7647,
+          "falseNegative" : 7,
+          "falsePositive" : 1,
+          "precision" : 0.9286,
+          "recall" : 0.65,
+          "total" : 252,
+          "trueNegative" : 231,
+          "truePositive" : 13
+        },
+        "threshold" : 0.96
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9643,
+          "f1" : 0.7097,
+          "falseNegative" : 9,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.55,
+          "total" : 252,
+          "trueNegative" : 232,
+          "truePositive" : 11
+        },
+        "threshold" : 0.98
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9683,
+            "f1" : 0.75,
+            "falseNegative" : 4,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.6,
+            "total" : 126,
+            "trueNegative" : 116,
+            "truePositive" : 6
+          },
+          "threshold" : 0.98
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9762,
+            "f1" : 0.8235,
+            "falseNegative" : 3,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.7,
+            "total" : 126,
+            "trueNegative" : 116,
+            "truePositive" : 7
+          },
+          "threshold" : 0.72
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9683,
+            "f1" : 0.75,
+            "falseNegative" : 4,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.6,
+            "total" : 126,
+            "trueNegative" : 116,
+            "truePositive" : 6
+          },
+          "threshold" : 0.98
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9762,
+            "f1" : 0.8235,
+            "falseNegative" : 3,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.7,
+            "total" : 126,
+            "trueNegative" : 116,
+            "truePositive" : 7
+          },
+          "threshold" : 0.72
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.9131,
+          "family" : "self_plan",
+          "id" : "golden-zh-Hans-0022",
+          "language" : "zh-Hans",
+          "text" : "先记一下：月底前我自己联系客户。"
+        },
+        {
+          "confidence" : 0.8917,
+          "family" : "follow_up_reminder_golden",
+          "id" : "golden-en-0184",
+          "language" : "en",
+          "text" : "Once the client replies, send the final quote to Finance."
+        },
+        {
+          "confidence" : 0.8891,
+          "family" : "follow_up_reminder_golden",
+          "id" : "golden-en-0189",
+          "language" : "en",
+          "text" : "Follow up with the vendor about the delivery date next Monday."
+        },
+        {
+          "confidence" : 0.8677,
+          "family" : "follow_up_reminder_golden",
+          "id" : "golden-zh-Hans-0173",
+          "language" : "zh-Hans",
+          "text" : "明早九点提醒我给牙医打电话确认复诊。"
+        },
+        {
+          "confidence" : 0.8568,
+          "family" : "follow_up_reminder_golden",
+          "id" : "golden-en-0186",
+          "language" : "en",
+          "text" : "After the meeting, summarize the three decisions in the project channel."
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "followUpReminder",
+      "metrics" : {
+        "accuracy" : 0.9444,
+        "f1" : 0.6316,
+        "falseNegative" : 14,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.4615,
+        "total" : 252,
+        "trueNegative" : 226,
+        "truePositive" : 12
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9444,
+          "f1" : 0.6316,
+          "falseNegative" : 7,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.4615,
+          "total" : 126,
+          "trueNegative" : 113,
+          "truePositive" : 6
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9444,
+          "f1" : 0.6316,
+          "falseNegative" : 7,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.4615,
+          "total" : 126,
+          "trueNegative" : 113,
+          "truePositive" : 6
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "blessing_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "blessing_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "complaint_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "complaint_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "confirmation_decision_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "confirmation_decision_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "conversational_message" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 10,
+          "trueNegative" : 10,
+          "truePositive" : 0
+        },
+        "event_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_golden" : {
+          "accuracy" : 0.5,
+          "f1" : 0.6667,
+          "falseNegative" : 10,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.5,
+          "total" : 20,
+          "trueNegative" : 0,
+          "truePositive" : 10
+        },
+        "information_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "invitation_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "negative_news" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 10,
+          "trueNegative" : 10,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "quoted_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "schedule_negotiation_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "schedule_negotiation_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "self_plan" : {
+          "accuracy" : 0.8333,
+          "f1" : 0.6667,
+          "falseNegative" : 1,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.5,
+          "total" : 6,
+          "trueNegative" : 4,
+          "truePositive" : 1
+        },
+        "task_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "task_statement" : {
+          "accuracy" : 0.625,
+          "f1" : 0.4,
+          "falseNegative" : 3,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.25,
+          "total" : 8,
+          "trueNegative" : 4,
+          "truePositive" : 1
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9762,
+          "f1" : 0.875,
+          "falseNegative" : 5,
+          "falsePositive" : 1,
+          "precision" : 0.9545,
+          "recall" : 0.8077,
+          "total" : 252,
+          "trueNegative" : 225,
+          "truePositive" : 21
+        },
+        "threshold" : 0.76
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9762,
+          "f1" : 0.875,
+          "falseNegative" : 5,
+          "falsePositive" : 1,
+          "precision" : 0.9545,
+          "recall" : 0.8077,
+          "total" : 252,
+          "trueNegative" : 225,
+          "truePositive" : 21
+        },
+        "threshold" : 0.76
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9921,
+            "f1" : 0.96,
+            "falseNegative" : 1,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.9231,
+            "total" : 126,
+            "trueNegative" : 113,
+            "truePositive" : 12
+          },
+          "threshold" : 0.58
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9683,
+            "f1" : 0.8333,
+            "falseNegative" : 3,
+            "falsePositive" : 1,
+            "precision" : 0.9091,
+            "recall" : 0.7692,
+            "total" : 126,
+            "trueNegative" : 112,
+            "truePositive" : 10
+          },
+          "threshold" : 0.76
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9921,
+            "f1" : 0.96,
+            "falseNegative" : 1,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.9231,
+            "total" : 126,
+            "trueNegative" : 113,
+            "truePositive" : 12
+          },
+          "threshold" : 0.58
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9444,
+            "f1" : 0.6316,
+            "falseNegative" : 7,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.4615,
+            "total" : 126,
+            "trueNegative" : 113,
+            "truePositive" : 6
+          },
+          "threshold" : 0.93
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.9652,
+          "family" : "blessing_golden",
+          "id" : "golden-en-0226",
+          "language" : "en",
+          "text" : "Wishing the newlyweds a lifetime of love, laughter, and wonderful memories."
+        },
+        {
+          "confidence" : 0.9337,
+          "family" : "blessing_golden",
+          "id" : "golden-zh-Hans-0217",
+          "language" : "zh-Hans",
+          "text" : "祝两位新婚快乐，往后的日子相互陪伴，长长久久。"
+        },
+        {
+          "confidence" : 0.7616,
+          "family" : "blessing_golden",
+          "id" : "golden-zh-Hans-0220",
+          "language" : "zh-Hans",
+          "text" : "祝宝宝健康成长，也祝新手爸妈每天都有好睡眠。"
+        },
+        {
+          "confidence" : 0.7188,
+          "family" : "blessing_golden",
+          "id" : "golden-zh-Hans-0215",
+          "language" : "zh-Hans",
+          "text" : "中秋团圆，愿大家所念皆如愿，所行皆坦途。"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 1,
+          "family" : "blessing_boundary",
+          "id" : "golden-en-0246",
+          "language" : "en",
+          "text" : "This article explains the history of the phrase “best wishes.”"
+        }
+      ],
+      "id" : "blessing",
+      "metrics" : {
+        "accuracy" : 0.9802,
+        "f1" : 0.8649,
+        "falseNegative" : 4,
+        "falsePositive" : 1,
+        "precision" : 0.9412,
+        "recall" : 0.8,
+        "total" : 252,
+        "trueNegative" : 231,
+        "truePositive" : 16
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9841,
+          "f1" : 0.9,
+          "falseNegative" : 1,
+          "falsePositive" : 1,
+          "precision" : 0.9,
+          "recall" : 0.9,
+          "total" : 126,
+          "trueNegative" : 115,
+          "truePositive" : 9
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9762,
+          "f1" : 0.8235,
+          "falseNegative" : 3,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.7,
+          "total" : 126,
+          "trueNegative" : 116,
+          "truePositive" : 7
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "blessing_boundary" : {
+          "accuracy" : 0.95,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 19,
+          "truePositive" : 0
+        },
+        "blessing_golden" : {
+          "accuracy" : 0.8,
+          "f1" : 0.8889,
+          "falseNegative" : 4,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.8,
+          "total" : 20,
+          "trueNegative" : 0,
+          "truePositive" : 16
+        },
+        "complaint_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "complaint_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "confirmation_decision_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "confirmation_decision_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "conversational_message" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 10,
+          "trueNegative" : 10,
+          "truePositive" : 0
+        },
+        "event_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "information_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "invitation_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "negative_news" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 10,
+          "trueNegative" : 10,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "quoted_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "schedule_negotiation_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "schedule_negotiation_golden" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "self_plan" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "task_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "task_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9802,
+          "f1" : 0.8649,
+          "falseNegative" : 4,
+          "falsePositive" : 1,
+          "precision" : 0.9412,
+          "recall" : 0.8,
+          "total" : 252,
+          "trueNegative" : 231,
+          "truePositive" : 16
+        },
+        "threshold" : 0.05
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9841,
+            "f1" : 0.9,
+            "falseNegative" : 1,
+            "falsePositive" : 1,
+            "precision" : 0.9,
+            "recall" : 0.9,
+            "total" : 126,
+            "trueNegative" : 115,
+            "truePositive" : 9
+          },
+          "threshold" : 0.05
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9762,
+            "f1" : 0.8235,
+            "falseNegative" : 3,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.7,
+            "total" : 126,
+            "trueNegative" : 116,
+            "truePositive" : 7
+          },
+          "threshold" : 0.05
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9762,
+            "f1" : 0.8235,
+            "falseNegative" : 3,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.7,
+            "total" : 126,
+            "trueNegative" : 116,
+            "truePositive" : 7
+          },
+          "threshold" : 0.05
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.6485,
+          "family" : "task_question",
+          "id" : "golden-zh-Hans-0007",
+          "language" : "zh-Hans",
+          "text" : "这些材料可以在月底前准备好吗？"
+        },
+        {
+          "confidence" : 0.639,
+          "family" : "follow_up_reminder_golden",
+          "id" : "golden-en-0186",
+          "language" : "en",
+          "text" : "After the meeting, summarize the three decisions in the project channel."
+        },
+        {
+          "confidence" : 0.5827,
+          "family" : "complaint_request",
+          "id" : "golden-zh-Hans-0019",
+          "language" : "zh-Hans",
+          "text" : "客服已经三天没有回复了，请问什么时候能处理？"
+        },
+        {
+          "confidence" : 0.5425,
+          "family" : "confirmation_decision_golden",
+          "id" : "golden-en-0143",
+          "language" : "en",
+          "text" : "Between the two versions, I choose the second. Ship that one."
+        },
+        {
+          "confidence" : 0.5211,
+          "family" : "follow_up_reminder_golden",
+          "id" : "golden-zh-Hans-0178",
+          "language" : "zh-Hans",
+          "text" : "等审批结果出来，请联系申请人说明原因。"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9928,
+          "family" : "follow_up_reminder_boundary",
+          "id" : "golden-en-0210",
+          "language" : "en",
+          "text" : "There is no owner and no next step."
+        },
+        {
+          "confidence" : 0.9847,
+          "family" : "blessing_boundary",
+          "id" : "golden-en-0244",
+          "language" : "en",
+          "text" : "It is Maya's birthday today, and the cake is already in the meeting room."
+        },
+        {
+          "confidence" : 0.9846,
+          "family" : "neutral_fact",
+          "id" : "golden-en-0079",
+          "language" : "en",
+          "text" : "The store is open from nine in the morning until ten at night."
+        },
+        {
+          "confidence" : 0.9473,
+          "family" : "self_plan",
+          "id" : "golden-zh-Hans-0021",
+          "language" : "zh-Hans",
+          "text" : "明天我要去财务核对发票，不用你帮忙。"
+        },
+        {
+          "confidence" : 0.8938,
+          "family" : "confirmation_decision_boundary",
+          "id" : "golden-en-0165",
+          "language" : "en",
+          "text" : "Sure, let us wait until everyone has discussed it."
+        }
+      ],
+      "id" : "replyableMessage",
+      "metrics" : {
+        "accuracy" : 0.9008,
+        "f1" : 0.9104,
+        "falseNegative" : 13,
+        "falsePositive" : 12,
+        "precision" : 0.9137,
+        "recall" : 0.9071,
+        "total" : 252,
+        "trueNegative" : 100,
+        "truePositive" : 127
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.8968,
+          "f1" : 0.9103,
+          "falseNegative" : 4,
+          "falsePositive" : 9,
+          "precision" : 0.88,
+          "recall" : 0.9429,
+          "total" : 126,
+          "trueNegative" : 47,
+          "truePositive" : 66
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9048,
+          "f1" : 0.9104,
+          "falseNegative" : 9,
+          "falsePositive" : 3,
+          "precision" : 0.9531,
+          "recall" : 0.8714,
+          "total" : 126,
+          "trueNegative" : 53,
+          "truePositive" : 61
+        }
+      },
+      "metricsBySource" : {
+        "acknowledgment" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "blessing_boundary" : {
+          "accuracy" : 0.95,
+          "f1" : 0.8889,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0.8,
+          "recall" : 1,
+          "total" : 20,
+          "trueNegative" : 15,
+          "truePositive" : 4
+        },
+        "blessing_golden" : {
+          "accuracy" : 0.95,
+          "f1" : 0.9744,
+          "falseNegative" : 1,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.95,
+          "total" : 20,
+          "trueNegative" : 0,
+          "truePositive" : 19
+        },
+        "complaint_request" : {
+          "accuracy" : 0.8333,
+          "f1" : 0.9091,
+          "falseNegative" : 1,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.8333,
+          "total" : 6,
+          "trueNegative" : 0,
+          "truePositive" : 5
+        },
+        "complaint_statement" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 6,
+          "trueNegative" : 0,
+          "truePositive" : 6
+        },
+        "confirmation_decision_boundary" : {
+          "accuracy" : 0.9,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 2,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 18,
+          "truePositive" : 0
+        },
+        "confirmation_decision_golden" : {
+          "accuracy" : 0.85,
+          "f1" : 0.9189,
+          "falseNegative" : 3,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.85,
+          "total" : 20,
+          "trueNegative" : 0,
+          "truePositive" : 17
+        },
+        "conversational_message" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 10,
+          "trueNegative" : 0,
+          "truePositive" : 10
+        },
+        "event_statement" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_boundary" : {
+          "accuracy" : 0.8,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 4,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 16,
+          "truePositive" : 0
+        },
+        "follow_up_reminder_golden" : {
+          "accuracy" : 0.75,
+          "f1" : 0.8,
+          "falseNegative" : 4,
+          "falsePositive" : 1,
+          "precision" : 0.9091,
+          "recall" : 0.7143,
+          "total" : 20,
+          "trueNegative" : 5,
+          "truePositive" : 10
+        },
+        "information_question" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 4,
+          "trueNegative" : 0,
+          "truePositive" : 4
+        },
+        "invitation_question" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 8,
+          "trueNegative" : 0,
+          "truePositive" : 8
+        },
+        "negative_news" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "neutral_fact" : {
+          "accuracy" : 0.9,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 10,
+          "trueNegative" : 9,
+          "truePositive" : 0
+        },
+        "positive_feedback" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 6,
+          "trueNegative" : 0,
+          "truePositive" : 6
+        },
+        "quoted_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "schedule_negotiation_boundary" : {
+          "accuracy" : 0.9,
+          "f1" : 0.875,
+          "falseNegative" : 1,
+          "falsePositive" : 1,
+          "precision" : 0.875,
+          "recall" : 0.875,
+          "total" : 20,
+          "trueNegative" : 11,
+          "truePositive" : 7
+        },
+        "schedule_negotiation_golden" : {
+          "accuracy" : 0.9,
+          "f1" : 0.9474,
+          "falseNegative" : 2,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.9,
+          "total" : 20,
+          "trueNegative" : 0,
+          "truePositive" : 18
+        },
+        "self_plan" : {
+          "accuracy" : 0.6667,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 2,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 6,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "task_question" : {
+          "accuracy" : 0.8333,
+          "f1" : 0.9091,
+          "falseNegative" : 1,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.8333,
+          "total" : 6,
+          "trueNegative" : 0,
+          "truePositive" : 5
+        },
+        "task_statement" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 8,
+          "trueNegative" : 0,
+          "truePositive" : 8
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9048,
+          "f1" : 0.9155,
+          "falseNegative" : 10,
+          "falsePositive" : 14,
+          "precision" : 0.9028,
+          "recall" : 0.9286,
+          "total" : 252,
+          "trueNegative" : 98,
+          "truePositive" : 130
+        },
+        "threshold" : 0.58
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.8889,
+          "f1" : 0.8939,
+          "falseNegative" : 22,
+          "falsePositive" : 6,
+          "precision" : 0.9516,
+          "recall" : 0.8429,
+          "total" : 252,
+          "trueNegative" : 106,
+          "truePositive" : 118
+        },
+        "threshold" : 0.83
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.881,
+            "f1" : 0.8889,
+            "falseNegative" : 10,
+            "falsePositive" : 5,
+            "precision" : 0.9231,
+            "recall" : 0.8571,
+            "total" : 126,
+            "trueNegative" : 51,
+            "truePositive" : 60
+          },
+          "threshold" : 0.8
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9048,
+            "f1" : 0.9155,
+            "falseNegative" : 5,
+            "falsePositive" : 7,
+            "precision" : 0.9028,
+            "recall" : 0.9286,
+            "total" : 126,
+            "trueNegative" : 49,
+            "truePositive" : 65
+          },
+          "threshold" : 0.46
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.6508,
+            "f1" : 0.551,
+            "falseNegative" : 43,
+            "falsePositive" : 1,
+            "precision" : 0.9643,
+            "recall" : 0.3857,
+            "total" : 126,
+            "trueNegative" : 55,
+            "truePositive" : 27
+          },
+          "threshold" : 0.99
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9127,
+            "f1" : 0.9185,
+            "falseNegative" : 8,
+            "falsePositive" : 3,
+            "precision" : 0.9538,
+            "recall" : 0.8857,
+            "total" : 126,
+            "trueNegative" : 53,
+            "truePositive" : 62
+          },
+          "threshold" : 0.63
+        }
+      }
+    }
+  ],
+  "corpusRecordCount" : 252,
+  "exactTrainingOverlapCount" : 252,
+  "familyCount" : 22,
+  "generatedAt" : "2026-08-27T05:29:36Z",
+  "languageCounts" : {
+    "en" : 126,
+    "zh-Hans" : 126
+  },
+  "manifestSchemaVersion" : 2,
+  "seed" : 20260826,
+  "sentiment" : {
+    "accuracy" : 0.7579,
+    "correct" : 191,
+    "macroF1" : 0.7981,
+    "perLabelF1" : {
+      "negative" : 0.6452,
+      "neutral" : 0.8603,
+      "positive" : 0.8889
+    },
+    "total" : 252,
+    "unknown" : 54,
+    "unknownRate" : 0.2143
+  },
+  "sentimentBySource" : {
+    "acknowledgment" : {
+      "accuracy" : 0.375,
+      "correct" : 3,
+      "macroF1" : 0.1818,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.5455,
+        "positive" : 0
+      },
+      "total" : 8,
+      "unknown" : 5,
+      "unknownRate" : 0.625
+    },
+    "blessing_boundary" : {
+      "accuracy" : 0.45,
+      "correct" : 9,
+      "macroF1" : 0.2069,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.6207,
+        "positive" : 0
+      },
+      "total" : 20,
+      "unknown" : 11,
+      "unknownRate" : 0.55
+    },
+    "blessing_golden" : {
+      "accuracy" : 0.9,
+      "correct" : 18,
+      "macroF1" : 0.3158,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0,
+        "positive" : 0.9474
+      },
+      "total" : 20,
+      "unknown" : 2,
+      "unknownRate" : 0.1
+    },
+    "complaint_request" : {
+      "accuracy" : 0.3333,
+      "correct" : 2,
+      "macroF1" : 0.1667,
+      "perLabelF1" : {
+        "negative" : 0.5,
+        "neutral" : 0,
+        "positive" : 0
+      },
+      "total" : 6,
+      "unknown" : 4,
+      "unknownRate" : 0.6667
+    },
+    "complaint_statement" : {
+      "accuracy" : 1,
+      "correct" : 6,
+      "macroF1" : 0.3333,
+      "perLabelF1" : {
+        "negative" : 1,
+        "neutral" : 0,
+        "positive" : 0
+      },
+      "total" : 6,
+      "unknown" : 0,
+      "unknownRate" : 0
+    },
+    "confirmation_decision_boundary" : {
+      "accuracy" : 0.75,
+      "correct" : 15,
+      "macroF1" : 0.2857,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.8571,
+        "positive" : 0
+      },
+      "total" : 20,
+      "unknown" : 4,
+      "unknownRate" : 0.2
+    },
+    "confirmation_decision_golden" : {
+      "accuracy" : 0.85,
+      "correct" : 17,
+      "macroF1" : 0.3063,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.9189,
+        "positive" : 0
+      },
+      "total" : 20,
+      "unknown" : 2,
+      "unknownRate" : 0.1
+    },
+    "conversational_message" : {
+      "accuracy" : 0.6,
+      "correct" : 6,
+      "macroF1" : 0.25,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.75,
+        "positive" : 0
+      },
+      "total" : 10,
+      "unknown" : 1,
+      "unknownRate" : 0.1
+    },
+    "event_statement" : {
+      "accuracy" : 1,
+      "correct" : 4,
+      "macroF1" : 0.3333,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 1,
+        "positive" : 0
+      },
+      "total" : 4,
+      "unknown" : 0,
+      "unknownRate" : 0
+    },
+    "follow_up_reminder_boundary" : {
+      "accuracy" : 0.45,
+      "correct" : 9,
+      "macroF1" : 0.2069,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.6207,
+        "positive" : 0
+      },
+      "total" : 20,
+      "unknown" : 10,
+      "unknownRate" : 0.5
+    },
+    "follow_up_reminder_golden" : {
+      "accuracy" : 0.95,
+      "correct" : 19,
+      "macroF1" : 0.3248,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.9744,
+        "positive" : 0
+      },
+      "total" : 20,
+      "unknown" : 1,
+      "unknownRate" : 0.05
+    },
+    "information_question" : {
+      "accuracy" : 0.75,
+      "correct" : 3,
+      "macroF1" : 0.2857,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.8571,
+        "positive" : 0
+      },
+      "total" : 4,
+      "unknown" : 1,
+      "unknownRate" : 0.25
+    },
+    "invitation_question" : {
+      "accuracy" : 1,
+      "correct" : 8,
+      "macroF1" : 0.3333,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 1,
+        "positive" : 0
+      },
+      "total" : 8,
+      "unknown" : 0,
+      "unknownRate" : 0
+    },
+    "negative_news" : {
+      "accuracy" : 0.3333,
+      "correct" : 2,
+      "macroF1" : 0.1667,
+      "perLabelF1" : {
+        "negative" : 0.5,
+        "neutral" : 0,
+        "positive" : 0
+      },
+      "total" : 6,
+      "unknown" : 4,
+      "unknownRate" : 0.6667
+    },
+    "neutral_fact" : {
+      "accuracy" : 0.6,
+      "correct" : 6,
+      "macroF1" : 0.25,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.75,
+        "positive" : 0
+      },
+      "total" : 10,
+      "unknown" : 3,
+      "unknownRate" : 0.3
+    },
+    "positive_feedback" : {
+      "accuracy" : 1,
+      "correct" : 6,
+      "macroF1" : 0.3333,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0,
+        "positive" : 1
+      },
+      "total" : 6,
+      "unknown" : 0,
+      "unknownRate" : 0
+    },
+    "quoted_question" : {
+      "accuracy" : 1,
+      "correct" : 4,
+      "macroF1" : 0.3333,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 1,
+        "positive" : 0
+      },
+      "total" : 4,
+      "unknown" : 0,
+      "unknownRate" : 0
+    },
+    "schedule_negotiation_boundary" : {
+      "accuracy" : 0.9,
+      "correct" : 18,
+      "macroF1" : 0.3158,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.9474,
+        "positive" : 0
+      },
+      "total" : 20,
+      "unknown" : 2,
+      "unknownRate" : 0.1
+    },
+    "schedule_negotiation_golden" : {
+      "accuracy" : 0.9,
+      "correct" : 18,
+      "macroF1" : 0.3158,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.9474,
+        "positive" : 0
+      },
+      "total" : 20,
+      "unknown" : 2,
+      "unknownRate" : 0.1
+    },
+    "self_plan" : {
+      "accuracy" : 0.8333,
+      "correct" : 5,
+      "macroF1" : 0.303,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.9091,
+        "positive" : 0
+      },
+      "total" : 6,
+      "unknown" : 1,
+      "unknownRate" : 0.1667
+    },
+    "task_question" : {
+      "accuracy" : 1,
+      "correct" : 6,
+      "macroF1" : 0.3333,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 1,
+        "positive" : 0
+      },
+      "total" : 6,
+      "unknown" : 0,
+      "unknownRate" : 0
+    },
+    "task_statement" : {
+      "accuracy" : 0.875,
+      "correct" : 7,
+      "macroF1" : 0.3111,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.9333,
+        "positive" : 0
+      },
+      "total" : 8,
+      "unknown" : 1,
+      "unknownRate" : 0.125
+    }
+  }
+}

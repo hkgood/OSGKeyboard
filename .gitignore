@@ -65,6 +65,25 @@ OSGKeyboard/Resources/CustomLanguageModel/v1/compiled/
 # Reproducible Create ML candidates (selected models live in Shared resources)
 ModelTraining/ClipboardSemantics/Candidates/
 
+# Reproducible open-data corpus artifacts (regenerated from pinned sources)
+ModelTraining/ClipboardSemantics/Generated/
+ModelTraining/ClipboardSemantics/open-training-corpus.jsonl
+ModelTraining/ClipboardSemantics/combined-training-corpus.jsonl
+ModelTraining/ClipboardSemantics/v6-boundary-training-supplement.jsonl
+ModelTraining/ClipboardSemantics/v6-blind-evaluation-corpus.jsonl
+ModelTraining/ClipboardSemantics/Consensus/*.jsonl
+ModelTraining/ClipboardSemantics/CorpusRegistry/*.jsonl
+ModelTraining/ClipboardSemantics/CorpusRegistry/Labels/
+ModelTraining/ClipboardSemantics/CorpusRegistry/*-report.json
+ModelTraining/ClipboardSemantics/VerifierCandidates/
+ModelTraining/ClipboardSemantics/IterativeResearch/**/rounds.json
+ModelTraining/ClipboardSemantics/IterativeResearch/**/final-report.json
+
+# Blind review queues can contain restricted evaluation text and reviewer IDs.
+ModelTraining/ClipboardSemantics/BlessingBenchmark/*.jsonl
+ModelTraining/ClipboardSemantics/BlessingBenchmark/manifest.json
+ModelTraining/ClipboardSemantics/BlessingBenchmark/final-manifest.json
+
 # Python bytecode
 __pycache__/
 *.pyc
@@ -93,3 +112,18 @@ CHANGES.md
 .ai-skills-layout-shots/
 .workbuddy-ai/
 reports/
+
+# Internal planning / audit docs kept locally only (zero in-repo or
+# GitHub-Pages references; never re-add these — they were removed
+# in 2026-08 to keep the public docs/ limited to GitHub Pages assets).
+/docs/ACCOUNT_MANAGED_GATEWAY_TESTING.md
+/docs/APPSTORE_METADATA.md
+/docs/STOREKIT_TESTING.md
+/docs/TYPING_KEYBOARD_BASELINE.md
+/docs/ios-pip-voice-session-plan.md
+/docs/keyboard-accuracy-plan.md
+/docs/keyboard-memory-budget.md
+/docs/local-asr-architecture.md
+/docs/mac-parity-audit-2026-08-23.md
+/docs/personal-dictionary-icloud-kvs-checklist.md
+/docs/screenshots/README.md

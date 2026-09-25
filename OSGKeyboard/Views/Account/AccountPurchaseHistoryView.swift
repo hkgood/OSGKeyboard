@@ -22,7 +22,7 @@ struct AccountPurchaseHistoryView: View {
         Group {
             switch manager.historyPhase {
             case .idle, .loading:
-                ProgressView("account.purchaseHistory.loading")
+                ProgressView(AppL10n.string("account.purchaseHistory.loading"))
                     .tint(palette.accent)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             case .loaded(let records):
@@ -40,10 +40,10 @@ struct AccountPurchaseHistoryView: View {
                         .font(.title2)
                         .foregroundStyle(palette.warning)
                         .accessibilityHidden(true)
-                    Text(LocalizedStringKey(messageKey))
+                    Text(AppL10n.string(messageKey))
                         .font(TypeStyle.body)
                         .foregroundStyle(palette.textSecondary)
-                    Button("account.retry") {
+                    Button(AppL10n.string("account.retry")) {
                         Task {
                             await manager.loadPurchaseHistory(
                                 accountID: accountID,
@@ -58,7 +58,7 @@ struct AccountPurchaseHistoryView: View {
             }
         }
         .background(palette.background.ignoresSafeArea())
-        .navigationTitle("account.purchaseHistory.title")
+        .navigationTitle(AppL10n.string("account.purchaseHistory.title"))
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await manager.loadPurchaseHistory(accountID: accountID)
@@ -95,7 +95,7 @@ struct AccountPurchaseHistoryView: View {
                             await manager.loadNextPurchaseHistoryPage(accountID: accountID)
                         }
                     } label: {
-                        Text(LocalizedStringKey(errorKey))
+                        Text(AppL10n.string(errorKey))
                             .font(TypeStyle.caption)
                             .foregroundStyle(palette.accent)
                             .frame(maxWidth: .infinity)
@@ -129,7 +129,7 @@ struct AccountPurchaseHistoryView: View {
                     Text(record.creditsGranted, format: .number.grouping(.automatic))
                         .font(TypeStyle.bodyEmph.monospacedDigit())
                         .foregroundStyle(palette.textPrimary)
-                    Text("account.storekit.credits")
+                    Text(AppL10n.string("account.storekit.credits"))
                         .font(TypeStyle.body)
                         .foregroundStyle(palette.textSecondary)
                 }
@@ -144,7 +144,7 @@ struct AccountPurchaseHistoryView: View {
                 Text(balanceAfterText(record.balanceAfter))
                     .font(TypeStyle.body.monospacedDigit())
                     .foregroundStyle(palette.textSecondary)
-                Text("account.purchaseHistory.status.credited")
+                Text(AppL10n.string("account.purchaseHistory.status.credited"))
                     .font(TypeStyle.caption2.weight(.semibold))
                     .foregroundStyle(palette.success)
             }

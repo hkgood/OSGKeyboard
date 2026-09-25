@@ -33,6 +33,7 @@ public enum CloudASRError: Error, LocalizedError, Sendable, Equatable {
     case emptyTranscript
     case audioTooLong
     case providerUnsupported
+    case timedOut
 
     public var errorDescription: String? {
         switch self {
@@ -41,6 +42,12 @@ public enum CloudASRError: Error, LocalizedError, Sendable, Equatable {
         case .invalidURL:
             return SharedL10n.string("error.cloudASR.invalidURL")
         case .http(let status, let message):
+            // 402 / balance-related errors: SiliconFlow gates some ¥0-priced
+            // models behind a positive account balance. Surface an actionable
+            // hint instead of the raw provider string.
+            if Self.isInsufficientBalance(status: status, message: message) {
+                return SharedL10n.string("error.cloudASR.insufficientBalance")
+            }
             if let message, !message.isEmpty {
                 return SharedL10n.format("error.cloudASR.httpWithMessage", status, message)
             }
@@ -55,7 +62,21 @@ public enum CloudASRError: Error, LocalizedError, Sendable, Equatable {
             return SharedL10n.string("error.cloudASR.audioTooLong")
         case .providerUnsupported:
             return SharedL10n.string("error.cloudASR.providerUnsupported")
+        case .timedOut:
+            return SharedL10n.string("error.cloudASR.timedOut")
         }
+    }
+
+    /// Whether an HTTP failure is an account-balance / billing gate rather than
+    /// a bad key or missing model. Keyed off the 402 status or a message that
+    /// mentions balance/欠费, covering providers that reuse other 4xx codes.
+    static func isInsufficientBalance(status: Int, message: String?) -> Bool {
+        if status == 402 { return true }
+        guard let message = message?.lowercased() else { return false }
+        return message.contains("insufficient")
+            || message.contains("balance")
+            || message.contains("余额")
+            || message.contains("欠费")
     }
 }
 

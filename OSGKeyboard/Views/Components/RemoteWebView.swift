@@ -18,7 +18,7 @@ struct RemoteWebView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> WKWebView {
-        let webView = WKWebView(frame: .zero)
+        let webView = WKWebView(frame: .zero, configuration: Self.mediaFriendlyConfiguration())
         webView.isOpaque = false
         webView.backgroundColor = .clear
         webView.scrollView.backgroundColor = .clear
@@ -35,6 +35,18 @@ struct RemoteWebView: UIViewRepresentable {
         guard context.coordinator.loadedURL != url else { return }
         context.coordinator.loadedURL = url
         uiView.load(Self.request(for: url))
+    }
+
+    /// Release-notes pages autoplay muted, inline `<video>` demos. On iPhone the
+    /// default configuration blocks both (`allowsInlineMediaPlayback` is `false`
+    /// and playback needs a user gesture), so the clips render as blank/black
+    /// boxes — invisible on the dark theme. Opt into inline, gesture-free
+    /// playback so the demos actually play.
+    static func mediaFriendlyConfiguration() -> WKWebViewConfiguration {
+        let config = WKWebViewConfiguration()
+        config.allowsInlineMediaPlayback = true
+        config.mediaTypesRequiringUserActionForPlayback = []
+        return config
     }
 
     /// The pages we host send no `Cache-Control`, so the default policy lets

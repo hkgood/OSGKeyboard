@@ -39,6 +39,14 @@ final class KeyboardFlowCoordinator {
 
     private var isPendingFlowStart = false
     private var flowStartDeadline: TimeInterval = 0
+    /// Absolute cap for a cold-start jump. The soft `flowStartDeadline` is
+    /// pushed forward while the host keeps acknowledging it is warming, but
+    /// never past this — bounds the wait when the host is stuck in the
+    /// background and the user never brings it forward.
+    private var flowStartHardDeadline: TimeInterval = 0
+    /// One-shot guard so the "bring the app forward" hint is shown once per
+    /// start attempt instead of on every 200 ms watchdog poll.
+    private var coldStartForegroundHintShown = false
     private var isFlowRecording = false
     private var flowWatchdogTask: Task<Void, Never>?
     private var utteranceTimerTask: Task<Void, Never>?
@@ -162,6 +170,9 @@ final class KeyboardFlowCoordinator {
     /// the user returns from startflow and taps the Voice tab — height/appear
     /// noise used to call this again while `ready` briefly lagged).
     func ensurePiPReadyOnKeyboardOpen() {
+        #if DEBUG
+        MemoryDeviceProbe.log("pip.ensure.entry")
+        #endif
         guard FlowHandoffPolicy.allowsProactiveHostAutoLaunch,
               voiceSetupReady,
               hasFullAccess(),
@@ -190,6 +201,9 @@ final class KeyboardFlowCoordinator {
 
         FlowSessionBridge.markPiPArmAttempt()
         detectAndStoreAppContext()
+        #if DEBUG
+        MemoryDeviceProbe.log("pip.arm.beginFlowStart")
+        #endif
         beginFlowStart(recordAfterHandoff: false)
         traceState("keyboardOpen.autoArmPiP")
     }
@@ -995,6 +1009,7 @@ final class KeyboardFlowCoordinator {
             clearUnissuedUtterance()
             return .rejected(.missingAPIKey)
         case .unavailable(.noFullAccess):
+            persistStartupFailure("noFullAccess")
             let msg = ExtL10n.string("keyboard.error.fullAccessRequired")
             state.phase = .error(.fullAccessRequired, message: msg)
             scheduleAutoClearError()
@@ -1002,6 +1017,9 @@ final class KeyboardFlowCoordinator {
             clearUnissuedUtterance()
             return .rejected(.noFullAccess)
         case .unavailable(.appGroupUnavailable):
+            // Falls back to this extension's own container — the App Group is
+            // exactly what is missing here — so it will not show in Settings.
+            persistStartupFailure("appGroupUnavailable")
             let msg = ExtL10n.string("keyboard.error.appGroupCommunication")
             state.phase = .error(.appGroupUnavailable, message: msg)
             scheduleAutoClearError()
@@ -1031,6 +1049,9 @@ final class KeyboardFlowCoordinator {
             if isPendingFlowStart || recordWhenHostReady {
                 return .waitingForHost(utteranceID)
             }
+            // Availability said ready, yet no command was issued and no wait is
+            // pending: the press is dropped with no error UI at all.
+            persistStartupFailure("pressDroppedHostUnavailable")
             clearUnissuedUtterance()
             return .rejected(.hostUnavailable)
         case .waitForHostReady(let recordWhenReady):
@@ -1087,6 +1108,7 @@ final class KeyboardFlowCoordinator {
 
     func beginFlowStart(recordAfterHandoff: Bool = false) {
         guard voiceSetupReady else {
+            persistStartupFailure("voiceSetupIncomplete")
             promptFinishSetupInApp()
             return
         }
@@ -1099,8 +1121,15 @@ final class KeyboardFlowCoordinator {
         coldStartDebouncer.reset()
         isPendingFlowStart = true
         isFlowRecording = false
+        coldStartForegroundHintShown = false
         let now = Date().timeIntervalSince1970
-        flowStartDeadline = currentStartDeadlineAt ?? (now + FlowWatchdog.startTimeout)
+        // This path always jumps to the host (`openHostApp("startflow")`), so
+        // the budget must cover host foreground + PiP arm + first ready publish.
+        // Anchor it at the jump (not the mic press) with the cold-launch budget;
+        // reusing the press-anchored 8 s charged app-launch latency against the
+        // recording budget and timed out legitimate cold starts.
+        flowStartDeadline = now + FlowSessionKeys.coldStartHostLaunchBudget
+        flowStartHardDeadline = now + FlowSessionKeys.coldStartHostLaunchHardCap
         currentStartDeadlineAt = flowStartDeadline
         state.lastTranscript = ""
         recomputeMicVoiceAvailability()
@@ -1131,6 +1160,9 @@ final class KeyboardFlowCoordinator {
             flowStartDeadline = 0
             stopFlowWatchdog()
             traceState("openHostApp.failed", extra: "path=startflow cancelPending=1")
+            // iOS refused the jump (no Full Access, or the open was blocked):
+            // the host process never even had a chance to record anything.
+            persistStartupFailure("hostOpenRejected")
             if currentUtteranceRequest?.isEdit == true {
                 onEditFailure(ExtL10n.string("keyboard.error.manualOpenForFlow"))
                 resetEditTransportState()
@@ -1645,6 +1677,10 @@ final class KeyboardFlowCoordinator {
     }
 
     private func failHostDisconnected() {
+        // Host was alive enough to be asked, then went away (jetsam, force-quit,
+        // suspended mid-utterance). Its own process is gone, so this side is the
+        // only one that can record it.
+        persistStartupFailure("hostDisconnected")
         if let id = currentUtteranceId,
            cancelledDictationUtteranceIDs.remove(id) != nil {
             stopUtteranceCountdown()
@@ -1769,6 +1805,7 @@ final class KeyboardFlowCoordinator {
     }
 
     private func showFlowSessionExpiredHint() {
+        persistStartupFailure("sessionExpired")
         let message = ExtL10n.string("keyboard.flow.sessionExpired")
         state.phase = .error(.flowSessionExpired, message: message)
         scheduleAutoClearError()
@@ -1804,6 +1841,9 @@ final class KeyboardFlowCoordinator {
     private func startFlowRecording() {
         if let deadline = currentStartDeadlineAt,
            Date().timeIntervalSince1970 >= deadline {
+            // The 8 s budget started at the mic press and was spent waiting for
+            // the host; recording never even got attempted.
+            persistStartupFailure("startBudgetExpiredBeforeRecord")
             if currentUtteranceRequest?.isEdit == true {
                 onEditFailure(ExtL10n.string("keyboard.edit.error.startTimeout"))
                 abortEditRecording()
@@ -2002,11 +2042,41 @@ final class KeyboardFlowCoordinator {
                     return
                 }
                 let now = Date().timeIntervalSince1970
+                // The host acknowledged the request and is alive & warming
+                // (cold launch / foreground handoff). Extend the soft budget up
+                // to the hard cap so a legitimate cold start is not failed at
+                // the initial launch budget while the host is provably working.
+                if let ackReason = FlowSessionBridge.hostStartInProgress() {
+                    let extended = min(
+                        now + FlowSessionKeys.hostStartAckExtension,
+                        self.flowStartHardDeadline
+                    )
+                    if extended > self.flowStartDeadline {
+                        self.flowStartDeadline = extended
+                        self.currentStartDeadlineAt = extended
+                    }
+                    // Host is up but parked waiting for the user to bring it to
+                    // the foreground — PiP cannot arm from the background. Prompt
+                    // once so the user can tap back instead of watching a silent
+                    // spinner run out the clock. Edit mode has no manual-open UI,
+                    // so keep letting it wait out the hard cap.
+                    if ackReason == .waitingForForeground,
+                       !self.coldStartForegroundHintShown,
+                       self.currentUtteranceRequest?.isEdit != true {
+                        self.coldStartForegroundHintShown = true
+                        self.showManualOpenHint(path: "startflow")
+                    }
+                }
                 if self.flowStartDeadline > 0, now > self.flowStartDeadline {
                     self.isPendingFlowStart = false
                     self.recordAfterHandoff = false
-                    self.flowStartDeadline = 0
                     self.traceState("startWatchdog.timeout")
+                    // The single most common user-visible failure: the host was
+                    // asked to start and never published ready inside the
+                    // budget. Persist before clearing the deadline so the
+                    // report still carries it.
+                    self.persistStartupFailure("startTimeout")
+                    self.flowStartDeadline = 0
                     if self.currentUtteranceRequest?.isEdit == true {
                         self.onEditFailure(
                             ExtL10n.string("keyboard.edit.error.startTimeout")
@@ -2027,6 +2097,8 @@ final class KeyboardFlowCoordinator {
         isPendingFlowStart = false
         recordAfterHandoff = false
         flowStartDeadline = 0
+        flowStartHardDeadline = 0
+        coldStartForegroundHintShown = false
         stopFlowWatchdog()
         state.lastTranscript = ""
         refreshSessionState()
@@ -2322,7 +2394,42 @@ final class KeyboardFlowCoordinator {
     }
 
     private func debug(_ message: String) {
+        // Also feeds the shared breadcrumb window, so a terminal start failure
+        // on this side ships with the keyboard's own timeline instead of only
+        // whatever the host happened to record.
+        FlowFailureDiagnostics.record(message)
         OSGLog.keyboardExt.info("\(message, privacy: .public)")
+    }
+
+    /// Writes a startup-failure report for a keyboard-observed dead end and
+    /// asks the host for its companion window. This is the capture path that
+    /// survives the host never launching at all.
+    private func persistStartupFailure(_ reason: String) {
+        FlowFailureDiagnostics.persistKeyboardStartupFailure(
+            reason: reason,
+            context: keyboardStartupFailureContext()
+        )
+    }
+
+    private func keyboardStartupFailureContext() -> [String: String] {
+        let now = Date().timeIntervalSince1970
+        return [
+            "pendingFlowStart": isPendingFlowStart ? "true" : "false",
+            "startDeadlineRemainingSeconds": flowStartDeadline > 0
+                ? String(format: "%.3f", flowStartDeadline - now)
+                : "nil",
+            "startBudgetSeconds": String(format: "%.1f", FlowWatchdog.startTimeout),
+            "recordAfterHandoff": recordAfterHandoff ? "true" : "false",
+            "flowRecording": isFlowRecording ? "true" : "false",
+            "awaitingResult": isAwaitingFlowResult ? "true" : "false",
+            "sessionProvenReady": sessionProvenReady ? "true" : "false",
+            "fullAccess": hasFullAccess() ? "true" : "false",
+            "voiceSetupReady": voiceSetupReady ? "true" : "false",
+            "requestKind": currentUtteranceRequest?.isEdit == true
+                ? "edit"
+                : (currentUtteranceRequest?.isAIQuestion == true ? "aiQuestion" : "dictation"),
+            "keyboardPhase": String(describing: state.phase)
+        ]
     }
 
     private func traceState(_ event: String, extra: String? = nil) {

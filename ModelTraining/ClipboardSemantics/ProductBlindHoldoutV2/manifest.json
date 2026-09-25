@@ -1,0 +1,148 @@
+{
+  "artifacts": {
+    "reviewQueueSHA256": "657e3a6696b9ec907e6983b045f240897a3de5035e717ae6a9774d149b98ec3e",
+    "sealedProvenanceSHA256": "25421ba7db52a97b0f72283d0f165670c3701aad74e981c7ac36a5fa5dc3dba7"
+  },
+  "authoringRequired": 699,
+  "cells": {
+    "en:blessing": 3,
+    "en:complaint": 50,
+    "en:confirmationDecision": 12,
+    "en:followUpReminder": 50,
+    "en:invitation": 50,
+    "en:noWeakIntent": 120,
+    "en:question": 120,
+    "en:replyableOnly": 120,
+    "en:scheduleNegotiation": 50,
+    "en:task": 50,
+    "zh-Hans:complaint": 50,
+    "zh-Hans:followUpReminder": 2,
+    "zh-Hans:question": 12,
+    "zh-Hans:replyableOnly": 4,
+    "zh-Hans:task": 28
+  },
+  "clipboardShapeFilter": {
+    "excludedFamilyPrefixes": [
+      "online_cped_",
+      "online_goemotions_"
+    ],
+    "maximumCharacters": 1500,
+    "minimumCharacters": 25
+  },
+  "design": "Single-stage stratified sample. Each record belongs to exactly one (language, stratum) cell; divide by inclusionProbability for prevalence-corrected Horvitz-Thompson metrics.",
+  "humanReviewComplete": false,
+  "languages": {
+    "en": 625,
+    "zh-Hans": 96
+  },
+  "policy": "Evaluation-only stratified queue drawn from real licensed text. Weak source labels are stratification input only and are never gold. Never merge these records into training.",
+  "poolRecords": 6939,
+  "records": 721,
+  "rejected": {
+    "duplicateText": 93,
+    "lengthOutsideClipboardShape": 3896,
+    "notRealClipboardShapedSource": 30467
+  },
+  "schemaVersion": 1,
+  "seed": 20260902,
+  "sources": [
+    "ModelTraining/ClipboardSemantics/comprehensive-online-holdout-corpus.jsonl",
+    "ModelTraining/ClipboardSemantics/online-real-holdout-corpus.jsonl"
+  ],
+  "status": "awaiting-double-human-annotation",
+  "unfilledCells": [
+    {
+      "available": 3,
+      "language": "en",
+      "mustAuthor": 47,
+      "selected": 3,
+      "stratum": "blessing",
+      "target": 50
+    },
+    {
+      "available": 12,
+      "language": "en",
+      "mustAuthor": 38,
+      "selected": 12,
+      "stratum": "confirmationDecision",
+      "target": 50
+    },
+    {
+      "available": 0,
+      "language": "zh-Hans",
+      "mustAuthor": 50,
+      "selected": 0,
+      "stratum": "blessing",
+      "target": 50
+    },
+    {
+      "available": 0,
+      "language": "zh-Hans",
+      "mustAuthor": 50,
+      "selected": 0,
+      "stratum": "confirmationDecision",
+      "target": 50
+    },
+    {
+      "available": 0,
+      "language": "zh-Hans",
+      "mustAuthor": 50,
+      "selected": 0,
+      "stratum": "scheduleNegotiation",
+      "target": 50
+    },
+    {
+      "available": 0,
+      "language": "zh-Hans",
+      "mustAuthor": 50,
+      "selected": 0,
+      "stratum": "invitation",
+      "target": 50
+    },
+    {
+      "available": 2,
+      "language": "zh-Hans",
+      "mustAuthor": 48,
+      "selected": 2,
+      "stratum": "followUpReminder",
+      "target": 50
+    },
+    {
+      "available": 28,
+      "language": "zh-Hans",
+      "mustAuthor": 22,
+      "selected": 28,
+      "stratum": "task",
+      "target": 50
+    },
+    {
+      "available": 12,
+      "language": "zh-Hans",
+      "mustAuthor": 108,
+      "selected": 12,
+      "stratum": "question",
+      "target": 120
+    },
+    {
+      "available": 4,
+      "language": "zh-Hans",
+      "mustAuthor": 116,
+      "selected": 4,
+      "stratum": "replyableOnly",
+      "target": 120
+    },
+    {
+      "available": 0,
+      "language": "zh-Hans",
+      "mustAuthor": 120,
+      "selected": 0,
+      "stratum": "noWeakIntent",
+      "target": 120
+    }
+  ],
+  "validation": {
+    "configuredTrainingOverlap": 0,
+    "containsDetectedPII": false,
+    "duplicateNormalizedTexts": 0
+  }
+}

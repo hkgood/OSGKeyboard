@@ -16,7 +16,7 @@ struct OpenSourceLicensesView: View {
     var body: some View {
         ScrollView {
             CardPageContent(spacing: SettingsListMetrics.sectionLabelSpacing) {
-                Text("settings.licenses.footer")
+                Text(AppL10n.string("settings.licenses.footer"))
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -40,7 +40,7 @@ struct OpenSourceLicensesView: View {
             }
         }
         .background(palette.background.ignoresSafeArea())
-        .navigationTitle("settings.licenses.title")
+        .navigationTitle(AppL10n.string("settings.licenses.title"))
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -56,7 +56,7 @@ struct OpenSourceLicensesView: View {
                 .font(TypeStyle.caption2)
                 .foregroundStyle(palette.textTertiary)
             Image(systemName: "chevron.right")
-                .font(.system(size: 11, weight: .semibold))
+                .font(TypeStyle.caption2.weight(.semibold))
                 .foregroundStyle(palette.textTertiary)
         }
         .settingsListRow()
