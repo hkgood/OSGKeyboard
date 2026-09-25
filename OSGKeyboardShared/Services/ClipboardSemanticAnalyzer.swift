@@ -328,6 +328,10 @@ public actor ClipboardSemanticAnalyzer {
     }
 
     public func analyze(_ sourceText: String) -> ClipboardSemanticAnalysis {
+        #if DEBUG
+        MemoryDeviceProbe.log("semantic.analyze.begin")
+        defer { MemoryDeviceProbe.log("semantic.analyze.end") }
+        #endif
         let text = sourceText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else {
             return emptyAnalysis()
@@ -1058,6 +1062,9 @@ public actor ClipboardSemanticAnalyzer {
         }
         let entry = ModelEntry(configuration: configuration, model: model)
         models[id] = entry
+        #if DEBUG
+        MemoryDeviceProbe.log("nlmodel.loaded.\(id)")
+        #endif
         return entry
     }
 
@@ -1129,6 +1136,9 @@ public actor ClipboardSemanticAnalyzer {
         }
         let entry = VerifierEntry(configuration: configuration, model: model)
         verifierModels[id] = entry
+        #if DEBUG
+        MemoryDeviceProbe.log("nlmodel.verifier.loaded.\(id)")
+        #endif
         return entry
     }
 

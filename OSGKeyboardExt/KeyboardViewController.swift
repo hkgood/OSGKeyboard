@@ -51,6 +51,8 @@ public final class KeyboardViewController: UIInputViewController {
     /// it to tell "the user is mid-sentence" from "the typing surface is merely
     /// on screen" — see `isMidTypingBurst`.
     private var lastTypingActivityUptime: TimeInterval = -1
+    /// Reentrancy guard for `shedHeavyResources` — see the comment there.
+    private var isSheddingHeavyResources = false
 
     private var hosting: UIHostingController<KeyboardSurfaceRoot>?
     private var keyboardHeightConstraint: NSLayoutConstraint?
@@ -69,9 +71,6 @@ public final class KeyboardViewController: UIInputViewController {
     private var cancellables = Set<AnyCancellable>()
     /// Coalesces host-document refreshes after mutations issued by this keyboard.
     private var assistantFieldActionRefreshTask: Task<Void, Never>?
-    /// One random ID per keyboard presentation. The repository splits this ID
-    /// into independent UTC-day fragments when a presentation crosses midnight.
-    private var keyboardUsageSessionID = UUID()
     /// UIKit can reuse this controller across host apps. Keep document-scoped
     /// candidate state separate from the heavy typing-engine lifetime.
     private var isKeyboardPresentationActive = false
@@ -205,9 +204,13 @@ public final class KeyboardViewController: UIInputViewController {
         flowCoordinator.refreshSessionState()
         // Installed last: the handler tears down surfaces, so it must not be
         // reachable until the whole controller is wired up.
-        KeyboardExtensionMemoryTelemetry.reliefHandler = { [weak self] level in
-            self?.shedHeavyResources(level: level, reason: "budget") ?? false
-        }
+        //
+        // 临时停用主动内存降级（"自杀"逻辑）：真机实测语音界面正常工作就要
+        // 68-88 MB，远超 48 MiB critical，且诊断里没有任何纯内存 jetsam 记录——
+        // 这套阈值一直在防一个不会发生的杀，代价是跳语音和 Rime 反复拆建。
+        // 内存遥测的采样/记录保留（供后续压力测试校准阈值）；系统真正的内存警告
+        // didReceiveMemoryWarning 仍保留作兜底。量出真实 jetsam 上限后再恢复。
+        KeyboardExtensionMemoryTelemetry.reliefHandler = nil
         recordMemory(
             "KVC.viewDidLoad.done",
             details: "sessionActive=\(FlowSessionBridge.isSessionActive() ? 1 : 0) "
@@ -226,7 +229,6 @@ public final class KeyboardViewController: UIInputViewController {
         isKeyboardPresentationActive = false
         typingDocumentPresentationID = nil
         typingSessionStorage?.endDocumentPresentation()
-        AnalyticsExtensionService.shared.keyboardWillDisappear()
         assistantFieldActionRefreshTask?.cancel()
         assistantFieldActionRefreshTask = nil
         clipboardCapture?.keyboardWillDisappear()
@@ -335,10 +337,6 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        keyboardUsageSessionID = UUID()
-        AnalyticsExtensionService.shared.recordPresentation(
-            hasFullAccess: hasFullAccess
-        )
         OSGDiag.log(
             "KVC.viewDidAppear begin surface=\(state.surface.rawValue) \(OSGDiag.memoryTag())",
             category: "boot"
@@ -460,6 +458,17 @@ public final class KeyboardViewController: UIInputViewController {
         // Relief can be requested from the boot sampler before `installServices`
         // has run; nothing below is safe to touch until the view is loaded.
         guard isViewLoaded, flowCoordinator != nil else { return false }
+        // Every step below records a memory milestone, and a milestone can ask
+        // for relief. Telemetry gates that loop on its side; this guard also
+        // covers `didReceiveMemoryWarning`, which calls in directly without
+        // going through the sampler. Reporting `false` keeps the level armed so
+        // the outer shed's outcome decides the episode.
+        guard !isSheddingHeavyResources else { return false }
+        isSheddingHeavyResources = true
+        defer { isSheddingHeavyResources = false }
+        #if DEBUG
+        MemoryDeviceProbe.log("shed.\(level.rawValue).reason=\(reason).surface=\(state.surface.rawValue).midBurst=\(isMidTypingBurst ? 1 : 0)")
+        #endif
         OSGDiag.log(
             "KVC.shed level=\(level.rawValue) reason=\(reason) "
                 + "surface=\(state.surface.rawValue) \(OSGDiag.memoryTag())",
@@ -816,6 +825,9 @@ public final class KeyboardViewController: UIInputViewController {
             category: "boot"
         )
         state.surface = surface
+        #if DEBUG
+        MemoryDeviceProbe.log("applySurface.\(surface.rawValue)")
+        #endif
         recordMemory("KVC.applySurface", details: "requested=\(surface.rawValue)")
         if surface == .typing {
             activateTypingPresentationIfNeeded()
@@ -969,19 +981,14 @@ public final class KeyboardViewController: UIInputViewController {
     /// echo this keyboard's own document mutation through `textDidChange`.
     private func insertTextIntoDocument(
         _ text: String,
-        source: KeyboardTextInsertionSource
+        source _: KeyboardTextInsertionSource
     ) {
         guard !text.isEmpty else { return }
         lastTypingActivityUptime = ProcessInfo.processInfo.systemUptime
         textDocumentProxy.insertText(text)
-        if source.contributesToKeyboardUsage {
-            let counts = KeyboardUsageCharacterClassifier.classify(text)
-            AnalyticsExtensionService.shared.keyboardUsageRecorder
-                .recordManualKeyboardCounts(
-                    counts,
-                    sessionID: keyboardUsageSessionID
-                )
-        }
+        // Usage analytics stay in the host app. Recording SQLite from this
+        // process held WAL locks across keyboard hide and triggered
+        // RunningBoard `0xdead10cc` kills.
         // A non-empty insertion makes content actions available immediately.
         // The next host callback remains the authoritative correction.
         refreshAssistantFieldAction(hasTextOverride: true)

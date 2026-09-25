@@ -3,6 +3,7 @@
 //
 // Pure rules for accepting clipboard text and simple English/whitespace tokens.
 
+import CryptoKit
 import Foundation
 
 public enum ClipboardHistoryPolicy: Sendable {
@@ -297,5 +298,21 @@ public enum ClipboardHistoryPolicy: Sendable {
         now: Date = Date()
     ) -> Bool {
         now.timeIntervalSince(entry.createdAt) <= aiHintEligibilitySeconds
+    }
+
+    /// Stable content fingerprint for deduping auto triggers across pasteboard
+    /// generations. SHA-256 because `String.hashValue` is per-process randomized.
+    public static func contentFingerprint(for text: String) -> String {
+        SHA256.hash(data: Data(text.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
+    }
+
+    /// Whether an action fired at `firedAt` still suppresses an identical repeat
+    /// at `now`. Universal Clipboard re-announces one copy under several
+    /// changeCounts within seconds; a deliberate re-copy after the window may
+    /// fire again.
+    public static func isRepeatSuppressed(firedAt: Date, now: Date = Date()) -> Bool {
+        now.timeIntervalSince(firedAt) <= aiHintEligibilitySeconds
     }
 }

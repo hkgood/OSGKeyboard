@@ -57,6 +57,9 @@ public enum KeyboardExtensionMemoryTelemetry {
     /// Highest level already relieved in the current pressure episode. Reset only
     /// when the footprint falls back below `warningMB` — see `requestReliefIfNeeded`.
     private static var lastReliefLevel = KeyboardExtensionMemoryBudget.Level.normal
+    /// True while `reliefHandler` is running, so relief can never be requested
+    /// from inside relief — see `requestReliefIfNeeded`.
+    private static var isRelieving = false
 
     /// Poll interval once the startup burst is over. Sustained sampling is what
     /// catches growth *between* milestones (a long clipboard session, a big
@@ -177,6 +180,9 @@ public enum KeyboardExtensionMemoryTelemetry {
         if crossedLevel {
             highestLevel = level
         }
+        #if DEBUG
+        MemoryDeviceProbe.log("emit.\(stage).\(level.rawValue)")
+        #endif
         // Shed BEFORE logging: at `.critical` we are ~12 MiB from the observed
         // jetsam boundary and the log line is the less important half.
         requestReliefIfNeeded(level: level, stage: stage)
@@ -234,11 +240,26 @@ public enum KeyboardExtensionMemoryTelemetry {
         }
         guard level == .high || level == .critical, let handler = reliefHandler else { return }
         guard levelRank(level) > levelRank(lastReliefLevel) else { return }
+        // Shedding records a milestone at every teardown step, and recording
+        // samples the footprint again — which asks the same handler to shed
+        // from inside itself. `lastReliefLevel` cannot stop that, because it is
+        // only assigned once the handler returns. The nesting is unbounded and
+        // overflowed the main thread's stack instead of relieving anything.
+        guard !isRelieving else { return }
+        #if DEBUG
+        MemoryDeviceProbe.log("relief.fire.\(level.rawValue).\(stage)")
+        #endif
         OSGDiag.log(
             "extMemory relief level=\(level.rawValue) stage=\(stage) \(OSGDiag.memoryTag())",
             category: "memory"
         )
-        guard handler(level) else {
+        isRelieving = true
+        let relieved = handler(level)
+        isRelieving = false
+        #if DEBUG
+        MemoryDeviceProbe.log("relief.done.\(level.rawValue).relieved=\(relieved ? 1 : 0)")
+        #endif
+        guard relieved else {
             OSGDiag.log(
                 "extMemory relief declined level=\(level.rawValue) stage=\(stage)",
                 category: "memory"
@@ -274,3 +295,55 @@ public enum KeyboardExtensionMemoryTelemetry {
         }
     }
 }
+
+#if DEBUG
+/// DEBUG-only device probe. `log stream --device` is unavailable on this Mac and
+/// tool-hosted tests can't run on a physical device, so the extension's real
+/// jetsam footprint can't be read from the console. Instead we append every
+/// memory sample to an App Group file and pull it back to the Mac:
+///
+/// ```
+/// xcrun devicectl device copy from --device <udid> \
+///   --domain-type appGroupDataContainer \
+///   --domain-identifier group.com.osgkeyboard.shared \
+///   --source memory-probe.log --destination /tmp/
+/// ```
+///
+/// Each line: `<uptime>s <tag> foot=<MB> rss=<MB>`. Temporary — remove once the
+/// footprint budget is re-baselined.
+public enum MemoryDeviceProbe {
+    public static let fileName = "memory-probe.log"
+
+    /// devicectl can only pull from the container's Library/Documents/tmp, so
+    /// the probe lives under Library rather than the container root.
+    private static var fileURL: URL? {
+        guard let base = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: AppGroup.identifier)?
+            .appendingPathComponent("Library", isDirectory: true)
+        else { return nil }
+        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        return base.appendingPathComponent(fileName, isDirectory: false)
+    }
+
+    /// Appends one sample. Cheap enough for a short DEBUG run; not for shipping.
+    public static func log(_ tag: String) {
+        guard let url = fileURL else { return }
+        let snap = OSGDiag.memorySnapshot()
+        let line = String(
+            format: "%.2f %@ foot=%.1f rss=%.1f\n",
+            ProcessInfo.processInfo.systemUptime,
+            tag,
+            snap.physFootprintMB,
+            snap.rssMB
+        )
+        guard let data = line.data(using: .utf8) else { return }
+        if let handle = try? FileHandle(forWritingTo: url) {
+            handle.seekToEndOfFile()
+            handle.write(data)
+            try? handle.close()
+        } else {
+            try? data.write(to: url, options: .atomic)
+        }
+    }
+}
+#endif

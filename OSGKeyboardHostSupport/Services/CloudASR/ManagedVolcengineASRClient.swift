@@ -155,6 +155,22 @@ private struct URLSessionManagedASRWebSocketFactory: ManagedASRWebSocketFactory 
     }
 }
 
+/// Once-only gate for callback APIs that may invoke their handler more than
+/// once (see `ping()`). The first `claim()` returns true; later calls return
+/// false so the wrapped continuation is resumed exactly once.
+private final class ResumeOnceGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var claimed = false
+
+    func claim() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        if claimed { return false }
+        claimed = true
+        return true
+    }
+}
+
 private final class URLSessionManagedASRWebSocket: ManagedASRWebSocket, @unchecked Sendable {
     private let task: URLSessionWebSocketTask
 
@@ -167,8 +183,14 @@ private final class URLSessionManagedASRWebSocket: ManagedASRWebSocket, @uncheck
     }
 
     func ping() async throws {
+        // `URLSessionWebSocketTask.sendPing` can invoke its handler twice when
+        // the task is cancelled with a ping in flight (cancel path + pong
+        // timeout path). Resuming a CheckedContinuation twice traps (SIGTRAP),
+        // so the handler is funneled through a once-only gate.
+        let gate = ResumeOnceGate()
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             task.sendPing { error in
+                guard gate.claim() else { return }
                 if let error {
                     continuation.resume(throwing: error)
                 } else {

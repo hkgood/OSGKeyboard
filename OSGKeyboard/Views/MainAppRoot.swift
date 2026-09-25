@@ -391,6 +391,13 @@ struct MainAppRoot: View {
     /// Starts foreground-only services once per active transition. Rime yields
     /// the first frame; Flow and CLM keep their existing lazy-heavy-work rules.
     private func activateForegroundServices(reason: String) {
+        // Clipboard history is a whole-array blob shared with the keyboard, and
+        // a suspended app receives no Darwin notifications — so everything the
+        // keyboard captured or deleted while we were backgrounded is visible
+        // only after this reload. Skipping it leaves every host view holding a
+        // stale array that silently reverts those writes on its next delete.
+        ClipboardHistoryStore.shared.startObservingCrossProcessChanges()
+        ClipboardHistoryStore.shared.reload()
         scheduleRimeDeployment(reason: reason)
         // Automatically arm the low-profile PiP on every host open.
         // Capture/ASR remain lazy and start only on an actual mic press.

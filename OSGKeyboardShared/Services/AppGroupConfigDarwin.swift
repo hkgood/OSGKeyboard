@@ -20,3 +20,27 @@ public enum AppGroupConfigDarwin {
         )
     }
 }
+
+/// Cross-process Darwin notification for clipboard-history writes.
+///
+/// History is one whole-array JSON blob under a single key, so a peer holding a
+/// stale in-memory copy silently reverts the other side's deletes (and drops
+/// its new entries) on its next write. Every other shared surface already has a
+/// notification; this one did not.
+///
+/// A suspended process never receives Darwin notifications, so this covers only
+/// the window where both processes are alive. The host must still reload when it
+/// returns to the foreground.
+public enum ClipboardHistoryDarwin {
+    public static let notificationName = "com.osgkeyboard.clipboard.history.changed"
+
+    public static func postHistoryChanged() {
+        CFNotificationCenterPostNotification(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            CFNotificationName(notificationName as CFString),
+            nil,
+            nil,
+            true
+        )
+    }
+}

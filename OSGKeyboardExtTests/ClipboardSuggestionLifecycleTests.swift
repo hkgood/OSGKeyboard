@@ -188,6 +188,47 @@ final class ClipboardSuggestionLifecycleTests: XCTestCase {
         XCTAssertNil(state.clipboardSuggestionText)
     }
 
+    func testSameTextUnderNewChangeCountIsSwallowedAsSameLogicalCopy() {
+        copy("meeting at 3pm")
+        coordinator.captureIfNeeded()
+        let firstEntry = history.newestEntry
+
+        // Universal Clipboard re-announce: same text, new changeCount.
+        pasteboard.setText("meeting at 3pm", changeCount: 12)
+        coordinator.captureIfNeeded()
+
+        XCTAssertEqual(history.entries.count, 1)
+        XCTAssertEqual(history.newestEntry?.id, firstEntry?.id)
+        XCTAssertEqual(history.newestEntry?.createdAt, firstEntry?.createdAt)
+        XCTAssertEqual(history.lastObservedChangeCount, 12)
+        XCTAssertEqual(state.clipboardSuggestionText, "meeting at 3pm")
+    }
+
+    func testRecopyAfterDifferentContentCreatesNewGeneration() {
+        copy("first message")
+        coordinator.captureIfNeeded()
+        copy("second message")
+        coordinator.captureIfNeeded()
+
+        copy("first message")
+        coordinator.captureIfNeeded()
+
+        XCTAssertEqual(history.entries.map(\.text), ["first message", "second message"])
+        XCTAssertEqual(state.clipboardSuggestionText, "first message")
+    }
+
+    func testDismissedSuggestionStaysHiddenAcrossUniversalClipboardResync() {
+        copy("dismiss me")
+        coordinator.captureIfNeeded()
+        coordinator.dismissSuggestion()
+
+        pasteboard.setText("dismiss me", changeCount: 12)
+        coordinator.captureIfNeeded()
+
+        XCTAssertNil(state.clipboardSuggestionText)
+        XCTAssertEqual(history.entries.count, 1)
+    }
+
     private func copy(_ text: String) {
         pasteboard.setText(text, changeCount: pasteboard.changeCount + 1)
     }

@@ -312,6 +312,9 @@ public struct AnalyticsRuntime: Sendable {
 
     /// Main-app runtime. A bearer provider may be supplied by host-only account
     /// code without making the shared framework depend on that code.
+    /// Production keyboard-extension processes must not construct this runtime
+    /// (or any other SQLite-backed analytics client): an open WAL connection is
+    /// killed as RunningBoard `0xdead10cc` when the keyboard hides.
     public static func mainApp(
         environment: AnalyticsEnvironment,
         repositoryConfiguration: AnalyticsRepositoryConfiguration = .appGroupDefault(),
@@ -332,36 +335,6 @@ public struct AnalyticsRuntime: Sendable {
             uploadConfiguration: uploadConfiguration,
             network: network,
             bearerProvider: bearerProvider,
-            wallClock: wallClock,
-            monotonicClock: monotonicClock,
-            uuidGenerator: uuidGenerator,
-            random: random,
-            trigger: trigger,
-            logger: logger
-        )
-    }
-
-    /// Keyboard-extension runtime. This factory intentionally has no bearer
-    /// parameter, so extension uploads are anonymous by construction.
-    public static func keyboardExtension(
-        environment: AnalyticsEnvironment,
-        repositoryConfiguration: AnalyticsRepositoryConfiguration = .appGroupDefault(),
-        uploadConfiguration: AnalyticsUploadConfiguration,
-        network: any AnalyticsNetworking = URLSessionAnalyticsNetwork(),
-        wallClock: any AnalyticsWallClock = SystemAnalyticsWallClock(),
-        monotonicClock: any AnalyticsMonotonicClock = SystemAnalyticsMonotonicClock(),
-        uuidGenerator: any AnalyticsUUIDGenerating = SystemAnalyticsUUIDGenerator(),
-        random: any AnalyticsRandomGenerating = SystemAnalyticsRandomGenerator(),
-        trigger: any AnalyticsUploadTriggering = NoopAnalyticsUploadTrigger(),
-        logger: any AnalyticsLogging = NoopAnalyticsLogger()
-    ) -> Self {
-        Self(
-            surface: .keyboard,
-            environment: environment,
-            repositoryConfiguration: repositoryConfiguration,
-            uploadConfiguration: uploadConfiguration,
-            network: network,
-            bearerProvider: nil,
             wallClock: wallClock,
             monotonicClock: monotonicClock,
             uuidGenerator: uuidGenerator,

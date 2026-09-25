@@ -126,4 +126,33 @@ final class ClipboardHistoryPolicyTests: XCTestCase {
         )
         XCTAssertEqual(tokens, ["great", "experience", "he", "writes"])
     }
+
+    func testContentFingerprintIsStableAndTextSensitive() {
+        let first = ClipboardHistoryPolicy.contentFingerprint(for: "same message")
+        let second = ClipboardHistoryPolicy.contentFingerprint(for: "same message")
+        let other = ClipboardHistoryPolicy.contentFingerprint(for: "same message!")
+        XCTAssertEqual(first, second)
+        XCTAssertEqual(first.count, 64)
+        XCTAssertNotEqual(first, other)
+    }
+
+    func testRepeatSuppressionEndsAfterHintWindow() {
+        let firedAt = Date()
+        XCTAssertTrue(
+            ClipboardHistoryPolicy.isRepeatSuppressed(
+                firedAt: firedAt,
+                now: firedAt.addingTimeInterval(
+                    ClipboardHistoryPolicy.aiHintEligibilitySeconds - 1
+                )
+            )
+        )
+        XCTAssertFalse(
+            ClipboardHistoryPolicy.isRepeatSuppressed(
+                firedAt: firedAt,
+                now: firedAt.addingTimeInterval(
+                    ClipboardHistoryPolicy.aiHintEligibilitySeconds + 1
+                )
+            )
+        )
+    }
 }

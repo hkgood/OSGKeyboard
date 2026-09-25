@@ -288,6 +288,9 @@ public final class TypingSessionController: ObservableObject {
     /// in the document so we only clear suggestion state.
     public func setLanguage(_ newLanguage: TypingInputLanguage) -> TypingOutput {
         guard language != newLanguage else { return .none }
+        #if DEBUG
+        MemoryDeviceProbe.log("setLanguage.\(language.rawValue)->\(newLanguage.rawValue)")
+        #endif
         var output = TypingOutput.none
         if language == .chinese, !composition.preedit.isEmpty {
             let raw = engine.flushPreedit()

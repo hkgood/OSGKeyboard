@@ -20,6 +20,10 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let baseURL = "config.baseURL"
         /// Legacy plaintext slot — migrated to Keychain on first read.
         public static let apiKeyLegacy = "config.apiKey"
+        /// Marks that the one-shot legacy credential probe already ran for this
+        /// install, so steady-state `load()` never touches the Keychain.
+        public static let legacyCredentialMigrationAttempted =
+            "config.legacyCredentialMigrationAttempted"
         public static let model = "config.model"
         /// Cloud ASR provider — independent from polish `providerId`.
         public static let asrProviderId = "config.asrProviderId"
@@ -435,11 +439,21 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         }
 
         // One-shot legacy migration: plaintext apiKey in UserDefaults → Keychain.
-        _ = resolveAPIKey(
-            defaults: defaults,
-            providerId: config.providerId,
-            preferICloudSync: config.settingsICloudSyncEnabled
-        )
+        // Gated to a single eager attempt per install: the keyboard extension
+        // runs load() on every config read, and a synchronous
+        // SecItemCopyMatching inside the appear/suspend window is a
+        // RunningBoard 0xdead10cc kill vector. A deferred attempt still happens
+        // lazily via `apiKey` / `asrApiKey` on first real use, so a migration
+        // skipped here (e.g. Keychain unavailable) is not lost.
+        let hasLegacyPlaintextKey = defaults.string(forKey: Keys.apiKeyLegacy)?.isEmpty == false
+        if hasLegacyPlaintextKey || !defaults.bool(forKey: Keys.legacyCredentialMigrationAttempted) {
+            defaults.set(true, forKey: Keys.legacyCredentialMigrationAttempted)
+            _ = resolveAPIKey(
+                defaults: defaults,
+                providerId: config.providerId,
+                preferICloudSync: config.settingsICloudSyncEnabled
+            )
+        }
 
         // One-shot defaults for installs that predate explicit settings.
         // Preserve the legacy engine choice, but use the current privacy-safe

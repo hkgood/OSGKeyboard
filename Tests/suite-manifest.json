@@ -43,7 +43,7 @@
       ]
     },
     "analytics": {
-      "description": "Privacy-safe analytics schema, durable queue, uploader, identity lifecycle, and anonymous extension runtime",
+      "description": "Privacy-safe analytics schema, durable queue, uploader, and identity lifecycle",
       "platform": "ios",
       "tests": [
         "OSGKeyboardTests/AnalyticsModelTests",
@@ -54,8 +54,7 @@
         "OSGKeyboardTests/AnalyticsAIOperationTests",
         "OSGKeyboardTests/KeyboardUsageModelTests",
         "OSGKeyboardTests/KeyboardUsageRepositoryTests",
-        "OSGKeyboardTests/KeyboardUsageUploadCoordinatorTests",
-        "OSGKeyboardExtTests/AnalyticsExtensionPrivacyTests"
+        "OSGKeyboardTests/KeyboardUsageUploadCoordinatorTests"
       ]
     },
     "sync": {

@@ -66,6 +66,7 @@ final class KeyboardConfigSync {
         case .loaded:
             OSGLog.keyboardExt.info("config loaded")
             syncOnboardingStateFromAppGroup()
+            refreshCredentialsFromKeychain()
             return .loaded
         case .unavailable:
             state.phase = .error(
@@ -83,15 +84,52 @@ final class KeyboardConfigSync {
         )
         // Host may complete (or reset) onboarding while the extension stays alive.
         syncOnboardingStateFromAppGroup()
+        refreshCredentialsFromKeychain()
+    }
+
+    /// Resolves credential availability from the Keychain OFF the main actor,
+    /// then applies it to `state`. The extension's main thread never performs
+    /// a synchronous SecItemCopyMatching: one in flight while the system
+    /// suspends the keyboard is a RunningBoard 0xdead10cc kill vector.
+    /// Until the first refresh lands, `KeyboardState`'s optimistic defaults
+    /// (mic enabled, AI available) stand; a mis-gated mic corrects itself
+    /// within a beat of keyboard appear.
+    func refreshCredentialsFromKeychain() {
+        Task.detached { [weak self] in
+            guard AppGroup.isAvailable else { return }
+            let store = AppGroupStore()
+            let polishKeyMissing = store.isPolishKeyMissing
+            let cloudVoiceKeyMissing = store.isCloudAPIKeyMissingForVoiceInput
+            await MainActor.run {
+                guard let self else { return }
+                self.persistor.applyCredentialAvailability(
+                    isPolishKeyMissing: polishKeyMissing,
+                    isCloudAPIKeyMissingForVoiceInput: cloudVoiceKeyMissing,
+                    into: self.state
+                )
+            }
+        }
     }
 
     /// Mirrors host-app onboarding completion for the mic gate only.
     /// Does not sync `onboardingPage` — page flow is host-app exclusive.
     func syncOnboardingStateFromAppGroup() {
         let store = AppGroupStore()
-        // Keychain fallback: a reboot must not resurrect the mic gate when
-        // App Group transiently reads empty.
-        state.hasCompletedOnboarding = store.hasCompletedOnboarding || Keychain.hasCompletedOnboarding()
+        // Synchronous reads stay defaults-only on the main thread (0xdead10cc
+        // window). The Keychain fallback — a reboot must not resurrect the mic
+        // gate when App Group transiently reads empty — resolves asynchronously
+        // and only when the App Group value looks incomplete.
+        let appGroupCompleted = store.hasCompletedOnboarding
+        state.hasCompletedOnboarding = appGroupCompleted
+        if !appGroupCompleted {
+            Task.detached { [weak self] in
+                let keychainCompleted = Keychain.hasCompletedOnboarding()
+                await MainActor.run {
+                    guard let self, keychainCompleted else { return }
+                    self.state.hasCompletedOnboarding = true
+                }
+            }
+        }
         let practice = KeyboardSetupBridge.activeOOBEPracticeSession
         state.oobePracticeSession = practice
         state.isOnboardingPracticeActive = practice != nil

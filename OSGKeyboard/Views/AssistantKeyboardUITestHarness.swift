@@ -65,6 +65,9 @@ struct AssistantKeyboardUITestHarness: View {
             }
             .onAppear {
                 configure(width: proxy.size.width)
+                #if DEBUG
+                startVoiceMemorySampling()
+                #endif
             }
             .onChange(of: proxy.size.width) { _, width in
                 configureLayout(width: width)
@@ -82,6 +85,22 @@ struct AssistantKeyboardUITestHarness: View {
     private var backgroundColor: Color {
         colorScheme == .dark ? Palette.dark.background : Palette.light.background
     }
+
+    #if DEBUG
+    /// DEBUG-only: samples the host process footprint while the voice surface
+    /// renders, so the Liquid Glass cost can be read off the simulator's App
+    /// Group container directly (no device log capture needed).
+    private func startVoiceMemorySampling() {
+        MemoryDeviceProbe.log("harness.voice.beforeRender")
+        Task { @MainActor in
+            for i in 0..<25 {
+                try? await Task.sleep(for: .milliseconds(200))
+                MemoryDeviceProbe.log("harness.voice.t\(i)")
+            }
+            MemoryDeviceProbe.log("harness.voice.done")
+        }
+    }
+    #endif
 
     private func configure(width: CGFloat) {
         configureLayout(width: width)

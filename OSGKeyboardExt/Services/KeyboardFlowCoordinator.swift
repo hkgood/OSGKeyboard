@@ -170,6 +170,9 @@ final class KeyboardFlowCoordinator {
     /// the user returns from startflow and taps the Voice tab — height/appear
     /// noise used to call this again while `ready` briefly lagged).
     func ensurePiPReadyOnKeyboardOpen() {
+        #if DEBUG
+        MemoryDeviceProbe.log("pip.ensure.entry")
+        #endif
         guard FlowHandoffPolicy.allowsProactiveHostAutoLaunch,
               voiceSetupReady,
               hasFullAccess(),
@@ -198,6 +201,9 @@ final class KeyboardFlowCoordinator {
 
         FlowSessionBridge.markPiPArmAttempt()
         detectAndStoreAppContext()
+        #if DEBUG
+        MemoryDeviceProbe.log("pip.arm.beginFlowStart")
+        #endif
         beginFlowStart(recordAfterHandoff: false)
         traceState("keyboardOpen.autoArmPiP")
     }

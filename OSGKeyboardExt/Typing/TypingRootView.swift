@@ -360,6 +360,9 @@ struct TypingRootView: View {
             .padding(.trailing, Spacing.xs)
         }
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        // iOS 26+ 默认给 ScrollView 加边缘效果（soft = 渐进模糊+压暗），在键盘
+        // 顶栏会把候选文字整段糊掉（顶部更糊、底部较清）。候选条不需要它。
+        .scrollEdgeEffectHidden()
     }
 
     /// Opaque chip like the translation control so ▼ never shares pixels with text.

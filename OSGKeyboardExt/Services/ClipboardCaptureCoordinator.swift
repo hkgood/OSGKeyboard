@@ -65,6 +65,9 @@ final class ClipboardCaptureCoordinator {
         self.history = history
         self.semanticRanking = semanticRanking
         self.pasteboard = pasteboard
+        // The host can delete or clear history while this extension is alive;
+        // without this the next capture writes our stale array back and undoes it.
+        history.startObservingCrossProcessChanges()
         snapshotObserver = semanticRanking.$snapshot
             .sink { [weak self] snapshot in
                 // `@Published` fires in willSet, so the store's property is not
@@ -267,12 +270,11 @@ final class ClipboardCaptureCoordinator {
             return
         }
 
-        // A new generation replaces any previous transient suggestion,
-        // including generations that contain no acceptable text.
-        clearSuggestion()
-
         // Prefer hasStrings peek before reading body (reduces empty reads).
         guard pasteboard.hasStrings else {
+            // A new generation replaces any previous transient suggestion,
+            // including generations that contain no acceptable text.
+            clearSuggestion()
             semanticRanking.clear()
             history.lastObservedChangeCount = changeCount
             return
@@ -284,6 +286,17 @@ final class ClipboardCaptureCoordinator {
         if isCurrentGeneration {
             return
         }
+        // Universal Clipboard re-announces one copy under several changeCounts.
+        // Text identical to the newest entry is the same logical copy: update
+        // bookkeeping only — re-ingesting would refresh the entry's createdAt
+        // and keep the AI-hint window (and auto triggers) alive indefinitely.
+        if let text = ClipboardHistoryPolicy.acceptedText(from: raw),
+           text == history.newestEntry?.text {
+            history.lastObservedChangeCount = changeCount
+            return
+        }
+        // A genuinely new generation replaces any previous transient suggestion.
+        clearSuggestion()
         semanticRanking.clear()
         if let entry = history.ingest(rawText: raw, changeCount: changeCount) {
             semanticRanking.analyze(entry)
@@ -344,6 +357,20 @@ final class ClipboardCaptureCoordinator {
         }
         secureFieldSuppressedChangeCount = nil
         let isCurrentGeneration = changeCount == history.lastObservedChangeCount
+
+        // Universal Clipboard re-announces one copy under several changeCounts.
+        // Text identical to the newest entry is the same logical copy: update
+        // bookkeeping only — re-ingesting would refresh the entry's createdAt
+        // and keep the AI-hint window (and auto triggers) alive indefinitely.
+        if let text = ClipboardHistoryPolicy.acceptedText(from: sample.text),
+           text == history.newestEntry?.text {
+            history.lastObservedChangeCount = changeCount
+            KeyboardExtensionMemoryTelemetry.record(
+                "clipboard.swallowDuplicate",
+                details: "changeCount=\(changeCount)"
+            )
+            return
+        }
 
         // A new generation replaces any previous transient suggestion,
         // including generations that contain no acceptable text.
@@ -428,6 +455,10 @@ final class ClipboardCaptureCoordinator {
         }
         // One auto action per copy, even across keyboard close/reopen.
         guard history.lastAutoRepliedChangeCount != changeCount else { return }
+        // Universal Clipboard re-announces one copy under several changeCounts,
+        // each a fresh "generation" here. Suppress identical content inside the
+        // window; a deliberate re-copy after it may trigger again.
+        guard !history.recentlyAutoReplied(text: newest.text) else { return }
         guard AIHintPool.isClipboardSkillWindowActive(
             clipboardHistoryEnabled: state.clipboardHistoryEnabled,
             newestClipboard: newest
@@ -450,6 +481,7 @@ final class ClipboardCaptureCoordinator {
                 AIClipboardSkillCatalog.emailReplySkill,
                 scene: nil,
                 changeCount: changeCount,
+                sourceText: newest.text,
                 readOnlyResult: true,
                 insertLabelKey: "keyboard.assistant.insertReply"
             )
@@ -459,7 +491,13 @@ final class ClipboardCaptureCoordinator {
         if state.clipboardAutoTranslateEnabled,
            ClipboardSkillSemanticRanker.isForeignLanguage(snapshot.analysis),
            let translate = catalog.first(where: { $0.id == AIClipboardSkillCatalog.translateID }) {
-            fireAutoAction(translate, scene: nil, changeCount: changeCount, readOnlyResult: true)
+            fireAutoAction(
+                translate,
+                scene: nil,
+                changeCount: changeCount,
+                sourceText: newest.text,
+                readOnlyResult: true
+            )
             return
         }
         // 3. Auto-reply for any interpersonal message worth answering — a task,
@@ -480,6 +518,7 @@ final class ClipboardCaptureCoordinator {
                     sourceText: newest.text
                 ),
                 changeCount: changeCount,
+                sourceText: newest.text,
                 readOnlyResult: false
             )
         }
@@ -491,11 +530,16 @@ final class ClipboardCaptureCoordinator {
         _ skill: AIClipboardSkill,
         scene: AIClipboardReplyScene?,
         changeCount: Int,
+        sourceText: String,
         readOnlyResult: Bool,
         insertLabelKey: String = "keyboard.assistant.insertTranslation"
     ) {
         // Mark handled before submitting so re-entrant publishes cannot double-fire.
-        history.lastAutoRepliedChangeCount = changeCount
+        history.markAutoReplied(text: sourceText, changeCount: changeCount)
+        KeyboardExtensionMemoryTelemetry.record(
+            "clipboard.autoFire",
+            details: "skill=\(skill.id) changeCount=\(changeCount)"
+        )
         // Remember the keyboard to return to once the result is used or closed:
         // the surface the user is actively on, or — when the keyboard opened
         // straight onto voice — the one they last left, so finishing never
@@ -527,6 +571,10 @@ final class ClipboardCaptureCoordinator {
     /// Only auto-present once per pasteboard generation, so dismissing the layer
     /// does not immediately resurface it for the same copy.
     private var lastGuidedChangeCount: Int?
+    /// Universal Clipboard re-announces one copy under several changeCounts, so
+    /// the content fingerprint + present time suppress those repeats too.
+    private var lastGuidedTextFingerprint: String?
+    private var lastGuidedAt: Date?
 
     /// For users who never turned auto mode on: when a freshly copied message
     /// reads as replyable, raise the clean full-keyboard guide instead of firing
@@ -548,6 +596,12 @@ final class ClipboardCaptureCoordinator {
               lastGuidedChangeCount != changeCount else {
             return
         }
+        let textFingerprint = ClipboardHistoryPolicy.contentFingerprint(for: newest.text)
+        if lastGuidedTextFingerprint == textFingerprint,
+           let lastGuidedAt,
+           ClipboardHistoryPolicy.isRepeatSuppressed(firedAt: lastGuidedAt) {
+            return
+        }
         guard AIHintPool.isClipboardSkillWindowActive(
             clipboardHistoryEnabled: state.clipboardHistoryEnabled,
             newestClipboard: newest
@@ -567,6 +621,8 @@ final class ClipboardCaptureCoordinator {
         )
         guard recommended.first?.id == AIClipboardSkillCatalog.replyID else { return }
         lastGuidedChangeCount = changeCount
+        lastGuidedTextFingerprint = textFingerprint
+        lastGuidedAt = Date()
         state.clipboardOverlay = .autoReplyGuide
     }
 
@@ -594,6 +650,7 @@ final class ClipboardCaptureCoordinator {
             reply,
             scene: scene,
             changeCount: newest.changeCount ?? history.lastObservedChangeCount,
+            sourceText: newest.text,
             readOnlyResult: false
         )
     }

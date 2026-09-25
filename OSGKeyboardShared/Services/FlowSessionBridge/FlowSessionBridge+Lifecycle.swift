@@ -68,13 +68,16 @@ extension FlowSessionBridge {
         store.removeObject(forKey: FlowSessionKeys.flowStartTransactionPayload)
         store.removeObject(forKey: FlowSessionKeys.pendingKeyboardUtteranceId)
         if let sessionId {
+            // One load per lifecycle event — each load runs defaults migrations
+            // and backfills, so loading twice here doubles that churn.
+            let config = AppGroupConfiguration.load(fromAvailable: store)
             let snapshot = FlowReadySnapshot(
                 sessionId: sessionId,
                 ready: false,
                 reason: .starting,
                 heartbeatAt: now,
-                engineMode: AppGroupConfiguration.load(fromAvailable: store).engineMode,
-                localeId: AppGroupConfiguration.load(fromAvailable: store).localeId,
+                engineMode: config.engineMode,
+                localeId: config.localeId,
                 sessionExpiresAt: nil,
                 hostGeneration: store.string(forKey: FlowSessionKeys.hostGeneration)
             )

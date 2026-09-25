@@ -505,6 +505,9 @@ struct AIKeyboardView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .scrollClipDisabled()
+                // iOS 26+ 默认的 scroll edge effect（渐进模糊）会把顶栏的
+                // 粘贴/技能胶囊糊掉——复制后这行一出现模糊就出现。
+                .scrollEdgeEffectHidden()
             } else {
                 Spacer(minLength: 0)
             }

@@ -47,7 +47,11 @@ public struct AppGroupPersistor {
         state.clipboardAutoEmailReplyEnabled = store.clipboardAutoEmailReplyEnabled
         applySkillSnapshot(store: store, into: state)
         state.keyboardHapticIntensity = store.keyboardHapticIntensity
-        applyAPIKeyAvailability(store: store, into: state)
+        // Credential availability is intentionally NOT resolved here: it needs
+        // synchronous Keychain reads, which are a RunningBoard 0xdead10cc kill
+        // vector on the extension's main thread inside the appear/suspend
+        // window. KeyboardState's optimistic defaults stand until
+        // `KeyboardConfigSync.refreshCredentialsFromKeychain()` lands.
 
         #if DEBUG
         // Log only credential availability and the base URL origin. Never put
@@ -106,7 +110,7 @@ public struct AppGroupPersistor {
         state.clipboardAutoEmailReplyEnabled = store.clipboardAutoEmailReplyEnabled
         applySkillSnapshot(store: store, into: state)
         state.keyboardHapticIntensity = store.keyboardHapticIntensity
-        applyAPIKeyAvailability(store: store, into: state)
+        // Credential availability is refreshed asynchronously — see load(into:).
     }
 
     /// Resolve once outside SwiftUI body evaluation. Assigning the complete
@@ -154,17 +158,22 @@ public struct AppGroupPersistor {
         )
     }
 
+    /// Applies a credential snapshot that was resolved OFF the main actor
+    /// (see `KeyboardConfigSync.refreshCredentialsFromKeychain`). This method
+    /// itself performs no Keychain access.
+    ///
     /// Cloud without ASR/LLM keys blocks the mic. Local ASR still works when
     /// the polish key is missing — show a soft tip above the mic instead.
-    private func applyAPIKeyAvailability(
-        store: AppGroupStore,
+    public func applyCredentialAvailability(
+        isPolishKeyMissing: Bool,
+        isCloudAPIKeyMissingForVoiceInput: Bool,
         into state: KeyboardViewController.State
     ) {
-        state.aiServiceAvailable = !store.isPolishKeyMissing
-        if store.isCloudAPIKeyMissingForVoiceInput {
+        state.aiServiceAvailable = !isPolishKeyMissing
+        if isCloudAPIKeyMissingForVoiceInput {
             state.micDisabled = true
             state.micDisabledHint = ExtL10n.string("keyboard.mic.disabled.missingApiKey")
-        } else if store.isPolishKeyMissing {
+        } else if isPolishKeyMissing {
             state.micDisabled = false
             state.micDisabledHint = ExtL10n.string("keyboard.mic.hint.missingPolishApiKey")
         } else {

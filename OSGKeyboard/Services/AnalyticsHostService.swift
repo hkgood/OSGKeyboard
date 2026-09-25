@@ -3,6 +3,8 @@
 //
 // Host-only analytics lifecycle. The shared module owns the wire contract,
 // SQLite queue and uploader; this type only connects iOS lifecycle signals.
+// The keyboard extension must never open these databases — an open WAL
+// connection survives hide and is killed as RunningBoard `0xdead10cc`.
 
 import BackgroundTasks
 import Foundation
