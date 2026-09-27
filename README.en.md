@@ -1,8 +1,8 @@
 # OSGKeyboard
 
-**Speak it. It's typed. You can also type, ask, and edit.**
+**Say it. It's typed. Speaks like you. Acts for you.**
 
-OSGKeyboard is a voice input tool for iPhone, iPad, and Mac. Its iOS keyboard combines on-device dictation, Chinese and English typing, an AI assistant, clipboard skills, and optional managed credits in one input surface. On Mac, hold Option for global dictation.
+OSGKeyboard is an AI voice keyboard for iPhone, iPad, and Mac: say it and it's typed — sounding like you wrote it, thanks to your AI voice double; copy something and it acts for you — an agentic keyboard. Its iOS keyboard combines on-device dictation, Chinese and English typing, an AI assistant, clipboard skills, and optional managed credits in one input surface. On Mac, hold Option for global dictation. On-device by default; core features need no account.
 
 <p align="center">
   <img src="download/OSG_All-1600.png" srcset="download/OSG_All-1600.png 1600w, download/OSG_All.png 13742w" alt="OSGKeyboard running on iPad, Mac, and iPhone" width="100%">
@@ -48,21 +48,28 @@ OSGKeyboard is a voice input tool for iPhone, iPad, and Mac. Its iOS keyboard co
 - Optional AI polish: nine built-in styles, custom styles, Light / Heavy playful intensity, and optional mood emoji
 - Optional post-polish translation that re-targets the polished result into your chosen language
 
-### Chinese and English typing: effortless when speaking is not convenient
+### Agentic clipboard skills: copy it, and it acts for you
+
+- Clipboard history is off by default; when enabled, it keeps up to 15 plain-text items in the device-local App Group
+- After a copy, on-device semantic analysis understands where the text should go and recommends up to five relevant actions from the complete skill catalog
+- Built-in Reply, Summarize, Translate, Tasks, Events, Notes, and navigation through Apple Maps, Amap, or Baidu Maps
+- Extract Tasks and Extract Events now write through native EventKit, with no companion Shortcut to install; Calendar uses write-only access so existing events are never read
+- Create custom skills with a name, SF Symbol, prompt, and optional iCloud Shortcut
+- Install any number of skills; manage and reorder them in the Skills tab while the keyboard dynamically shows relevant actions for the current clipboard text
+
+### Chinese and English typing: the fallback when speaking is not convenient
 
 - **Chinese**: full pinyin, Ziranma, Xiaohe, Microsoft, and Sogou double pinyin — with fuzzy pairs, abbreviation ranking, candidate paging, number selection, swipe selection, and mixed Chinese-English input
 - **English**: three-slot QuickType, a ~40k-word offline lexicon, prefix completion, autocorrect, next-word prediction, candidate undo, and sentence capitalization
 - Touch behavior: proximity correction, overlapping presses, hold-to-delete, double-space period, and system Return semantics
 - One personal dictionary participates in Chinese candidates, English suggestions, speech biasing, and polish protection
 
-### Clipboard and skills: copy, then act
+## Your AI voice double: it sounds like you wrote it
 
-- Clipboard history is off by default; when enabled, it keeps up to 15 plain-text items in the device-local App Group
-- On-device semantic analysis recommends up to five relevant actions from the complete skill catalog after a copy
-- Built-in Reply, Summarize, Translate, Tasks, Events, Notes, and navigation through Apple Maps, Amap, or Baidu Maps
-- Extract Tasks and Extract Events now write through native EventKit, with no companion Shortcut to install; Calendar uses write-only access so existing events are never read
-- Create custom skills with a name, SF Symbol, prompt, and optional iCloud Shortcut
-- Install any number of skills; manage and reorder them in the Skills tab while the keyboard dynamically shows relevant actions for the current clipboard text
+- **Learned speaking style**: unlocks after 2,500 effective dictated characters, prioritizing your recurring phrasing and explicit edits; you review everything before it is saved
+- **Personalized replies**: ordinary, formal, and playful tones one tap apart; reply and dictation preferences are learned separately, with bounded choice feedback kept only on the device
+- **Personal dictionary**: names and terms you reuse lift Chinese candidates, English suggestions, and speech recognition at once
+- Style learning and choice feedback stay on device; nothing is saved without your review
 
 ## Three service paths
 
