@@ -379,7 +379,60 @@ final class AIClipboardSkillTests: XCTestCase {
 
         XCTAssertFalse(instruction.contains("通常控制在 1～3 句"))
         XCTAssertFalse(instruction.contains("像一个普通人在和朋友"))
-        XCTAssertTrue(instruction.contains("± 20%"))
+        // The old ±20% length cap fought a formal personal style and forced a
+        // single-paraphrase that the model interpreted as "echo the source".
+        // Length now follows the user's natural voice.
+        XCTAssertFalse(instruction.contains("± 20%"))
+    }
+
+    /// "Speak as me" must tell the model to emit one plain-text rewrite, not the
+    /// Reply contract's JSON variants. Otherwise the clipboard answer gets
+    /// stuffed with raw JSON like
+    /// `{"variants":[{"kind":"ordinary",…}]}` instead of a polished text.
+    func testSpeakAsMeForbidsJsonAndVariantsOutputShape() throws {
+        let instruction = try speakAsMeInstruction(
+            style: AIClipboardReplyStyleContext(styleID: "user.learned", prompt: "偏好短句")
+        )
+
+        // Output shape contract (must be present and unambiguous).
+        XCTAssertTrue(instruction.contains("只输出"))
+        XCTAssertTrue(instruction.contains("一段"))
+        XCTAssertTrue(instruction.contains("禁止 JSON"))
+        XCTAssertTrue(instruction.contains("代码块"))
+        XCTAssertTrue(instruction.contains("不要拆成多个版本"))
+        XCTAssertTrue(instruction.contains("不要提供选项"))
+
+        // The multi-reply contract must NOT leak into speakAsMe.
+        XCTAssertFalse(instruction.contains("MULTI-REPLY OUTPUT CONTRACT"))
+        XCTAssertFalse(instruction.contains("\"variants\""))
+        XCTAssertFalse(instruction.contains("\"kind\":\"ordinary\""))
+        XCTAssertFalse(instruction.contains("\"emotion\":\"neutral\""))
+    }
+
+    /// The personal style block uses XML tags for prompt parsing. The model
+    /// occasionally mistakes the tags for output scaffolding and echoes them
+    /// back. The prompt must explicitly tell it not to.
+    func testSpeakAsMeWarnsAgainstEchoingTheStyleBlockTags() throws {
+        let instruction = try speakAsMeInstruction(
+            style: AIClipboardReplyStyleContext(styleID: "user.learned", prompt: "短句为主")
+        )
+
+        XCTAssertTrue(instruction.contains("prompt 的内部包装"))
+        XCTAssertTrue(instruction.contains("不要把它带到最终输出里"))
+    }
+
+    /// English counterpart: single plain-text rewrite, no JSON, no variants.
+    func testSpeakAsMeEnglishForbidsJsonAndVariantsOutputShape() throws {
+        let instruction = try speakAsMeInstruction(
+            style: AIClipboardReplyStyleContext(styleID: "user.learned", prompt: "short sentences"),
+            locale: "en"
+        )
+
+        XCTAssertTrue(instruction.contains("Output **one single** piece of ready-to-send text only"))
+        XCTAssertTrue(instruction.contains("Never emit JSON"))
+        XCTAssertTrue(instruction.contains("Never split the result into multiple variants"))
+        XCTAssertFalse(instruction.contains("±20%"))
+        XCTAssertFalse(instruction.contains("within ±20%"))
     }
 
     /// Rewriting is not replying: Reply deliberately omits the never-answer
