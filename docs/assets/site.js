@@ -5,7 +5,7 @@
  *   2. 深浅色主题（默认跟随系统，手动选择后持久化；支持时以圆形扩散过渡）
  *   3. 移动端导航开合、导航滑块与当前区块高亮
  *   4. 逐字拆分标题（data-split）
- *   5. 滚动引擎：进度条、Hero 设备「立起」、媒体视差、三幕滚动叙事
+ *   5. 滚动引擎：进度条、Hero 设备「立起」、媒体视差、三幕滚动叙事（真机录屏随幕切换）
  *   6. 声波渲染、Hero 语音胶囊打字机、数字计数
  *   7. 指针光斑 / 3D 倾斜 / 磁吸按钮、FAQ 高度过渡、离屏视频暂停
  * 开启「减弱动态效果」时，持续动画与指针动效全部停用，内容直接呈现最终态。
@@ -36,8 +36,10 @@
 
   const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 
-  // 语言切换后需要重算的模块（胶囊文案、叙事文案、导航滑块）在此登记
+  // 语言切换后需要重算的模块（胶囊文案、真机录屏、导航滑块）在此登记
   const languageHooks = [];
+  // 主题切换后需要换源的模块（真机录屏按深浅色各录一份）在此登记
+  const themeHooks = [];
 
   /* ---------------- 逐字拆分 ---------------- */
 
@@ -216,6 +218,8 @@
       const lang = root.dataset.lang || "zh";
       image.src = `assets/screenshots/${lang}/${resolved}/${image.dataset.shot}`;
     });
+
+    themeHooks.forEach((hook) => hook(resolved));
 
     if (persist) localStorage.setItem("osg-site-theme", resolved);
   }
@@ -484,184 +488,134 @@
 
   languageHooks.push(() => playCapsule());
 
-  /* ---------------- 键盘复刻：共用状态写入 ---------------- */
+  /* ---------------- 真机录屏：Apple 机框 + 真实键盘扩展的片段 ---------------- */
 
-  const KB_DEFAULTS = { bar: "tabs", mic: "idle", ctx: "hint", surface: "main", pick: "", undo: "0", action: "off" };
+  // 片段按「幕-语言-主题」命名，每组都录自模拟器里真实的 OSGKeyboard 扩展
+  function clipPath(video, suffix) {
+    const lang = root.dataset.lang === "en" ? "en" : "zh";
+    const theme = root.dataset.theme === "dark" ? "dark" : "light";
+    return `assets/story/${video.dataset.clip}-${lang}-${theme}${suffix}`;
+  }
 
-  // 把键盘状态写到容器的 data-* 上（只写变化的值，避免无谓的样式重算）
-  function applyKeyboardState(element, state) {
-    Object.keys(KB_DEFAULTS).forEach((key) => {
-      const value = state[key] ?? KB_DEFAULTS[key];
-      if (element.dataset[key] !== value) element.dataset[key] = value;
+  const clipVideos = Array.from(document.querySelectorAll(".iphone-clip"));
+
+  function playClip(video, restart) {
+    if (reduceMotion) return;
+    if (restart && video.readyState >= 1) video.currentTime = 0;
+    video.dataset.playing = "1";
+    video.play().catch(() => {});
+  }
+
+  function pauseClip(video) {
+    video.dataset.playing = "0";
+    video.pause();
+  }
+
+  function refreshClipSources() {
+    clipVideos.forEach((video) => {
+      // 减弱动态效果：不加载视频，只显示最能说明这一幕的关键帧海报
+      if (reduceMotion) {
+        video.poster = clipPath(video, "-key.jpg");
+        return;
+      }
+      const src = clipPath(video, ".mp4");
+      if (video.getAttribute("src") === src) return;
+      const resume = video.dataset.playing === "1";
+      video.poster = clipPath(video, ".jpg");
+      video.src = src;
+      if (resume) playClip(video, false);
     });
   }
 
+  // 初始化时语言与主题会先后写入，合并成一次换源，避免同一片段加载两遍
+  let clipRefreshQueued = false;
+  function queueClipRefresh() {
+    if (clipRefreshQueued) return;
+    clipRefreshQueued = true;
+    queueMicrotask(() => {
+      clipRefreshQueued = false;
+      refreshClipSources();
+    });
+  }
+
+  languageHooks.push(queueClipRefresh);
+  themeHooks.push(queueClipRefresh);
+
   /* ---------------- 三幕滚动叙事 ---------------- */
 
-  // 与气泡文案保持一致：听写结果、选中的「普通」回复
-  const STORY_TEXT = {
-    zh: {
-      dictation: "收到了，我下午看完给你反馈。",
-      reply: "好的，我整理一下预算版，明天上午发你。"
-    },
-    en: {
-      dictation: "Got it — I’ll review it this afternoon and get back to you.",
-      reply: "Sure, I’ll put the budget version together and send it over tomorrow morning."
-    }
-  };
-
-  // 键盘时间轴（滚动进度 0 → 1），每段是完整状态，取最后一个 at ≤ p 的段
-  //   第一幕 听写：录音 → 打勾插入 → 发送
-  //   第二幕 嘴替：复制消息 → AI 思考 → 三条回复 → 点「普通」插入 → 发送
-  //   第三幕 Agentic：复制会议通知 → 顶栏技能 → 点「日程」→ 提取 → 写入日历
-  const STORY_PHASES = [
-    { at: 0 },
-    { at: 0.065, bar: "cancel", mic: "rec", ctx: "live" },
-    { at: 0.235, mic: "done", ctx: "none", undo: "1", action: "on", compose: "dictation" },
-    { at: 0.27, undo: "1", action: "on", compose: "dictation", send: true },
-    { at: 0.29 },
-    { at: 0.375, bar: "paste", mic: "busy", ctx: "think" },
-    { at: 0.44, bar: "paste", surface: "variants", ctx: "none" },
-    { at: 0.545, bar: "paste", surface: "variants", ctx: "none", pick: "0" },
-    { at: 0.575, mic: "done", ctx: "none", undo: "1", action: "on", compose: "reply" },
-    { at: 0.6, undo: "1", action: "on", compose: "reply", send: true },
-    { at: 0.62 },
-    { at: 0.715, bar: "skills", ctx: "none" },
-    { at: 0.775, bar: "skills", ctx: "extract", mic: "busy", pick: "event" },
-    { at: 0.84, ctx: "tip" },
-    { at: 0.93 }
-  ];
-
-  // 对话气泡：到达阈值即出现；复制提示只在区间内显示
-  const STORY_MESSAGES = { m1: 0.02, o1: 0.29, m2: 0.33, o2: 0.62, m3: 0.67, ev: 0.885 };
-  const STORY_COPIES = { c2: [0.36, 0.44], c3: [0.705, 0.775] };
-  const LIVE_RANGE = [0.075, 0.225];
-  const ACT_RANGES = [[0, 0.31], [0.31, 0.655], [0.655, 1]];
+  // 滚动只决定「当前是哪一幕」；画面是这一幕的真机片段，从头播放，播完停留片刻再重播
+  const ACT_RANGES = [[0, 0.34], [0.34, 0.67], [0.67, 1]];
+  const STORY_REPLAY_DELAY = 2200;
 
   const story = document.getElementById("storyStage");
-  const storyText = document.getElementById("storyText");
-  const storyLive = document.getElementById("storyLive");
   const storyActs = story ? Array.from(story.querySelectorAll(".story-act")) : [];
-  const storyWaves = story
-    ? Array.from(story.querySelectorAll(".mic-wave")).map((host) => createWave(host))
-    : [];
-  let storyLastText = null;
-  let storyLastLive = null;
-  let storyLastAct = -1;
+  const storyClips = story ? Array.from(story.querySelectorAll(".iphone-clip")) : [];
+  let storyAct = -1;
+  let storyInView = false;
+  let storyReplayTimer = 0;
 
-  function updateStory(force) {
+  function setStoryAct(act) {
+    storyAct = act;
+    clearTimeout(storyReplayTimer);
+    storyActs.forEach((element, i) => {
+      element.classList.toggle("is-active", i === act);
+      // 演完的幕进度条保持满格，还没到的幕清空；当前幕由片段播放进度驱动
+      if (i !== act || reduceMotion) element.style.setProperty("--ap", i <= act ? "1" : "0");
+    });
+    storyClips.forEach((video, i) => {
+      video.classList.toggle("is-on", i === act);
+      if (i === act && storyInView) playClip(video, true);
+      else pauseClip(video);
+    });
+  }
+
+  function updateStory() {
     if (!story) return;
     const rect = story.getBoundingClientRect();
     const viewport = innerHeight;
     const inView = rect.bottom > 0 && rect.top < viewport;
-    storyWaves.forEach((wave) => { wave.active = inView; });
-    if (!inView && !force) return;
+    const p = clamp(-rect.top / Math.max(1, story.offsetHeight - viewport));
 
-    const total = Math.max(1, story.offsetHeight - viewport);
-    const p = clamp(-rect.top / total);
-    const copy = STORY_TEXT[root.dataset.lang === "en" ? "en" : "zh"];
-
-    let phase = STORY_PHASES[0];
-    STORY_PHASES.forEach((item) => { if (p >= item.at) phase = item; });
-    applyKeyboardState(story, phase);
-    story.classList.toggle("press-send", Boolean(phase.send));
-
-    Object.entries(STORY_MESSAGES).forEach(([name, at]) => story.classList.toggle(name, p >= at));
-    Object.entries(STORY_COPIES).forEach(([name, [from, to]]) => story.classList.toggle(name, p >= from && p < to));
-
-    // 实时转写：录音阶段按滚动进度逐字出现
-    let live = "";
-    if (phase.ctx === "live") {
-      const characters = Array.from(copy.dictation);
-      const count = Math.round(clamp((p - LIVE_RANGE[0]) / (LIVE_RANGE[1] - LIVE_RANGE[0])) * characters.length);
-      live = characters.slice(0, count).join("");
-    }
-    if (storyLive && live !== storyLastLive) {
-      storyLive.textContent = live;
-      storyLastLive = live;
-    }
-
-    // 输入框：插入时整句落入（与真实插入行为一致），发送后清空
-    const text = phase.compose ? copy[phase.compose] : "";
-    if (storyText && text !== storyLastText) {
-      storyText.textContent = text;
-      if (text && !storyLastText && !reduceMotion) {
-        storyText.classList.remove("is-swapping");
-        void storyText.offsetWidth;
-        storyText.classList.add("is-swapping");
-      }
-      storyLastText = text;
-    }
-    story.classList.toggle("has-text", text.length > 0);
-
-    // 左侧三幕：高亮当前幕，幕内进度条随滚动填充
     let act = 0;
     ACT_RANGES.forEach(([start], i) => { if (p >= start) act = i; });
-    if (act !== storyLastAct) {
-      storyActs.forEach((element, i) => element.classList.toggle("is-active", i === act));
-      storyLastAct = act;
+
+    // 离开视口暂停，回来接着播
+    if (inView !== storyInView) {
+      storyInView = inView;
+      const current = storyClips[storyAct];
+      if (current) {
+        if (inView) playClip(current, false);
+        else pauseClip(current);
+      }
     }
-    storyActs.forEach((element, i) => {
-      const [start, end] = ACT_RANGES[i];
-      element.style.setProperty("--ap", clamp((p - start) / (end - start)).toFixed(3));
+    if (act !== storyAct) setStoryAct(act);
+  }
+
+  storyClips.forEach((video, i) => {
+    video.addEventListener("timeupdate", () => {
+      if (i !== storyAct || !video.duration || reduceMotion) return;
+      storyActs[i]?.style.setProperty("--ap", (video.currentTime / video.duration).toFixed(3));
     });
-
-    storyWaves.forEach((wave) => { wave.level = phase.mic === "rec" ? 1 : 0; });
-    if (inView) wakeWaves();
-  }
-
-  if (story) {
-    story.classList.add("is-live");
-    languageHooks.push(() => {
-      storyLastText = null;
-      storyLastLive = null;
-      updateStory(true);
+    video.addEventListener("ended", () => {
+      storyActs[i]?.style.setProperty("--ap", "1");
+      clearTimeout(storyReplayTimer);
+      storyReplayTimer = setTimeout(() => {
+        if (i === storyAct && storyInView) playClip(video, true);
+      }, STORY_REPLAY_DELAY);
     });
-  }
+  });
 
-  /* ---------------- 技能区循环演示 ---------------- */
+  /* ---------------- 技能区、打字区：进入视口时循环播放真机片段 ---------------- */
 
-  // 复制 → 顶栏换成技能胶囊 → 点「日程」→ 提取 → 加入日历 → 横幅确认，然后重来
-  const SKILL_DEMO_STEPS = [
-    { ms: 1300 },
-    { ms: 1900, bar: "skills", ctx: "none", copied: true },
-    { ms: 550, bar: "skills", ctx: "none", pick: "event", copied: true },
-    { ms: 1500, bar: "skills", ctx: "extract", mic: "busy", pick: "event" },
-    { ms: 1200, ctx: "tip" },
-    { ms: 2800, done: true }
-  ];
-
-  const skillsDemo = document.getElementById("skillsDemo");
-  let skillsDemoVisible = false;
-  let skillsDemoTimer = 0;
-  let skillsDemoIndex = 0;
-
-  function showSkillsStep(step) {
-    applyKeyboardState(skillsDemo, step);
-    skillsDemo.classList.toggle("is-copied", Boolean(step.copied));
-    skillsDemo.classList.toggle("is-done", Boolean(step.done));
-  }
-
-  function tickSkillsDemo() {
-    clearTimeout(skillsDemoTimer);
-    if (!skillsDemoVisible || document.hidden) return;
-    const step = SKILL_DEMO_STEPS[skillsDemoIndex];
-    showSkillsStep(step);
-    skillsDemoIndex = (skillsDemoIndex + 1) % SKILL_DEMO_STEPS.length;
-    skillsDemoTimer = setTimeout(tickSkillsDemo, step.ms);
-  }
-
-  if (skillsDemo) {
-    if (reduceMotion) {
-      // 减弱动态效果：停在「技能胶囊已出现」这一帧
-      showSkillsStep(SKILL_DEMO_STEPS[1]);
-    } else {
-      new IntersectionObserver((entries) => {
-        skillsDemoVisible = entries[0].isIntersecting;
-        tickSkillsDemo();
-      }, { threshold: 0.35 }).observe(skillsDemo);
-      document.addEventListener("visibilitychange", tickSkillsDemo);
-    }
+  const loopClips = clipVideos.filter((video) => !story || !story.contains(video));
+  if (!reduceMotion && loopClips.length && "IntersectionObserver" in window) {
+    const clipObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) playClip(entry.target, false);
+        else pauseClip(entry.target);
+      });
+    }, { threshold: 0.35 });
+    loopClips.forEach((video) => clipObserver.observe(video));
   }
 
   /* ---------------- 滚动引擎 ---------------- */

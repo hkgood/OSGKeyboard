@@ -56,23 +56,11 @@
   --dur-slow: 0.95s;
 
   /* 嵌入式手机演示的配色（随主题切换） */
-  --ph-bg: #ffffff;
-  --ph-ink: #0f1214;
-  --ph-muted: #8a939c;
-  --ph-line: rgba(15, 18, 20, 0.1);
-  --ph-in: #e9ecef;
-  --ph-out: #2c8a52;
 
   /* 键盘复刻色：取自 App 源码 ColorLibrary（brandAccent / aiTeal / recordRed）与原生键面色 */
   --kb-accent: #3aa05a;
   --kb-teal: #2bafa4;
   --kb-red: #ff3b30;
-  --ph-kb: #efeeec;
-  --ph-key: #ffffff;
-  --ph-key-ink: #1c1c1e;
-  --ph-key-off: #d6d6d6;
-  --ph-track: rgba(0, 0, 0, 0.1);
-  --ph-glass: rgba(255, 255, 255, 0.66);
 }
 
 html[data-theme="dark"] {
@@ -91,18 +79,6 @@ html[data-theme="dark"] {
   --shadow-card: 0 28px 56px -28px rgba(0, 0, 0, 0.6);
   --shadow-media: 0 32px 64px -32px rgba(0, 0, 0, 0.65);
 
-  --ph-bg: #0b0c0e;
-  --ph-ink: #f2f4f5;
-  --ph-muted: #7c858d;
-  --ph-line: rgba(255, 255, 255, 0.1);
-  --ph-in: #23262b;
-  --ph-out: #2f9a5b;
-  --ph-kb: #232324;
-  --ph-key: #525252;
-  --ph-key-ink: #ffffff;
-  --ph-key-off: #3b3b3b;
-  --ph-track: #1a1a1a;
-  --ph-glass: rgba(255, 255, 255, 0.09);
 }
 
 /* --------------------------------------------------------------------------
@@ -1032,7 +1008,7 @@ html.js .reveal.is-visible [data-split] .ch {
  * -------------------------------------------------------------------------- */
 .marquee {
   overflow: hidden;
-  padding: 20px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--line);
   background: var(--canvas);
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
@@ -1059,10 +1035,10 @@ html.js .reveal.is-visible [data-split] .ch {
 .marquee li {
   display: flex;
   align-items: center;
-  gap: 30px;
-  padding-right: 30px;
+  gap: 16px;
+  padding-right: 16px;
   color: var(--ink-3);
-  font-size: clamp(1.05rem, 1.8vw, 1.4rem);
+  font-size: clamp(0.6rem, 0.9vw, 0.72rem);
   font-weight: 650;
   letter-spacing: -0.01em;
   white-space: nowrap;
@@ -1073,8 +1049,8 @@ html.js .reveal.is-visible [data-split] .ch {
 }
 
 .marquee li::after {
-  width: 7px;
-  height: 7px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
   background: var(--accent);
   content: "";
@@ -1142,11 +1118,17 @@ h3 {
   grid-template-columns: 1.02fr 1fr;
 }
 
+/* 账号段落只保留文字，限制行宽保证可读性 */
+.account-layout .feature-copy {
+  max-width: 760px;
+}
+
 .split-layout.reverse .feature-copy {
   order: 2;
 }
 
-.split-layout.reverse .media-frame {
+.split-layout.reverse .media-frame,
+.split-layout.reverse .device-stage {
   order: 1;
 }
 
@@ -1279,9 +1261,8 @@ h3 {
 
 /* --------------------------------------------------------------------------
  * 9. 滚动叙事（三幕剧）
- * 消息类 m1/o1/m2/c2/o2/m3/c3/ev 与键盘 data-* 状态由 site.js 依滚动进度写到 .story 上；
- * 只有 .story.is-live（脚本已接管）时才进入「未发生 → 隐藏」的初始态，
- * 无 JavaScript 时手机直接展示最终画面。
+ * 滚动进度决定当前幕；手机里播放这一幕的真机录屏，幕内进度条跟随播放进度（--ap）。
+ * 无 JavaScript 时三幕文案平铺，手机停在第一幕的首帧。
  * -------------------------------------------------------------------------- */
 .story-section {
   padding-bottom: 0;
@@ -1390,9 +1371,10 @@ h3 {
   background: var(--accent);
   transform: scaleX(var(--ap, 0));
   transform-origin: left;
+  transition: transform 0.3s linear;
 }
 
-/* 舞台：手机 + 背后呼吸光晕 */
+/* 舞台：真机 + 背后呼吸光晕 */
 .story-device {
   position: relative;
   display: grid;
@@ -1407,956 +1389,73 @@ h3 {
   background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 26%, transparent), transparent);
   content: "";
   filter: blur(30px);
-  opacity: 0.55;
-  transition: opacity 0.6s ease, transform 0.8s var(--ease-out);
+  animation: device-glow 6s ease-in-out infinite;
 }
 
-.story:is([data-mic="rec"], [data-mic="busy"]) .story-device::before {
-  opacity: 1;
-  transform: scale(1.08);
-}
-
-/* 手机外壳：容器查询单位（cqw）让内部 UI 随机身等比缩放 */
-.phone {
-  --w: min(340px, calc((100svh - 150px) * 0.468));
-  position: relative;
-  width: var(--w);
-  aspect-ratio: 9 / 19.2;
-  padding: calc(var(--w) * 0.034);
-  border-radius: calc(var(--w) * 0.16);
-  background: linear-gradient(145deg, #39404a, #0d0f12 60%);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 60px 100px -40px rgba(0, 0, 0, 0.5), 0 30px 60px -30px rgba(16, 20, 24, 0.35);
-  container-type: inline-size;
-}
-
-.phone-screen {
-  position: relative;
-  display: flex;
-  overflow: hidden;
-  height: 100%;
-  flex-direction: column;
-  border-radius: 12.6cqw;
-  background: var(--ph-bg);
-  color: var(--ph-ink);
-  font-size: 4cqw;
-  line-height: 1.38;
-  text-align: left;
-}
-
-.phone-status {
-  display: flex;
-  height: 12cqw;
-  flex: none;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.6cqw 8cqw 0;
-  font-size: 3.6cqw;
-  font-weight: 650;
-}
-
-.phone-island {
-  position: absolute;
-  top: 2.8cqw;
-  left: 50%;
-  width: 27cqw;
-  height: 7.6cqw;
-  margin-left: -13.5cqw;
-  border-radius: 99px;
-  background: #000;
-}
-
-.phone-signal {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.7cqw;
-  height: 2.8cqw;
-}
-
-.phone-signal i {
-  width: 0.9cqw;
-  border-radius: 0.4cqw;
-  background: currentColor;
-}
-
-.phone-signal i:nth-child(1) { height: 40%; }
-.phone-signal i:nth-child(2) { height: 70%; }
-.phone-signal i:nth-child(3) { height: 100%; }
-
-.chat-head {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.2cqw;
-  padding: 1.2cqw 0 3cqw;
-  border-bottom: 1px solid var(--ph-line);
-}
-
-.chat-avatar {
-  display: grid;
-  width: 11cqw;
-  height: 11cqw;
-  place-items: center;
-  border-radius: 50%;
-  background: linear-gradient(145deg, #7fd0a0, #2c8a52);
-  color: #fff;
-  font-size: 4.4cqw;
-  font-weight: 700;
-}
-
-.chat-name {
-  display: grid;
-  justify-items: center;
-  line-height: 1.2;
-}
-
-.chat-name b {
-  font-size: 3.4cqw;
-  font-weight: 650;
-}
-
-.chat-name small {
-  color: var(--ph-muted);
-  font-size: 2.7cqw;
-}
-
-/* 底部对齐：新消息出现时把旧消息向上推，和真实聊天一样 */
-.chat-body {
-  display: flex;
-  overflow: hidden;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 1cqw 4.4cqw 3cqw;
-}
-
-.bubble {
-  position: relative;
-  flex: none;
-  max-width: 76%;
-  margin-top: 2.4cqw;
-  padding: 2.1cqw 3.4cqw;
-  border-radius: 5cqw;
-  font-size: 3.6cqw;
-  transition: opacity 0.35s ease, transform 0.7s var(--ease-spring), box-shadow 0.4s ease,
-    max-height 0.5s var(--ease-out), margin 0.5s var(--ease-out), padding 0.5s var(--ease-out);
-}
-
-.bubble.in {
-  align-self: flex-start;
-  border-bottom-left-radius: 1.4cqw;
-  background: var(--ph-in);
-  transform-origin: 0 100%;
-}
-
-.bubble.out {
-  align-self: flex-end;
-  border-bottom-right-radius: 1.4cqw;
-  background: var(--ph-out);
-  color: #fff;
-  transform-origin: 100% 100%;
-}
-
-/* 未出现的气泡不占位（高度收为 0），出现时弹簧放大 */
-.story.is-live .bubble {
-  max-height: 0;
-  margin-top: 0;
-  padding-block: 0;
-  opacity: 0;
-  transform: translateY(3cqw) scale(0.6);
-}
-
-.story.is-live.m1 .b-m1,
-.story.is-live.o1 .b-o1,
-.story.is-live.m2 .b-m2,
-.story.is-live.o2 .b-o2,
-.story.is-live.m3 .b-m3 {
-  max-height: 40cqw;
-  margin-top: 2.4cqw;
-  padding-block: 2.1cqw;
-  opacity: 1;
-  transform: none;
-}
-
-/* 长按复制：气泡描边高亮 + 「已复制」提示 */
-.story.c2 .b-m2,
-.story.c3 .b-m3,
-.skills-demo.is-copied .sd-msg {
-  box-shadow: 0 0 0 0.8cqw color-mix(in srgb, var(--kb-accent) 40%, transparent);
-}
-
-.copy-toast {
-  position: absolute;
-  top: -6.8cqw;
-  left: 4cqw;
-  display: flex;
-  align-items: center;
-  gap: 1cqw;
-  padding: 1.1cqw 2.6cqw;
-  border-radius: 99px;
-  background: var(--ph-ink);
-  color: var(--ph-bg);
-  font-size: 2.9cqw;
-  font-weight: 600;
-  opacity: 0;
-  transform: translateY(2cqw) scale(0.8);
-  transition: opacity 0.3s ease, transform 0.6s var(--ease-spring);
-}
-
-.copy-toast .i {
-  width: 3.4cqw;
-  height: 3.4cqw;
-  stroke-width: 2.4;
-}
-
-.story.c2 .b-m2 .copy-toast,
-.story.c3 .b-m3 .copy-toast,
-.skills-demo.is-copied .copy-toast {
-  opacity: 1;
-  transform: none;
-}
-
-/* 日历通知横幅：从刘海下方落下 */
-.event-banner {
-  position: absolute;
-  z-index: 3;
-  top: 2.6cqw;
-  right: 3.4cqw;
-  left: 3.4cqw;
-  display: flex;
-  align-items: center;
-  gap: 3cqw;
-  padding: 3cqw 3.4cqw;
-  border-radius: 6cqw;
-  background: color-mix(in srgb, var(--ph-bg) 82%, transparent);
-  -webkit-backdrop-filter: blur(20px) saturate(1.5);
-  backdrop-filter: blur(20px) saturate(1.5);
-  box-shadow: 0 6cqw 12cqw -4cqw rgba(0, 0, 0, 0.35), inset 0 0 0 1px var(--ph-line);
-  transition: transform 0.9s var(--ease-spring), opacity 0.4s ease;
-}
-
-.story.is-live .event-banner {
-  opacity: 0;
-  transform: translateY(-130%) scale(0.92);
-}
-
-.story.is-live.ev .event-banner {
-  opacity: 1;
-  transform: none;
-}
-
-.event-icon {
-  display: grid;
-  width: 10cqw;
-  height: 10cqw;
-  flex: none;
-  place-items: center;
-  border-radius: 2.8cqw;
-  background: var(--ph-out);
-  color: #fff;
-}
-
-.event-icon .i {
-  width: 5.4cqw;
-  height: 5.4cqw;
-}
-
-.event-copy {
-  display: grid;
-  min-width: 0;
-  flex: 1;
-  line-height: 1.3;
-}
-
-.event-copy small {
-  color: var(--ph-muted);
-  font-size: 2.7cqw;
-}
-
-.event-copy b {
-  font-size: 3.5cqw;
-}
-
-.event-copy span {
-  overflow: hidden;
-  color: var(--ph-muted);
-  font-size: 2.9cqw;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.event-check {
-  display: grid;
-  width: 6.4cqw;
-  height: 6.4cqw;
-  flex: none;
-  place-items: center;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--ph-out) 18%, transparent);
-  color: var(--ph-out);
-  transition: transform 0.7s var(--ease-spring) 0.35s;
-}
-
-.event-check .i {
-  width: 4cqw;
-  height: 4cqw;
-  stroke-width: 2.6;
-}
-
-.story.is-live .event-check {
-  transform: scale(0);
-}
-
-.story.is-live.ev .event-check {
-  transform: none;
-}
-
-/* 输入框：文字由 site.js 按滚动进度逐字写入 */
-.compose {
-  display: flex;
-  flex: none;
-  align-items: flex-end;
-  gap: 2.4cqw;
-  padding: 2.4cqw 3.6cqw 2.8cqw;
-}
-
-.compose-field {
-  position: relative;
-  display: block;
-  min-height: 9.4cqw;
-  flex: 1;
-  padding: 2cqw 3.6cqw;
-  border-radius: 4.8cqw;
-  box-shadow: inset 0 0 0 1px var(--ph-line);
-  font-size: 3.7cqw;
-}
-
-.compose-placeholder {
-  position: absolute;
-  top: 2cqw;
-  left: 3.6cqw;
-  color: var(--ph-muted);
-  transition: opacity 0.2s ease;
-}
-
-.story.has-text .compose-placeholder {
-  opacity: 0;
-}
-
-.compose-text {
-  position: relative;
-}
-
-.compose-text.is-swapping {
-  animation: text-swap 0.45s var(--ease-out);
-}
-
-@keyframes text-swap {
-  from { opacity: 0; filter: blur(4px); }
-  to { opacity: 1; filter: blur(0); }
-}
-
-.compose .caret {
-  background: var(--ph-out);
-  visibility: hidden;
-}
-
-.story.has-text .compose .caret {
-  visibility: visible;
-}
-
-.compose-send {
-  display: grid;
-  width: 9.4cqw;
-  height: 9.4cqw;
-  flex: none;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--ph-line);
-  color: #fff;
-  transition: background 0.3s ease, transform 0.6s var(--ease-spring);
-}
-
-.compose-send .i {
-  width: 5cqw;
-  height: 5cqw;
-  stroke-width: 2.4;
-}
-
-.story.has-text .compose-send {
-  background: var(--ph-out);
-  transform: scale(1.05);
-}
-
-/*
- * 键盘：按 App 真实的「AI 助手」界面复刻（AIKeyboardView）。
- * 尺寸以 cqw 表示，等比映射原生 pt 尺寸（顶栏 44pt、麦克风 156×60pt、圆键 48pt）。
- * 所有状态都由祖先元素上的 data-* 属性驱动，故事区与技能区共用同一套样式：
- *   data-bar     顶栏：tabs 常规 / cancel 录音中 / paste AI 结果 / skills 复制后
- *   data-mic     麦克风：idle / rec 听写 / ai 问 AI / busy 处理中 / done 已插入
- *   data-ctx     上下文区：hint / live / think / extract / tip / none
- *   data-surface 主体：main 常规 / variants 回复候选
- *   data-pick    被点按的元素：0-2 回复卡片 / event 日程胶囊
- *   data-undo    插入后出现撤销与改写按钮；data-action 回车键可用
- */
-.kb {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  padding: 1cqw 3cqw 7cqw;
-  background: var(--ph-kb);
-  color: var(--ph-key-ink);
-  transition: background 0.4s ease;
-}
-
-.kb .i {
-  stroke-width: 2;
-}
-
-.kb-top {
-  position: relative;
-  height: 10.5cqw;
-  flex: none;
-}
-
-.kb-bar {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  gap: 1.6cqw;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(1.5cqw);
-  transition: opacity 0.3s ease, transform 0.55s var(--ease-spring);
-}
-
-[data-bar="tabs"] .kb-bar-tabs,
-[data-bar="cancel"] .kb-bar-cancel,
-[data-bar="paste"] .kb-bar-paste,
-[data-bar="skills"] .kb-bar-skills {
-  opacity: 1;
-  transform: none;
-}
-
-.kb-bar-tabs,
-.kb-bar-paste {
-  justify-content: space-between;
-}
-
-.kb-bar-cancel {
-  justify-content: flex-end;
-}
-
-/* OSG 标志：两实一空的三个圆点 */
-.kb-logo {
-  display: flex;
-  gap: 0.8cqw;
-}
-
-.kb-logo i {
-  width: 3.4cqw;
-  height: 3.4cqw;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.kb-logo i:nth-child(2) {
-  background: transparent;
-  box-shadow: inset 0 0 0 0.45cqw currentColor;
-}
-
-/* AI / 中文 / EN 分段切换：固定在键盘水平中心，与真实界面一致 */
-.kb-seg {
-  position: absolute;
-  left: 50%;
-  display: flex;
-  gap: 0.5cqw;
-  padding: 0.5cqw;
-  border-radius: 99px;
-  background: var(--ph-track);
-  translate: -50% 0;
-}
-
-.kb-seg > span {
-  display: grid;
-  width: 11.4cqw;
-  height: 7.2cqw;
-  place-items: center;
-  border-radius: 99px;
-  color: color-mix(in srgb, var(--ph-key-ink) 55%, transparent);
-  font-size: 2.85cqw;
-  font-weight: 500;
-}
-
-.kb-seg > .is-on {
-  background: var(--ph-key);
-  box-shadow: 0 0 0 0.25cqw var(--ph-line);
-  color: var(--ph-key-ink);
-}
-
-.kb-seg .i {
-  width: 3.7cqw;
-  height: 3.7cqw;
-}
-
-.kb-chips {
-  display: flex;
-  gap: 1.4cqw;
-}
-
-.kb-chip {
-  display: grid;
-  width: 8.2cqw;
-  height: 8.2cqw;
-  flex: none;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--ph-key);
-  box-shadow: 0 0 0 0.25cqw var(--ph-line);
-  color: color-mix(in srgb, var(--ph-key-ink) 60%, transparent);
-}
-
-.kb-chip .i {
-  width: 3.8cqw;
-  height: 3.8cqw;
-}
-
-/* 玻璃胶囊：粘贴与技能 */
-.kb-cap {
-  display: inline-flex;
-  height: 7.2cqw;
-  flex: none;
-  align-items: center;
-  padding: 0 3cqw;
-  border-radius: 99px;
-  background: var(--ph-glass);
-  box-shadow: 0 0.6cqw 1.6cqw -0.6cqw rgba(0, 0, 0, 0.2), inset 0 0 0 0.25cqw var(--ph-line);
-  font-size: 3cqw;
-  font-weight: 650;
-  white-space: nowrap;
-  transition: background 0.25s ease, color 0.25s ease, transform 0.45s var(--ease-spring);
-}
-
-.kb-caps {
-  display: flex;
-  overflow: hidden;
-  min-width: 0;
-  flex: 1;
-  gap: 1.4cqw;
-  padding: 1cqw 0;
-  -webkit-mask-image: linear-gradient(90deg, #000 86%, transparent);
-  mask-image: linear-gradient(90deg, #000 86%, transparent);
-}
-
-/* 复制后技能胶囊依次弹出：模拟「按相关度挑出能用的技能」 */
-[data-bar="skills"] .kb-caps .kb-cap {
-  animation: cap-in 0.55s var(--ease-spring) both;
-}
-
-.kb-caps .kb-cap:nth-child(2) { animation-delay: 0.06s; }
-.kb-caps .kb-cap:nth-child(3) { animation-delay: 0.12s; }
-.kb-caps .kb-cap:nth-child(4) { animation-delay: 0.18s; }
-.kb-caps .kb-cap:nth-child(5) { animation-delay: 0.24s; }
-
-@keyframes cap-in {
-  from { opacity: 0; transform: translateY(2cqw) scale(0.7); }
-  to { opacity: 1; transform: none; }
-}
-
-[data-pick="event"] .cap-event {
-  background: var(--kb-accent);
-  color: #fff;
-  transform: scale(0.94);
-}
-
-/* 主体：上下文区 + 两排操作键；回复候选出现时整体让位 */
-.kb-stage {
-  position: relative;
-  height: 51cqw;
-  flex: none;
-}
-
-.kb-main {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  transition: opacity 0.3s ease, transform 0.5s var(--ease-out);
-}
-
-[data-surface="variants"] .kb-main {
-  opacity: 0;
-  transform: scale(0.97);
-}
-
-.kb-ctx {
-  position: relative;
-  flex: 1;
-}
-
-.ctx {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  max-width: 88%;
-  font-size: 3.3cqw;
-  opacity: 0;
-  text-align: center;
-  transform: translate(-50%, -30%);
-  transition: opacity 0.3s ease, transform 0.5s var(--ease-out);
-  white-space: nowrap;
-}
-
-[data-ctx="hint"] .ctx-hint,
-[data-ctx="live"] .ctx-live,
-[data-ctx="think"] .ctx-think,
-[data-ctx="extract"] .ctx-extract,
-[data-ctx="tip"] .ctx-tip {
-  opacity: 1;
-  transform: translate(-50%, -50%);
-}
-
-.ctx-hint {
-  padding: 1.2cqw 3.2cqw;
-  border-radius: 99px;
-  box-shadow: inset 0 0 0 0.3cqw color-mix(in srgb, var(--ph-key-ink) 18%, transparent);
-  color: color-mix(in srgb, var(--ph-key-ink) 55%, transparent);
-  font-weight: 500;
-}
-
-/* 实时转写：听写时边说边出字 */
-.ctx-live {
-  width: 88%;
-  font-size: 3.7cqw;
-  line-height: 1.35;
-  white-space: normal;
-}
-
-.ctx-think,
-.ctx-extract {
-  color: color-mix(in srgb, var(--ph-key-ink) 55%, transparent);
-  font-size: 3.6cqw;
-}
-
-.ctx-tip {
-  padding: 1.6cqw 3.6cqw;
-  border-radius: 99px;
-  background: var(--ph-glass);
-  box-shadow: 0 1cqw 3cqw -1cqw rgba(0, 0, 0, 0.22), inset 0 0 0 0.25cqw var(--ph-line);
-  font-size: 3.6cqw;
-}
-
-.kb-row {
-  display: flex;
-  height: 14.3cqw;
-  flex: none;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 2cqw;
-}
-
-.kb-row-low {
-  height: 11.4cqw;
-  margin-top: 5.2cqw;
-}
-
-.kb-circle {
-  display: grid;
-  width: 11.4cqw;
-  height: 11.4cqw;
-  flex: none;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--ph-key);
-  box-shadow: 0 1cqw 2.4cqw -1cqw rgba(0, 0, 0, 0.25), inset 0 0 0 0.25cqw var(--ph-line);
-  transition: opacity 0.35s ease, scale 0.5s var(--ease-spring);
-}
-
-.kb-circle .i {
-  width: 5cqw;
-  height: 5cqw;
-}
-
-/* 撤销与口述改写只在刚插入过文字后出现 */
-.kb-undo,
-.kb-edit {
-  opacity: 0;
-  scale: 0.7;
-}
-
-[data-undo="1"] .kb-undo,
-[data-undo="1"] .kb-edit {
-  opacity: 1;
-  scale: 1;
-}
-
-.kb-mic {
-  position: relative;
-  display: grid;
-  width: 37cqw;
-  height: 14.3cqw;
-  flex: none;
-  place-items: center;
-  border-radius: 99px;
-  background: var(--kb-accent);
-  box-shadow: inset 0 0.3cqw 0 rgba(255, 255, 255, 0.3),
-    0 1.6cqw 4cqw -1.6cqw color-mix(in srgb, var(--kb-accent) 85%, transparent);
-  color: #fff;
-  transition: background-color 0.35s ease, box-shadow 0.35s ease, transform 0.5s var(--ease-spring);
-}
-
-.kb-mic > * {
-  grid-area: 1 / 1;
-  transition: opacity 0.25s ease, transform 0.45s var(--ease-spring);
-}
-
-.mic-icon {
-  width: 6.6cqw;
-  height: 6.6cqw;
-}
-
-.kb .mic-check {
-  width: 7cqw;
-  height: 7cqw;
-  stroke-width: 3;
-}
-
-.mic-wave {
-  height: 6.2cqw;
-  gap: 1cqw;
-}
-
-.mic-wave i {
-  width: 1cqw;
-  height: 100%;
-  border-radius: 1cqw;
-  background: #ffc7c7;
-  transform: scaleY(0.14);
-}
-
-.kb .mic-spin {
-  width: 5.2cqw;
-  height: 5.2cqw;
-  border-width: 0.7cqw;
-}
-
-.mic-wave,
-.mic-spin,
-.mic-check {
-  opacity: 0;
-  transform: scale(0.6);
-}
-
-[data-mic="rec"] .kb-mic {
-  background: var(--kb-red);
-  box-shadow: inset 0 0.3cqw 0 rgba(255, 255, 255, 0.3),
-    0 1.6cqw 4.4cqw -1.6cqw color-mix(in srgb, var(--kb-red) 85%, transparent);
-}
-
-[data-mic="ai"] .kb-mic {
-  background: var(--kb-teal);
-  transform: scale(1.03);
-}
-
-[data-mic="ai"] .mic-wave i {
-  background: #fff;
-}
-
-[data-mic="busy"] .kb-mic {
-  background: color-mix(in srgb, var(--kb-red) 72%, var(--ph-kb));
-  box-shadow: none;
-}
-
-:is([data-mic="rec"], [data-mic="ai"], [data-mic="busy"], [data-mic="done"]) .mic-icon {
-  opacity: 0;
-  transform: scale(0.6);
-}
-
-:is([data-mic="rec"], [data-mic="ai"]) .mic-wave,
-[data-mic="busy"] .mic-spin,
-[data-mic="done"] .mic-check {
-  opacity: 1;
-  transform: none;
-}
-
-/* 回车 / 发送：无可发送内容时为浅灰禁用态 */
-.kb-action {
-  display: grid;
-  width: 31.4cqw;
-  height: 11.4cqw;
-  flex: none;
-  place-items: center;
-  border-radius: 99px;
-  background: var(--ph-key-off);
-  color: color-mix(in srgb, var(--ph-key-ink) 45%, transparent);
-  transition: background 0.3s ease, color 0.3s ease, transform 0.45s var(--ease-spring);
-}
-
-.kb-action .i {
-  width: 5.4cqw;
-  height: 5.4cqw;
-}
-
-[data-action="on"] .kb-action {
-  background: var(--ph-key);
-  box-shadow: 0 1cqw 2.4cqw -1cqw rgba(0, 0, 0, 0.25), inset 0 0 0 0.25cqw var(--ph-line);
-  color: var(--ph-key-ink);
-}
-
-.story.press-send .kb-action {
-  animation: key-press 0.5s var(--ease-out);
-}
-
-@keyframes key-press {
-  30% { transform: scale(0.9); }
-}
-
-/* 回复候选：三张玻璃卡片（普通 / 正式 / 轻松趣味），自下而上依次落定 */
-.kb-variants {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1.8cqw;
-  padding: 1.2cqw 0.6cqw 0;
-  pointer-events: none;
-}
-
-.kb-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 2.6cqw;
-  padding: 2cqw 3cqw;
-  border-radius: 3.6cqw;
-  background: var(--ph-glass);
-  box-shadow: 0 0.8cqw 2.4cqw -1.2cqw rgba(0, 0, 0, 0.2), inset 0 0 0 0.25cqw var(--ph-line);
-  opacity: 0;
-  transform: translateY(5cqw) scale(0.96);
-  transition: opacity 0.35s ease, transform 0.6s var(--ease-spring), box-shadow 0.3s ease;
-}
-
-.kb-card:nth-child(2) { transition-delay: 0.07s; }
-.kb-card:nth-child(3) { transition-delay: 0.14s; }
-
-[data-surface="variants"] .kb-card {
-  opacity: 1;
-  transform: none;
-}
-
-.kb-card .i-solid {
-  width: 4.6cqw;
-  height: 4.6cqw;
-  flex: none;
-  margin-top: 0.4cqw;
-  fill: currentColor;
-  stroke: none;
-}
-
-.kb-card > span {
-  display: grid;
-  gap: 0.3cqw;
-  line-height: 1.32;
-}
-
-.kb-card small {
-  color: color-mix(in srgb, var(--ph-key-ink) 55%, transparent);
-  font-size: 2.7cqw;
-}
-
-.kb-card b {
-  font-size: 3.2cqw;
-  font-weight: 500;
-}
-
-[data-pick="0"] .kb-card[data-card="0"],
-[data-pick="1"] .kb-card[data-card="1"],
-[data-pick="2"] .kb-card[data-card="2"] {
-  box-shadow: 0 0 0 0.7cqw color-mix(in srgb, var(--kb-accent) 50%, transparent);
-  transform: scale(0.97);
-  transition-delay: 0s;
+@keyframes device-glow {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.08); }
 }
 
 /* --------------------------------------------------------------------------
- * 技能区演示：复用键盘复刻组件，独立的容器查询让它按自身宽度缩放
+ * 真机外框：Apple 官方 iPhone 17 Pro 机框图（原图 1350 × 2760）。
+ * 屏幕开口为 1206 × 2622、起点 (72, 69)，换算成百分比后放置录屏；
+ * 模拟器录屏正是这个分辨率，像素一一对应。机框自带灵动岛与圆角，叠在录屏之上。
  * -------------------------------------------------------------------------- */
-.skills-frame {
-  display: grid;
-  place-items: center;
-  padding: clamp(18px, 3vw, 34px);
-  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--accent) 14%, var(--surface)), var(--surface-soft));
+.iphone {
+  --w: min(330px, calc((100svh - 150px) * 0.489));
+  position: relative;
+  width: var(--w);
+  aspect-ratio: 1350 / 2760;
+  filter: drop-shadow(0 40px 48px rgba(8, 12, 16, 0.26)) drop-shadow(0 12px 16px rgba(8, 12, 16, 0.14));
 }
 
-.skills-demo {
-  display: flex;
+.iphone-screen {
+  position: absolute;
+  top: 2.5%;
+  left: 5.333%;
+  width: 89.333%;
+  height: 95%;
   overflow: hidden;
-  width: min(100%, 430px);
-  flex-direction: column;
-  border-radius: 22px;
-  background: var(--ph-bg);
-  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.45), inset 0 0 0 1px var(--ph-line);
-  color: var(--ph-ink);
-  container-type: inline-size;
-  text-align: left;
+  /* 开口圆角约 230px：230 / 1206 与 230 / 2622 */
+  border-radius: 19% / 8.8%;
+  background: #000;
 }
 
-/* 消息来源区：被复制的那条消息，最后被「已添加到日历」横幅替换 */
-.sd-source {
-  position: relative;
+/* 同一屏幕里叠放多段录屏，当前一段淡入 */
+.iphone-clip {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-out);
+}
+
+.iphone-clip.is-on {
+  opacity: 1;
+}
+
+.iphone-bezel {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* 分栏区块里的真机：与文案并排居中 */
+.device-stage {
   display: grid;
-  min-height: 34cqw;
-  align-items: center;
-  padding: 7cqw 5cqw;
+  margin: 0;
+  place-items: center;
 }
 
-.sd-msg {
-  position: relative;
-  justify-self: start;
-  max-width: 82%;
-  padding: 2.4cqw 3.8cqw;
-  border-radius: 5cqw 5cqw 5cqw 1.4cqw;
-  background: var(--ph-in);
-  font-size: 3.7cqw;
-  line-height: 1.4;
-  transition: box-shadow 0.4s ease, opacity 0.4s ease, transform 0.6s var(--ease-out);
-}
-
-.skills-demo .event-banner {
-  top: 50%;
-  right: 5cqw;
-  left: 5cqw;
-  translate: 0 -50%;
-}
-
-.skills-demo .event-banner,
-.skills-demo .event-check {
-  opacity: 0;
-  transform: translateY(-40%) scale(0.92);
-}
-
-.skills-demo .event-check {
-  transform: scale(0);
-}
-
-.skills-demo.is-done .event-banner {
-  opacity: 1;
-  transform: none;
-}
-
-.skills-demo.is-done .event-check {
-  opacity: 1;
-  transform: none;
-}
-
-.skills-demo.is-done .sd-msg {
-  opacity: 0;
-  transform: translateY(6cqw) scale(0.94);
-}
-
-.skills-demo .kb {
-  padding-bottom: 5cqw;
+.device-stage .iphone {
+  --w: min(320px, 76vw);
 }
 
 /* --------------------------------------------------------------------------
@@ -3389,7 +2488,8 @@ html.vt-theme::view-transition-new(root) {
     order: 1;
   }
 
-  .split-layout.reverse .media-frame {
+  .split-layout.reverse .media-frame,
+  .split-layout.reverse .device-stage {
     order: 2;
   }
 
@@ -3440,8 +2540,8 @@ html.vt-theme::view-transition-new(root) {
     order: -1;
   }
 
-  .phone {
-    --w: min(290px, calc((100svh - 360px) * 0.468));
+  .iphone {
+    --w: min(260px, calc((100svh - 360px) * 0.489));
   }
 
   .story-acts {

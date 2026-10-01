@@ -50,7 +50,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- v= 查询串用于缓存刷新：GitHub Pages 对静态资源有 10 分钟缓存窗口，改版本号强制浏览器取新文件 -->
-  <link rel="stylesheet" href="assets/site.css?v=20261001b">
+  <link rel="stylesheet" href="assets/site.css?v=20261001c">
   <script>
     // 首屏前确定主题，避免闪烁；无保存偏好时跟随系统。
     // .js 类只在脚本可用时出现：所有「先隐藏、再动效显现」的初始态都挂在它下面，
@@ -198,21 +198,8 @@
       <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.3v9.4M15.2 9.2c-.6-.9-1.8-1.4-3.2-1.4-1.7 0-3 .9-3 2.2 0 3 6.1 1.6 6.1 4.4 0 1.4-1.4 2.3-3.1 2.3-1.4 0-2.6-.5-3.2-1.5"/></symbol>
       <symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M7 9.5 10 12l-3 2.5M12.5 14.8H17"/></symbol>
       <symbol id="i-arrow-out" viewBox="0 0 24 24"><path d="M7 17 17 7M9.2 7H17v7.8"/></symbol>
-      <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5.5M6.5 11 12 5.5l5.5 5.5"/></symbol>
       <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
       <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.2-3.6-8.5S9.6 5.9 12 3.5Z"/></symbol>
-      <!-- 以下图标对应键盘真实界面里的 SF Symbols（delete.left / space / return / arrow.uturn.backward 等） -->
-      <symbol id="i-delete" viewBox="0 0 24 24"><path d="M9 5.5h10a1.8 1.8 0 0 1 1.8 1.8v9.4a1.8 1.8 0 0 1-1.8 1.8H9L3.2 12 9 5.5Z"/><path d="M11.8 9.5l5 5M16.8 9.5l-5 5"/></symbol>
-      <symbol id="i-space" viewBox="0 0 24 24"><path d="M4 10v4.5h16V10"/></symbol>
-      <symbol id="i-return" viewBox="0 0 24 24"><path d="M19 5.5v5.5a3 3 0 0 1-3 3H5.5"/><path d="M9.5 10 5.5 14l4 4"/></symbol>
-      <symbol id="i-undo" viewBox="0 0 24 24"><path d="M8.5 14 4 9.5 8.5 5"/><path d="M4 9.5h10.5a5 5 0 0 1 0 10H11"/></symbol>
-      <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20.5h16"/><path d="M14.6 4.8l3.1 3.1-8.6 8.6H6v-3.1l8.6-8.6Z"/></symbol>
-      <symbol id="i-clipboard" viewBox="0 0 24 24"><rect x="5.5" y="4.5" width="13" height="16" rx="2.5"/><path d="M9.2 3.5h5.6v2.6H9.2z"/></symbol>
-      <symbol id="i-charbubble" viewBox="0 0 24 24"><path d="M5.5 4h13A2.5 2.5 0 0 1 21 6.5v8a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 3.5V17h-1A2.5 2.5 0 0 1 3 14.5v-8A2.5 2.5 0 0 1 5.5 4Z"/><path d="M8.5 8.2h7M12 7v6.5M9.2 11c1.2 1.4 3.6 2.4 5.6 2.5"/></symbol>
-      <!-- 实心图标：回复候选卡片左侧的 bubble.left.fill / briefcase.fill / theatermasks.fill -->
-      <symbol id="i-bubble-fill" viewBox="0 0 24 24"><path d="M6 3.5h12A2.5 2.5 0 0 1 20.5 6v8.5A2.5 2.5 0 0 1 18 17h-7.3L6.4 20.6c-.5.4-1.2 0-1.2-.6V17A2.5 2.5 0 0 1 3.5 14.5V6A2.5 2.5 0 0 1 6 3.5Z"/></symbol>
-      <symbol id="i-briefcase-fill" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9.8 3.5h4.4a1.8 1.8 0 0 1 1.8 1.8V7h3a2.5 2.5 0 0 1 2.5 2.5v8.5a2.5 2.5 0 0 1-2.5 2.5H5A2.5 2.5 0 0 1 2.5 18V9.5A2.5 2.5 0 0 1 5 7h3V5.3a1.8 1.8 0 0 1 1.8-1.8Zm.1 1.8V7h4.2V5.3H9.9Z"/></symbol>
-      <symbol id="i-masks-fill" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M2.5 4.6c3-1.5 6.6-1.5 9.6 0v5.2c0 3.2-2.1 5.9-4.8 5.9S2.5 13 2.5 9.8V4.6Zm2.2 2.8a1.2.9 0 1 0 2.4 0a1.2.9 0 1 0-2.4 0Zm3.2 0a1.2.9 0 1 0 2.4 0a1.2.9 0 1 0-2.4 0Zm-2.6 3.4c1.1 1.3 3 1.3 4.1 0Z"/><path fill-rule="evenodd" d="M12.6 9.3c3-1.5 6.1-1.5 8.9 0v4.9c0 3.1-2 5.6-4.45 5.6s-4.45-2.5-4.45-5.6V9.3Zm2 2.7a1.1.85 0 1 0 2.2 0a1.1.85 0 1 0-2.2 0Zm2.9 0a1.1.85 0 1 0 2.2 0a1.1.85 0 1 0-2.2 0Zm-1.9 4.8c.9-1 2.6-1 3.5 0Z"/></symbol>
     </defs>
   </svg>
 
@@ -452,7 +439,7 @@
           data-en="One real conversation, three moves: the voice keyboard listens, the reply engine says it in your voice, and the agentic keyboard takes the next step. Scroll to watch it work."
         >一次真实的聊天，三个动作完成：语音输入法负责听写，嘴替输入法负责把话说好，Agentic 键盘负责下一步。向下滚动，看它怎样工作。</p>
       </div>
-      <div class="story" id="storyStage" data-bar="tabs" data-mic="idle" data-ctx="hint" data-surface="main">
+      <div class="story" id="storyStage">
         <div class="story-sticky">
           <div class="story-layout">
             <ol class="story-acts">
@@ -485,136 +472,20 @@
               </li>
             </ol>
 
+            <!--
+              真机画面：Apple 官方 iPhone 17 Pro 机框，屏幕里是模拟器中真实 OSGKeyboard 扩展的录屏
+              （不是 HTML 复刻）。site.js 按当前幕切换片段，并按语言 / 主题选用
+              assets/story/<幕>-<zh|en>-<light|dark>.mp4；无 JavaScript 时停在第一幕的首帧。
+            -->
             <div class="story-device" aria-hidden="true">
-              <div class="phone">
-                <div class="phone-screen">
-                  <div class="phone-status">
-                    <span>9:41</span>
-                    <span class="phone-island"></span>
-                    <span class="phone-signal"><i></i><i></i><i></i></span>
-                  </div>
-                  <!-- 日历通知横幅：第三幕结尾从顶部落下 -->
-                  <div class="event-banner">
-                    <span class="event-icon"><svg class="i"><use href="#i-event"/></svg></span>
-                    <span class="event-copy">
-                      <small data-zh="已添加到日历" data-en="Added to Calendar">已添加到日历</small>
-                      <b data-zh="开会 · 小林" data-en="Meeting with Alex">开会 · 小林</b>
-                      <span data-zh="明天 15:00 · 3 楼会议室" data-en="Tomorrow 3:00 PM · Room 3F">明天 15:00 · 3 楼会议室</span>
-                    </span>
-                    <span class="event-check"><svg class="i"><use href="#i-check"/></svg></span>
-                  </div>
-                  <div class="chat-head">
-                    <span class="chat-avatar" data-zh="林" data-en="A">林</span>
-                    <span class="chat-name">
-                      <b data-zh="小林" data-en="Alex">小林</b>
-                      <small>iMessage</small>
-                    </span>
-                  </div>
-                  <!-- 对话：消息按滚动进度依次出现，旧消息随新消息上移（底部对齐） -->
-                  <div class="chat-body">
-                    <div class="bubble in b-m1" data-zh="方案初稿收到没？" data-en="Did you get the first draft?">方案初稿收到没？</div>
-                    <div class="bubble out b-o1" data-zh="收到了，我下午看完给你反馈。" data-en="Got it — I’ll review it this afternoon and get back to you.">收到了，我下午看完给你反馈。</div>
-                    <div class="bubble in b-m2">
-                      <span data-zh="方案我看了，明天能不能把预算那一版也发我？" data-en="Read the proposal. Can you send the budget version tomorrow?">方案我看了，明天能不能把预算那一版也发我？</span>
-                      <span class="copy-toast"><svg class="i"><use href="#i-check"/></svg><span data-zh="已复制" data-en="Copied">已复制</span></span>
-                    </div>
-                    <div class="bubble out b-o2" data-zh="好的，我整理一下预算版，明天上午发你。" data-en="Sure, I’ll put the budget version together and send it over tomorrow morning.">好的，我整理一下预算版，明天上午发你。</div>
-                    <div class="bubble in b-m3">
-                      <span data-zh="好，那明天下午三点开会，3 楼会议室见。" data-en="Great — meeting tomorrow at 3 PM, Room 3F.">好，那明天下午三点开会，3 楼会议室见。</span>
-                      <span class="copy-toast"><svg class="i"><use href="#i-check"/></svg><span data-zh="已复制" data-en="Copied">已复制</span></span>
-                    </div>
-                  </div>
-                  <div class="compose">
-                    <span class="compose-field">
-                      <span class="compose-placeholder">iMessage</span>
-                      <span class="compose-text" id="storyText"></span><span class="caret"></span>
-                    </span>
-                    <span class="compose-send"><svg class="i"><use href="#i-arrow-up"/></svg></span>
-                  </div>
-                  <!--
-                    键盘：按 OSGKeyboard 真实的「AI 助手」界面复刻（AIKeyboardView）。
-                    顶栏四种状态：常规（标志 + AI/中文/EN 切换 + 翻译/剪贴板）、录音中（仅关闭）、
-                    AI 结果（粘贴 + 关闭）、复制后（粘贴 + 相关技能胶囊 + 关闭）。
-                    状态由 site.js 写到 .story 的 data-bar / data-mic / data-ctx / data-surface 上；
-                    无 JavaScript 时保持 HTML 中的默认值，即键盘待机画面。
-                  -->
-                  <div class="kb">
-                    <div class="kb-top">
-                      <div class="kb-bar kb-bar-tabs">
-                        <span class="kb-logo"><i></i><i></i><i></i></span>
-                        <span class="kb-seg">
-                          <span class="is-on"><svg class="i"><use href="#i-sparkle"/></svg></span>
-                          <span>中文</span>
-                          <span>EN</span>
-                        </span>
-                        <span class="kb-chips">
-                          <span class="kb-chip"><svg class="i"><use href="#i-charbubble"/></svg></span>
-                          <span class="kb-chip"><svg class="i"><use href="#i-clipboard"/></svg></span>
-                        </span>
-                      </div>
-                      <div class="kb-bar kb-bar-cancel">
-                        <span class="kb-chip kb-x"><svg class="i"><use href="#i-close"/></svg></span>
-                      </div>
-                      <div class="kb-bar kb-bar-paste">
-                        <span class="kb-cap" data-zh="粘贴" data-en="Paste">粘贴</span>
-                        <span class="kb-chip kb-x"><svg class="i"><use href="#i-close"/></svg></span>
-                      </div>
-                      <div class="kb-bar kb-bar-skills">
-                        <span class="kb-caps">
-                          <span class="kb-cap" data-zh="粘贴" data-en="Paste">粘贴</span>
-                          <span class="kb-cap" data-zh="回复" data-en="Reply">回复</span>
-                          <span class="kb-cap cap-event" data-zh="日程" data-en="Events">日程</span>
-                          <span class="kb-cap" data-zh="待办" data-en="Tasks">待办</span>
-                          <span class="kb-cap" data-zh="导航" data-en="Navigate">导航</span>
-                        </span>
-                        <span class="kb-chip kb-x"><svg class="i"><use href="#i-close"/></svg></span>
-                      </div>
-                    </div>
-                    <div class="kb-stage">
-                      <div class="kb-main">
-                        <!-- 上下文区：提示语 / 实时转写 / 状态文字 / 技能提示，同一时刻只显示一种 -->
-                        <div class="kb-ctx">
-                          <span class="ctx ctx-hint" data-zh="轻点听写 · 长按问 AI" data-en="Tap to dictate · Hold to ask AI">轻点听写 · 长按问 AI</span>
-                          <span class="ctx ctx-live" id="storyLive"></span>
-                          <span class="ctx ctx-think" data-zh="AI 正在思考…" data-en="AI is thinking…">AI 正在思考…</span>
-                          <span class="ctx ctx-extract" data-zh="正在提取日程…" data-en="Finding events…">正在提取日程…</span>
-                          <span class="ctx ctx-tip" data-zh="正在加入日历…" data-en="Adding to Calendar…">正在加入日历…</span>
-                        </div>
-                        <div class="kb-row">
-                          <span class="kb-circle"><svg class="i"><use href="#i-delete"/></svg></span>
-                          <span class="kb-mic">
-                            <svg class="i mic-icon"><use href="#i-mic"/></svg>
-                            <span class="mic-wave" data-wave="7"></span>
-                            <span class="mic-spin"></span>
-                            <svg class="i mic-check"><use href="#i-check"/></svg>
-                          </span>
-                          <span class="kb-circle"><svg class="i"><use href="#i-space"/></svg></span>
-                        </div>
-                        <div class="kb-row kb-row-low">
-                          <span class="kb-circle kb-undo"><svg class="i"><use href="#i-undo"/></svg></span>
-                          <span class="kb-action"><svg class="i"><use href="#i-return"/></svg></span>
-                          <span class="kb-circle kb-edit"><svg class="i"><use href="#i-pencil"/></svg></span>
-                        </div>
-                      </div>
-                      <!-- 回复候选：真实界面中替换整个键盘主体，点一张即插入 -->
-                      <div class="kb-variants">
-                        <span class="kb-card" data-card="0">
-                          <svg class="i i-solid"><use href="#i-bubble-fill"/></svg>
-                          <span><small data-zh="普通" data-en="Ordinary">普通</small><b data-zh="好的，我整理一下预算版，明天上午发你。" data-en="Sure, I’ll put the budget version together and send it over tomorrow morning.">好的，我整理一下预算版，明天上午发你。</b></span>
-                        </span>
-                        <span class="kb-card" data-card="1">
-                          <svg class="i i-solid"><use href="#i-briefcase-fill"/></svg>
-                          <span><small data-zh="正式" data-en="Formal">正式</small><b data-zh="收到，预算版本我今晚整理完毕，明日上午发送给您。" data-en="Received. I’ll finalize the budget version tonight and send it to you tomorrow morning.">收到，预算版本我今晚整理完毕，明日上午发送给您。</b></span>
-                        </span>
-                        <span class="kb-card" data-card="2">
-                          <svg class="i i-solid"><use href="#i-masks-fill"/></svg>
-                          <span><small data-zh="轻松趣味" data-en="Relaxed &amp; playful">轻松趣味</small><b data-zh="行嘞～预算表这就去梳妆打扮，明早准时上桌！" data-en="You got it — the budget sheet is getting dressed up and will be on your desk first thing.">行嘞～预算表这就去梳妆打扮，明早准时上桌！</b></span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+              <figure class="iphone">
+                <div class="iphone-screen">
+                  <video class="iphone-clip is-on" data-clip="voice" muted playsinline preload="auto" poster="assets/story/voice-zh-light.jpg"></video>
+                  <video class="iphone-clip" data-clip="reply" muted playsinline preload="metadata" poster="assets/story/reply-zh-light.jpg"></video>
+                  <video class="iphone-clip" data-clip="agent" muted playsinline preload="metadata" poster="assets/story/agent-zh-light.jpg"></video>
                 </div>
-              </div>
+                <img class="iphone-bezel" src="assets/device/iphone-17-pro-silver.png" alt="" width="675" height="1380" decoding="async">
+              </figure>
             </div>
           </div>
         </div>
@@ -788,85 +659,24 @@
           </ul>
         </div>
         <!--
-          技能演示：复用故事区的真实键盘组件，循环播放
-          「复制 → 顶栏换成相关技能 → 点日程 → 提取 → 写入日历」。
+          技能演示：真实键盘扩展的录屏。依次复制会议通知、链接、清单和地址，
+          顶栏的技能胶囊随内容换成日程、打开 / 总结网页、待办 / 整理、导航等。
         -->
-        <div
-          class="media-frame skills-frame unmask reveal"
-          data-parallax="0.06"
+        <figure
+          class="device-stage reveal"
           style="--d:.12s"
           role="img"
-          aria-label="复制含时间的文字后，键盘顶栏出现粘贴、回复、日程、待办、导航等技能，点日程即写入日历"
-          data-zh-label="复制含时间的文字后，键盘顶栏出现粘贴、回复、日程、待办、导航等技能，点日程即写入日历"
-          data-en-label="After copying text with a time, the keyboard’s top bar shows Paste, Reply, Events, Tasks, and Navigate; tapping Events adds it to Calendar"
+          aria-label="依次复制会议通知、网页链接、购物清单和地址，OSGKeyboard 顶栏的技能随内容换成日程、总结网页、待办、导航等"
+          data-zh-label="依次复制会议通知、网页链接、购物清单和地址，OSGKeyboard 顶栏的技能随内容换成日程、总结网页、待办、导航等"
+          data-en-label="Copying a meeting note, a link, a shopping list, and an address in turn — OSGKeyboard’s top bar swaps in Events, Summarize page, Tasks, Navigate, and more"
         >
-          <div class="skills-demo" id="skillsDemo" data-bar="skills" data-mic="idle" data-ctx="none" data-surface="main" aria-hidden="true">
-            <div class="sd-source">
-              <span class="sd-msg">
-                <span data-zh="明天下午三点开会，地点：南京西路 1266 号 3 楼" data-en="Meeting tomorrow at 3 PM — 1266 W Nanjing Rd, 3F">明天下午三点开会，地点：南京西路 1266 号 3 楼</span>
-                <span class="copy-toast"><svg class="i"><use href="#i-check"/></svg><span data-zh="已复制" data-en="Copied">已复制</span></span>
-              </span>
-              <span class="event-banner sd-event">
-                <span class="event-icon"><svg class="i"><use href="#i-event"/></svg></span>
-                <span class="event-copy">
-                  <small data-zh="已添加到日历" data-en="Added to Calendar">已添加到日历</small>
-                  <b data-zh="开会" data-en="Meeting">开会</b>
-                  <span data-zh="明天 15:00 · 南京西路 1266 号 3 楼" data-en="Tomorrow 3:00 PM · 1266 W Nanjing Rd, 3F">明天 15:00 · 南京西路 1266 号 3 楼</span>
-                </span>
-                <span class="event-check"><svg class="i"><use href="#i-check"/></svg></span>
-              </span>
+          <div class="iphone">
+            <div class="iphone-screen">
+              <video class="iphone-clip is-on" data-clip="skills" muted playsinline loop preload="metadata" poster="assets/story/skills-zh-light.jpg"></video>
             </div>
-            <div class="kb">
-              <div class="kb-top">
-                <div class="kb-bar kb-bar-tabs">
-                  <span class="kb-logo"><i></i><i></i><i></i></span>
-                  <span class="kb-seg">
-                    <span class="is-on"><svg class="i"><use href="#i-sparkle"/></svg></span>
-                    <span>中文</span>
-                    <span>EN</span>
-                  </span>
-                  <span class="kb-chips">
-                    <span class="kb-chip"><svg class="i"><use href="#i-charbubble"/></svg></span>
-                    <span class="kb-chip"><svg class="i"><use href="#i-clipboard"/></svg></span>
-                  </span>
-                </div>
-                <div class="kb-bar kb-bar-skills">
-                  <span class="kb-caps">
-                    <span class="kb-cap" data-zh="粘贴" data-en="Paste">粘贴</span>
-                    <span class="kb-cap" data-zh="回复" data-en="Reply">回复</span>
-                    <span class="kb-cap cap-event" data-zh="日程" data-en="Events">日程</span>
-                    <span class="kb-cap" data-zh="待办" data-en="Tasks">待办</span>
-                    <span class="kb-cap" data-zh="导航" data-en="Navigate">导航</span>
-                  </span>
-                  <span class="kb-chip kb-x"><svg class="i"><use href="#i-close"/></svg></span>
-                </div>
-              </div>
-              <div class="kb-stage">
-                <div class="kb-main">
-                  <div class="kb-ctx">
-                    <span class="ctx ctx-hint" data-zh="轻点听写 · 长按问 AI" data-en="Tap to dictate · Hold to ask AI">轻点听写 · 长按问 AI</span>
-                    <span class="ctx ctx-extract" data-zh="正在提取日程…" data-en="Finding events…">正在提取日程…</span>
-                    <span class="ctx ctx-tip" data-zh="正在加入日历…" data-en="Adding to Calendar…">正在加入日历…</span>
-                  </div>
-                  <div class="kb-row">
-                    <span class="kb-circle"><svg class="i"><use href="#i-delete"/></svg></span>
-                    <span class="kb-mic">
-                      <svg class="i mic-icon"><use href="#i-mic"/></svg>
-                      <span class="mic-spin"></span>
-                      <svg class="i mic-check"><use href="#i-check"/></svg>
-                    </span>
-                    <span class="kb-circle"><svg class="i"><use href="#i-space"/></svg></span>
-                  </div>
-                  <div class="kb-row kb-row-low">
-                    <span class="kb-circle kb-undo"><svg class="i"><use href="#i-undo"/></svg></span>
-                    <span class="kb-action"><svg class="i"><use href="#i-return"/></svg></span>
-                    <span class="kb-circle kb-edit"><svg class="i"><use href="#i-pencil"/></svg></span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <img class="iphone-bezel" src="assets/device/iphone-17-pro-silver.png" alt="" width="675" height="1380" loading="lazy" decoding="async">
           </div>
-        </div>
+        </figure>
       </div>
     </section>
 
@@ -890,19 +700,21 @@
             data-en="One personal dictionary feeds Chinese candidates, English suggestions, speech biasing, and polish protection."
           >一个个性词库，同时参与中文候选、英文建议、语音偏置与润色保护。</p>
         </div>
-        <div class="media-frame unmask reveal" data-parallax="0.06" style="--d:.12s">
-          <video
-            src="assets/whats-new/keyboard-typing.mp4"
-            autoplay
-            muted
-            loop
-            playsinline
-            preload="metadata"
-            data-zh-label="OSGKeyboard 中英打字实机演示"
-            data-en-label="OSGKeyboard bilingual typing recorded on device"
-            aria-label="OSGKeyboard 中英打字实机演示"
-          ></video>
-        </div>
+        <figure
+          class="device-stage reveal"
+          style="--d:.12s"
+          role="img"
+          aria-label="在 OSGKeyboard 真实键盘上用全拼输入中文，候选栏实时给出词语"
+          data-zh-label="在 OSGKeyboard 真实键盘上用全拼输入中文，候选栏实时给出词语"
+          data-en-label="Typing English on the real OSGKeyboard keys, with QuickType suggestions above"
+        >
+          <div class="iphone">
+            <div class="iphone-screen">
+              <video class="iphone-clip is-on" data-clip="typing" muted playsinline loop preload="metadata" poster="assets/story/typing-zh-light.jpg"></video>
+            </div>
+            <img class="iphone-bezel" src="assets/device/iphone-17-pro-silver.png" alt="" width="675" height="1380" loading="lazy" decoding="async">
+          </div>
+        </figure>
       </div>
     </section>
 
@@ -970,7 +782,7 @@
 
     <!-- 可选账号与积分 -->
     <section class="section account-section" id="account">
-      <div class="section-inner split-layout">
+      <div class="section-inner account-layout">
         <div class="feature-copy reveal">
           <p class="eyebrow" data-zh="可选账号与积分" data-en="Optional account and credits">可选账号与积分</p>
           <h2 data-split data-zh="账号是选项，不是门槛。" data-en="An account is an option, not a gate.">账号是选项，不是门槛。</h2>
@@ -984,18 +796,6 @@
             <li data-zh="邀请好友，双方均可获得积分奖励" data-en="Invite friends and you both earn credits">邀请好友，双方均可获得积分奖励</li>
             <li data-zh="账号令牌不下发给键盘扩展；应用内可注销账号" data-en="Account tokens never reach the keyboard extension; deletion is available in-app">账号令牌不下发给键盘扩展；应用内可注销账号</li>
           </ul>
-        </div>
-        <div class="media-frame unmask reveal" data-parallax="0.06" style="--d:.12s">
-          <img
-            src="assets/whats-new/osg-credits-zh.png"
-            data-zh-src="assets/whats-new/osg-credits-zh.png"
-            data-en-src="assets/whats-new/osg-credits-en.png"
-            data-zh-alt="OSGKeyboard 账号中的积分余额"
-            data-en-alt="Credit balance in an OSGKeyboard account"
-            alt="OSGKeyboard 账号中的积分余额"
-            loading="lazy"
-            decoding="async"
-          >
         </div>
       </div>
     </section>
@@ -1203,6 +1003,6 @@
     </div>
   </footer>
 
-  <script src="assets/site.js?v=20261001b"></script>
+  <script src="assets/site.js?v=20261001c"></script>
 </body>
 </html>
