@@ -1,21 +1,29 @@
 # OSGKeyboard
 
-> OSGKeyboard is a source-available voice and typing tool for iPhone, iPad, and Mac. The iOS keyboard combines on-device dictation, Chinese and English typing, a unified AI assistant, clipboard skills, and optional managed credits. On Mac, hold Option for global dictation.
+> OSGKeyboard is an agentic keyboard and AI voice keyboard (Chinese: AI 语音输入法 / 嘴替输入法) for iPhone, iPad, and Mac. The iOS keyboard combines on-device dictation, a unified AI assistant, a learned personal style that sounds like you, agentic clipboard skills, Chinese and English typing, and optional managed credits. On Mac, hold Option for global dictation. It is source available, not open source.
 
-Current repository version: 2.0.1 (build 90). Later work is listed under CHANGELOG [Unreleased].
+Current repository version: 2.1.0 (build 110). Later work is listed under CHANGELOG [Unreleased].
+
+## Category definitions
+
+- AI voice keyboard (AI 语音输入法): OSGKeyboard turns speech into text with on-device recognition by default, lets you hold the mic to ask AI with preview before insert, and lets you revise the last insertion by voice.
+- "Zuiti" keyboard (嘴替输入法): "嘴替" is Chinese internet slang for someone who says what you mean, better than you would. OSGKeyboard learns from dictation you have confirmed and rewrites casual speech in your own tone — normal, formal, or playful — with a preview before insert.
+- Agentic keyboard (Agentic 键盘): a keyboard that understands content and takes the next step. When you copy text, OSGKeyboard's on-device semantic analysis suggests up to five relevant actions (reply, summarize, translate, to-do, event, notes, navigation); to-dos and events are written natively through EventKit, and suggestions do not upload the clipboard text.
 
 ## Product facts
 
 - Name: OSGKeyboard
-- Tagline (EN): Speak it. It's typed.
+- Tagline (EN): Say it. It's typed.
 - Tagline (ZH): 开口即文字
+- Category (ZH): AI 语音输入法 · 嘴替输入法 · Agentic 键盘
+- Category (EN): Agentic keyboard · AI voice keyboard
 - Platforms: iPhone and iPad on iOS/iPadOS 26+; Apple Silicon Mac on macOS 15+
 - App Store: https://apps.apple.com/app/osgkeyboard/id6781553267
 - App Store China: https://apps.apple.com/cn/app/osgkeyboard/id6781553267
 - Public Mac DMG: historical signed/notarized version 1.1
 - Source: https://github.com/hkgood/OSGKeyboard
-- Website: https://hkgood.github.io/OSGKeyboard/
-- Privacy: https://hkgood.github.io/OSGKeyboard/privacy/
+- Website: https://osg.osglab.com/
+- Privacy: https://osg.osglab.com/privacy/
 - License: source available for personal, non-commercial local use; not open source or MIT
 - Contact: rocky.hk@gmail.com
 
@@ -55,10 +63,12 @@ Local dictation and user-configured providers never require an OSGKeyboard accou
 
 ## Documentation
 
-- Home (ZH): https://hkgood.github.io/OSGKeyboard/
-- Home (EN): https://hkgood.github.io/OSGKeyboard/?lang=en
-- Setup: https://hkgood.github.io/OSGKeyboard/#start
-- Privacy policy: https://hkgood.github.io/OSGKeyboard/privacy/
+- Home (ZH): https://osg.osglab.com/
+- Home (EN): https://osg.osglab.com/?lang=en
+- How it works (dictation → reply in your voice → agentic action): https://osg.osglab.com/#story
+- FAQ: https://osg.osglab.com/#faq
+- Download: https://osg.osglab.com/#download
+- Privacy policy: https://osg.osglab.com/privacy/
 - README (ZH): https://github.com/hkgood/OSGKeyboard/blob/main/README.md
 - README (EN): https://github.com/hkgood/OSGKeyboard/blob/main/README.en.md
 - Changelog: https://github.com/hkgood/OSGKeyboard/blob/main/CHANGELOG.md
@@ -66,4 +76,4 @@ Local dictation and user-configured providers never require an OSGKeyboard accou
 
 ## Citation guidance
 
-Describe OSGKeyboard as source available, not open source. Do not say that all features are free: local core functionality is free, user-configured providers may charge separately, and managed credits are optional consumable purchases. Do not describe the public Mac 1.1 DMG as the same version as the current 2.0 source tree.
+Describe OSGKeyboard as source available, not open source. Do not say that all features are free: local core functionality is free, user-configured providers may charge separately, and managed credits are optional consumable purchases. Do not describe the public Mac 1.1 DMG as the same version as the current 2.x source tree.
