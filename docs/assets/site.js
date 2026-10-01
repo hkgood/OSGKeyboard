@@ -5,16 +5,15 @@
  *   2. 深浅色主题（默认跟随系统，手动选择后持久化；支持时以圆形扩散过渡）
  *   3. 移动端导航开合、导航滑块与当前区块高亮
  *   4. 逐字拆分标题（data-split）
- *   5. 滚动引擎：进度条、Hero 设备「立起」、媒体视差、三幕滚动叙事（真机录屏随幕切换）
+ *   5. 滚动引擎：进度条、Hero 设备「立起」、媒体视差、四幕滚动叙事（真机录屏随幕切换）
  *   6. 声波渲染、Hero 语音胶囊打字机、数字计数
- *   7. 指针光斑 / 3D 倾斜 / 磁吸按钮、FAQ 高度过渡、离屏视频暂停
+ *   7. 亚克力反光 / 磁吸按钮、FAQ 高度过渡、离屏视频暂停
  * 开启「减弱动态效果」时，持续动画与指针动效全部停用，内容直接呈现最终态。
  */
 (function () {
   "use strict";
 
   const root = document.documentElement;
-  const siteNav = document.getElementById("siteNav");
   const languageButton = document.getElementById("languageToggle");
   const themeButton = document.getElementById("themeToggle");
   const themeIconUse = document.getElementById("themeIconUse");
@@ -211,8 +210,8 @@
       themeButton.setAttribute("aria-label", label);
     }
 
-    // 深色舞台在各主题下配色一致，theme-color 跟随舞台色
-    themeColor?.setAttribute("content", "#0e1013");
+    // 浏览器顶栏颜色与底板一致（与 site.css 的 --canvas 保持同步）
+    themeColor?.setAttribute("content", resolved === "dark" ? "#0e1011" : "#eff1f0");
 
     document.querySelectorAll("[data-shot]").forEach((image) => {
       const lang = root.dataset.lang || "zh";
@@ -541,10 +540,9 @@
   languageHooks.push(queueClipRefresh);
   themeHooks.push(queueClipRefresh);
 
-  /* ---------------- 三幕滚动叙事 ---------------- */
+  /* ---------------- 四幕滚动叙事 ---------------- */
 
   // 滚动只决定「当前是哪一幕」；画面是这一幕的真机片段，从头播放，播完停留片刻再重播
-  const ACT_RANGES = [[0, 0.34], [0.34, 0.67], [0.67, 1]];
   const STORY_REPLAY_DELAY = 2200;
 
   const story = document.getElementById("storyStage");
@@ -576,8 +574,8 @@
     const inView = rect.bottom > 0 && rect.top < viewport;
     const p = clamp(-rect.top / Math.max(1, story.offsetHeight - viewport));
 
-    let act = 0;
-    ACT_RANGES.forEach(([start], i) => { if (p >= start) act = i; });
+    // 滚动距离按幕数均分
+    const act = Math.min(storyActs.length - 1, Math.floor(p * storyActs.length));
 
     // 离开视口暂停，回来接着播
     if (inView !== storyInView) {
@@ -625,16 +623,10 @@
   let scrollTicking = false;
   let lastHeroProgress = -1;
 
-  function updateNavState() {
-    siteNav?.classList.toggle("is-scrolled", window.scrollY > 24);
-  }
-
   function updateScroll() {
     scrollTicking = false;
     const y = window.scrollY;
     const viewport = innerHeight;
-
-    updateNavState();
 
     if (progressBar) {
       const max = Math.max(1, root.scrollHeight - viewport);
@@ -822,28 +814,15 @@
     if (!document.hidden) wakeWaves();
   });
 
-  /* ---------------- 指针动效：光斑 / 倾斜 / 磁吸 / Hero 光斑 ---------------- */
+  /* ---------------- 指针动效：亚克力反光 / 磁吸 / Hero 光斑 ---------------- */
 
   if (finePointer && !reduceMotion) {
+    // 亚克力反光：高光跟随指针在面板表面移动
     document.querySelectorAll(".spot").forEach((element) => {
       element.addEventListener("pointermove", (event) => {
         const rect = element.getBoundingClientRect();
         element.style.setProperty("--mx", `${event.clientX - rect.left}px`);
         element.style.setProperty("--my", `${event.clientY - rect.top}px`);
-      });
-    });
-
-    document.querySelectorAll(".tilt").forEach((element) => {
-      element.addEventListener("pointermove", (event) => {
-        const rect = element.getBoundingClientRect();
-        const x = (event.clientX - rect.left) / rect.width;
-        const y = (event.clientY - rect.top) / rect.height;
-        element.style.setProperty("--rx", `${((0.5 - y) * 9).toFixed(2)}deg`);
-        element.style.setProperty("--ry", `${((x - 0.5) * 11).toFixed(2)}deg`);
-      });
-      element.addEventListener("pointerleave", () => {
-        element.style.setProperty("--rx", "0deg");
-        element.style.setProperty("--ry", "0deg");
       });
     });
 
