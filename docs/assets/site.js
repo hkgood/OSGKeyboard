@@ -368,18 +368,22 @@
 
   /* ---------------- Hero 语音胶囊 ---------------- */
 
+  // 复刻键盘真实的麦克风状态流：轻点听写（红色声波 → 打勾）、长按问 AI（青色声波 → 转圈 → 回答）、
+  // 复制消息后的嘴替回复（转圈 → 回复）。文案取自 App 的实际界面字符串与演示素材。
   const CAPSULE_SCRIPT = {
     zh: [
-      { tag: "听写", text: "帮我订周五晚上七点的位子，四个人" },
-      { tag: "嘴替 · 轻松", text: "这周有点累，先不去啦，下次我请！" },
-      { tag: "替你做", text: "已建日程：周五 19:00 · 四人晚餐", agent: true }
+      { tag: "轻点听写", mode: "rec", text: "帮我订周五晚上七点的位子，四个人" },
+      { tag: "长按问 AI", mode: "ai", text: "周末去哪儿玩比较合适？", busy: "AI 正在思考…", answer: "可以去近郊走走：上午逛古镇，下午找家咖啡馆。" },
+      { tag: "复制 · 嘴替回复", busy: "AI 正在思考…", answer: "好的，我整理一下预算版，明天上午发你。" }
     ],
     en: [
-      { tag: "Dictate", text: "Book a table for four, Friday at seven" },
-      { tag: "Your voice", text: "Bit wiped this week — rain check? Next one’s on me!" },
-      { tag: "Done for you", text: "Event added: Fri 7:00 PM · Dinner for four", agent: true }
+      { tag: "Tap to dictate", mode: "rec", text: "Book a table for four, Friday at seven" },
+      { tag: "Hold to ask AI", mode: "ai", text: "Where should we go this weekend?", busy: "AI is thinking…", answer: "Try a day trip: an old town in the morning, a café in the afternoon." },
+      { tag: "Copy · Reply in your voice", busy: "AI is thinking…", answer: "Sure, I’ll put the budget version together and send it over tomorrow morning." }
     ]
   };
+
+  const CAPSULE_STATES = ["is-rec", "is-ai", "is-busy", "is-ai-busy", "is-done"];
 
   const hero = document.getElementById("top");
   const capsule = document.querySelector(".voice-capsule");
@@ -400,6 +404,24 @@
     return run === capsuleRun;
   }
 
+  function setCapsuleState(...states) {
+    CAPSULE_STATES.forEach((name) => capsule.classList.toggle(name, states.includes(name)));
+    const listening = states.includes("is-rec") || states.includes("is-ai");
+    if (capsuleWave) capsuleWave.level = listening ? 1 : 0;
+    if (listening) wakeWaves();
+  }
+
+  // 逐字写入；返回 false 表示本轮已被新一轮（如切换语言）取代
+  async function typeLine(run, text, perChar) {
+    const characters = Array.from(text);
+    for (let i = 1; i <= characters.length; i += 1) {
+      if (!(await whenActive(run))) return false;
+      capsuleLine.textContent = characters.slice(0, i).join("");
+      await wait(perChar());
+    }
+    return true;
+  }
+
   async function playCapsule() {
     if (!capsule || !capsuleLine || !capsuleTag) return;
     const run = ++capsuleRun;
@@ -407,39 +429,50 @@
     const script = CAPSULE_SCRIPT[lang];
 
     if (reduceMotion) {
+      setCapsuleState();
       capsuleTag.textContent = script[0].tag;
       capsuleLine.textContent = script[0].text;
       return;
     }
 
+    const base = lang === "zh" ? 72 : 34;
+    const speech = () => base + Math.random() * base * 0.8;
     let index = 0;
     while (run === capsuleRun) {
       const item = script[index % script.length];
+      setCapsuleState();
       capsuleTag.textContent = item.tag;
-      capsuleTag.classList.toggle("is-agent", Boolean(item.agent));
       capsuleLine.textContent = "";
-      await wait(260);
+      await wait(650);
 
-      // 听写与嘴替模拟「边说边出字」，Agentic 结果直接以完成态弹出
-      const listening = !item.agent;
-      capsule.classList.toggle("is-listening", listening);
-      if (capsuleWave) capsuleWave.level = listening ? 1 : 0.15;
-      wakeWaves();
-
-      const characters = Array.from(item.text);
-      const base = lang === "zh" ? 70 : 34;
-      for (let i = 1; i <= characters.length; i += 1) {
-        if (!(await whenActive(run))) return;
-        capsuleLine.textContent = characters.slice(0, i).join("");
-        await wait(item.agent ? 14 : base + Math.random() * base * 0.8);
+      // 1. 说话：红色（听写）或青色（问 AI）胶囊 + 声波，边说边出字
+      if (item.text) {
+        setCapsuleState(item.mode === "ai" ? "is-ai" : "is-rec");
+        if (!(await typeLine(run, item.text, speech))) return;
+        await wait(420);
       }
 
-      capsule.classList.remove("is-listening");
-      if (capsuleWave) capsuleWave.level = 0.12;
-      await wait(item.agent ? 2400 : 1900);
+      // 2. 处理中：胶囊转圈，显示真实界面的状态文案
+      if (item.busy) {
+        setCapsuleState("is-busy", item.mode === "ai" ? "is-ai-busy" : "");
+        capsuleLine.textContent = item.busy;
+        await wait(1300);
+        if (!(await whenActive(run))) return;
+      }
+
+      // 3. 结果：回答快速流出
+      if (item.answer) {
+        capsuleLine.textContent = "";
+        if (!(await typeLine(run, item.answer, () => 16))) return;
+      }
+
+      // 4. 插入成功：胶囊打勾
+      setCapsuleState("is-done");
+      await wait(2100);
       if (!(await whenActive(run))) return;
 
-      // 快速回删，像是把这一句交给下一个能力
+      // 快速回删，交给下一个能力
+      const characters = Array.from(capsuleLine.textContent);
       for (let i = characters.length; i >= 0; i -= 2) {
         if (run !== capsuleRun) return;
         capsuleLine.textContent = characters.slice(0, i).join("");
@@ -451,43 +484,69 @@
 
   languageHooks.push(() => playCapsule());
 
+  /* ---------------- 键盘复刻：共用状态写入 ---------------- */
+
+  const KB_DEFAULTS = { bar: "tabs", mic: "idle", ctx: "hint", surface: "main", pick: "", undo: "0", action: "off" };
+
+  // 把键盘状态写到容器的 data-* 上（只写变化的值，避免无谓的样式重算）
+  function applyKeyboardState(element, state) {
+    Object.keys(KB_DEFAULTS).forEach((key) => {
+      const value = state[key] ?? KB_DEFAULTS[key];
+      if (element.dataset[key] !== value) element.dataset[key] = value;
+    });
+  }
+
   /* ---------------- 三幕滚动叙事 ---------------- */
 
+  // 与气泡文案保持一致：听写结果、选中的「普通」回复
   const STORY_TEXT = {
     zh: {
-      draft: "可以啊 周五七点 位子我来订",
-      tones: [
-        "可以，周五七点，位子我来订。",
-        "好的，周五晚七点见，座位由我来预订。",
-        "好呀！周五七点不见不散，位子包在我身上～"
-      ]
+      dictation: "收到了，我下午看完给你反馈。",
+      reply: "好的，我整理一下预算版，明天上午发你。"
     },
     en: {
-      draft: "sure friday at seven ill book a table",
-      tones: [
-        "Sure — Friday at seven. I’ll book a table.",
-        "Sounds good. Friday at 7 p.m.; I’ll make the reservation.",
-        "Yes! Friday at 7 — leave the table to me."
-      ]
+      dictation: "Got it — I’ll review it this afternoon and get back to you.",
+      reply: "Sure, I’ll put the budget version together and send it over tomorrow morning."
     }
   };
 
-  // 进度阈值（0 → 1）：s1 好友来信 · s2 开始聆听 · s3 嘴替改写 · s4 发送
-  //                     s5 好友回地址 · s6 复制 · s7 技能弹出 · s8 写入日历
-  const STORY_STEPS = [0.03, 0.08, 0.31, 0.585, 0.66, 0.735, 0.805, 0.885];
-  const TYPE_START = 0.08;
-  const TYPE_END = 0.29;
-  const TONE_STEPS = [0.36, 0.44, 0.515];
-  const ACT_RANGES = [[0, 0.31], [0.31, 0.66], [0.66, 1]];
+  // 键盘时间轴（滚动进度 0 → 1），每段是完整状态，取最后一个 at ≤ p 的段
+  //   第一幕 听写：录音 → 打勾插入 → 发送
+  //   第二幕 嘴替：复制消息 → AI 思考 → 三条回复 → 点「普通」插入 → 发送
+  //   第三幕 Agentic：复制会议通知 → 顶栏技能 → 点「日程」→ 提取 → 写入日历
+  const STORY_PHASES = [
+    { at: 0 },
+    { at: 0.065, bar: "cancel", mic: "rec", ctx: "live" },
+    { at: 0.235, mic: "done", ctx: "none", undo: "1", action: "on", compose: "dictation" },
+    { at: 0.27, undo: "1", action: "on", compose: "dictation", send: true },
+    { at: 0.29 },
+    { at: 0.375, bar: "paste", mic: "busy", ctx: "think" },
+    { at: 0.44, bar: "paste", surface: "variants", ctx: "none" },
+    { at: 0.545, bar: "paste", surface: "variants", ctx: "none", pick: "0" },
+    { at: 0.575, mic: "done", ctx: "none", undo: "1", action: "on", compose: "reply" },
+    { at: 0.6, undo: "1", action: "on", compose: "reply", send: true },
+    { at: 0.62 },
+    { at: 0.715, bar: "skills", ctx: "none" },
+    { at: 0.775, bar: "skills", ctx: "extract", mic: "busy", pick: "event" },
+    { at: 0.84, ctx: "tip" },
+    { at: 0.93 }
+  ];
+
+  // 对话气泡：到达阈值即出现；复制提示只在区间内显示
+  const STORY_MESSAGES = { m1: 0.02, o1: 0.29, m2: 0.33, o2: 0.62, m3: 0.67, ev: 0.885 };
+  const STORY_COPIES = { c2: [0.36, 0.44], c3: [0.705, 0.775] };
+  const LIVE_RANGE = [0.075, 0.225];
+  const ACT_RANGES = [[0, 0.31], [0.31, 0.655], [0.655, 1]];
 
   const story = document.getElementById("storyStage");
   const storyText = document.getElementById("storyText");
+  const storyLive = document.getElementById("storyLive");
   const storyActs = story ? Array.from(story.querySelectorAll(".story-act")) : [];
   const storyWaves = story
-    ? Array.from(story.querySelectorAll(".kb-wave")).map((host, i) => createWave(host, { mirror: i === 0 }))
+    ? Array.from(story.querySelectorAll(".mic-wave")).map((host) => createWave(host))
     : [];
   let storyLastText = null;
-  let storyLastTone = -1;
+  let storyLastLive = null;
   let storyLastAct = -1;
 
   function updateStory(force) {
@@ -500,43 +559,39 @@
 
     const total = Math.max(1, story.offsetHeight - viewport);
     const p = clamp(-rect.top / total);
-    const lang = root.dataset.lang === "en" ? "en" : "zh";
-    const copy = STORY_TEXT[lang];
+    const copy = STORY_TEXT[root.dataset.lang === "en" ? "en" : "zh"];
 
-    const reached = STORY_STEPS.map((step) => p >= step);
-    reached.forEach((on, i) => story.classList.toggle(`s${i + 1}`, on));
-    const [, listening, rewriting, sent] = reached;
+    let phase = STORY_PHASES[0];
+    STORY_PHASES.forEach((item) => { if (p >= item.at) phase = item; });
+    applyKeyboardState(story, phase);
+    story.classList.toggle("press-send", Boolean(phase.send));
 
-    // 语气：仅在「改写中」阶段可见，按进度依次切到 普通 → 正式 → 轻松
-    let tone = -1;
-    if (rewriting && !sent) {
-      TONE_STEPS.forEach((step, i) => { if (p >= step) tone = i; });
+    Object.entries(STORY_MESSAGES).forEach(([name, at]) => story.classList.toggle(name, p >= at));
+    Object.entries(STORY_COPIES).forEach(([name, [from, to]]) => story.classList.toggle(name, p >= from && p < to));
+
+    // 实时转写：录音阶段按滚动进度逐字出现
+    let live = "";
+    if (phase.ctx === "live") {
+      const characters = Array.from(copy.dictation);
+      const count = Math.round(clamp((p - LIVE_RANGE[0]) / (LIVE_RANGE[1] - LIVE_RANGE[0])) * characters.length);
+      live = characters.slice(0, count).join("");
     }
-    if (tone !== storyLastTone) {
-      [0, 1, 2].forEach((i) => story.classList.toggle(`tone-${i}`, i === tone));
-    }
-
-    // 输入框：聆听阶段按滚动进度逐字「听写」，改写阶段显示当前语气的版本
-    let text = "";
-    if (listening && !rewriting) {
-      const characters = Array.from(copy.draft);
-      const count = Math.round(clamp((p - TYPE_START) / (TYPE_END - TYPE_START)) * characters.length);
-      text = characters.slice(0, count).join("");
-    } else if (rewriting && !sent) {
-      text = tone >= 0 ? copy.tones[tone] : copy.draft;
+    if (storyLive && live !== storyLastLive) {
+      storyLive.textContent = live;
+      storyLastLive = live;
     }
 
+    // 输入框：插入时整句落入（与真实插入行为一致），发送后清空
+    const text = phase.compose ? copy[phase.compose] : "";
     if (storyText && text !== storyLastText) {
-      const isRewrite = tone !== storyLastTone && text && storyLastText;
       storyText.textContent = text;
-      if (isRewrite && !reduceMotion) {
+      if (text && !storyLastText && !reduceMotion) {
         storyText.classList.remove("is-swapping");
         void storyText.offsetWidth;
         storyText.classList.add("is-swapping");
       }
       storyLastText = text;
     }
-    storyLastTone = tone;
     story.classList.toggle("has-text", text.length > 0);
 
     // 左侧三幕：高亮当前幕，幕内进度条随滚动填充
@@ -551,7 +606,7 @@
       element.style.setProperty("--ap", clamp((p - start) / (end - start)).toFixed(3));
     });
 
-    storyWaves.forEach((wave) => { wave.level = listening && !rewriting ? 1 : 0.06; });
+    storyWaves.forEach((wave) => { wave.level = phase.mic === "rec" ? 1 : 0; });
     if (inView) wakeWaves();
   }
 
@@ -559,9 +614,54 @@
     story.classList.add("is-live");
     languageHooks.push(() => {
       storyLastText = null;
-      storyLastTone = -2;
+      storyLastLive = null;
       updateStory(true);
     });
+  }
+
+  /* ---------------- 技能区循环演示 ---------------- */
+
+  // 复制 → 顶栏换成技能胶囊 → 点「日程」→ 提取 → 加入日历 → 横幅确认，然后重来
+  const SKILL_DEMO_STEPS = [
+    { ms: 1300 },
+    { ms: 1900, bar: "skills", ctx: "none", copied: true },
+    { ms: 550, bar: "skills", ctx: "none", pick: "event", copied: true },
+    { ms: 1500, bar: "skills", ctx: "extract", mic: "busy", pick: "event" },
+    { ms: 1200, ctx: "tip" },
+    { ms: 2800, done: true }
+  ];
+
+  const skillsDemo = document.getElementById("skillsDemo");
+  let skillsDemoVisible = false;
+  let skillsDemoTimer = 0;
+  let skillsDemoIndex = 0;
+
+  function showSkillsStep(step) {
+    applyKeyboardState(skillsDemo, step);
+    skillsDemo.classList.toggle("is-copied", Boolean(step.copied));
+    skillsDemo.classList.toggle("is-done", Boolean(step.done));
+  }
+
+  function tickSkillsDemo() {
+    clearTimeout(skillsDemoTimer);
+    if (!skillsDemoVisible || document.hidden) return;
+    const step = SKILL_DEMO_STEPS[skillsDemoIndex];
+    showSkillsStep(step);
+    skillsDemoIndex = (skillsDemoIndex + 1) % SKILL_DEMO_STEPS.length;
+    skillsDemoTimer = setTimeout(tickSkillsDemo, step.ms);
+  }
+
+  if (skillsDemo) {
+    if (reduceMotion) {
+      // 减弱动态效果：停在「技能胶囊已出现」这一帧
+      showSkillsStep(SKILL_DEMO_STEPS[1]);
+    } else {
+      new IntersectionObserver((entries) => {
+        skillsDemoVisible = entries[0].isIntersecting;
+        tickSkillsDemo();
+      }, { threshold: 0.35 }).observe(skillsDemo);
+      document.addEventListener("visibilitychange", tickSkillsDemo);
+    }
   }
 
   /* ---------------- 滚动引擎 ---------------- */

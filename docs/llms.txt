@@ -7,8 +7,8 @@ Current repository version: 2.1.0 (build 110). Later work is listed under CHANGE
 ## Category definitions
 
 - AI voice keyboard (AI 语音输入法): OSGKeyboard turns speech into text with on-device recognition by default, lets you hold the mic to ask AI with preview before insert, and lets you revise the last insertion by voice.
-- "Zuiti" keyboard (嘴替输入法): "嘴替" is Chinese internet slang for someone who says what you mean, better than you would. OSGKeyboard learns from dictation you have confirmed and rewrites casual speech in your own tone — normal, formal, or playful — with a preview before insert.
-- Agentic keyboard (Agentic 键盘): a keyboard that understands content and takes the next step. When you copy text, OSGKeyboard's on-device semantic analysis suggests up to five relevant actions (reply, summarize, translate, to-do, event, notes, navigation); to-dos and events are written natively through EventKit, and suggestions do not upload the clipboard text.
+- "Zuiti" keyboard (嘴替输入法): "嘴替" is Chinese internet slang for someone who says what you mean, better than you would. OSGKeyboard learns from dictation you have confirmed; copy a message and it drafts three replies in your tone — ordinary, formal, and relaxed & playful — and you tap one to insert.
+- Agentic keyboard (Agentic 键盘): a keyboard that understands content and takes the next step. When you copy text, OSGKeyboard's on-device semantic analysis turns the keyboard's top bar into the relevant actions, ranked by relevance (reply, summarize, translate, tasks, events, notes, navigation); to-dos and events are written natively through EventKit, and suggestions do not upload the clipboard text.
 
 ## Product facts
 

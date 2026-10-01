@@ -62,8 +62,17 @@
   --ph-line: rgba(15, 18, 20, 0.1);
   --ph-in: #e9ecef;
   --ph-out: #2c8a52;
-  --ph-kb: #d9dde3;
+
+  /* 键盘复刻色：取自 App 源码 ColorLibrary（brandAccent / aiTeal / recordRed）与原生键面色 */
+  --kb-accent: #3aa05a;
+  --kb-teal: #2bafa4;
+  --kb-red: #ff3b30;
+  --ph-kb: #efeeec;
   --ph-key: #ffffff;
+  --ph-key-ink: #1c1c1e;
+  --ph-key-off: #d6d6d6;
+  --ph-track: rgba(0, 0, 0, 0.1);
+  --ph-glass: rgba(255, 255, 255, 0.66);
 }
 
 html[data-theme="dark"] {
@@ -88,8 +97,12 @@ html[data-theme="dark"] {
   --ph-line: rgba(255, 255, 255, 0.1);
   --ph-in: #23262b;
   --ph-out: #2f9a5b;
-  --ph-kb: #1a1d21;
-  --ph-key: #34383e;
+  --ph-kb: #232324;
+  --ph-key: #525252;
+  --ph-key-ink: #ffffff;
+  --ph-key-off: #3b3b3b;
+  --ph-track: #1a1a1a;
+  --ph-glass: rgba(255, 255, 255, 0.09);
 }
 
 /* --------------------------------------------------------------------------
@@ -748,7 +761,7 @@ html[data-lang="zh"] h3 {
   max-width: 92%;
   align-items: center;
   gap: 14px;
-  padding: 9px 22px 9px 9px;
+  padding: 9px 22px 9px 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
   background: rgba(14, 16, 19, 0.74);
@@ -759,67 +772,113 @@ html[data-lang="zh"] h3 {
   translate: -50% 0;
 }
 
-.capsule-orb {
+/*
+ * 麦克风胶囊：与键盘真实组件同色同形（156×60pt 的胶囊按比例缩小）。
+ * 待机 = 品牌绿 + 麦克风；录音 = 红色 + 7 条声波；长按问 AI = 青色 + 声波；
+ * 处理中 = 半透明红 + 转圈；插入成功 = 品牌绿 + 对勾。状态类由 site.js 切换。
+ */
+.capsule-mic {
   position: relative;
   display: grid;
-  width: 42px;
-  height: 42px;
+  width: 78px;
+  height: 32px;
   flex: none;
   place-items: center;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #a8e6c1, var(--stage-accent) 55%, #3c9c63);
-  color: #0c0e12;
+  border-radius: 999px;
+  background: var(--kb-accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 6px 18px -6px color-mix(in srgb, var(--kb-accent) 80%, transparent);
+  color: #fff;
+  transition: background-color 0.35s ease, box-shadow 0.35s ease, transform 0.5s var(--ease-spring);
 }
 
-.capsule-orb .i {
-  width: 19px;
-  height: 19px;
-  stroke-width: 2;
+.capsule-mic > * {
+  grid-area: 1 / 1;
+  transition: opacity 0.25s ease, transform 0.45s var(--ease-spring);
 }
 
-/* 录音态：橙绿色涟漪从按钮向外扩散 */
-.capsule-orb::before,
-.capsule-orb::after {
-  position: absolute;
-  inset: 0;
-  border: 1.5px solid var(--stage-accent);
-  border-radius: 50%;
-  content: "";
+.cap-mic {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.2;
+}
+
+.cap-check {
+  width: 18px;
+  height: 18px;
+  stroke-width: 3;
+}
+
+.capsule-wave,
+.capsule-spin,
+.cap-check {
   opacity: 0;
+  transform: scale(0.6);
 }
 
-.voice-capsule.is-listening .capsule-orb::before,
-.voice-capsule.is-listening .capsule-orb::after {
-  animation: orb-ripple 1.8s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+.voice-capsule.is-rec .capsule-mic {
+  background: var(--kb-red);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 6px 22px -6px color-mix(in srgb, var(--kb-red) 85%, transparent);
 }
 
-.voice-capsule.is-listening .capsule-orb::after {
-  animation-delay: 0.9s;
+.voice-capsule.is-ai .capsule-mic {
+  background: var(--kb-teal);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 6px 22px -6px color-mix(in srgb, var(--kb-teal) 85%, transparent);
+  transform: scale(1.04);
 }
 
-@keyframes orb-ripple {
-  0% { opacity: 0.9; transform: scale(1); }
-  100% { opacity: 0; transform: scale(1.9); }
+.voice-capsule.is-busy .capsule-mic {
+  background: color-mix(in srgb, var(--kb-red) 72%, #2a2d31);
+}
+
+.voice-capsule:is(.is-rec, .is-ai, .is-busy, .is-done) .cap-mic {
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+.voice-capsule:is(.is-rec, .is-ai) .capsule-wave,
+.voice-capsule.is-busy .capsule-spin,
+.voice-capsule.is-done .cap-check {
+  opacity: 1;
+  transform: none;
 }
 
 /* 声波条：site.js 每帧写 scaleY，只动 transform，不触发布局 */
 .capsule-wave,
-.kb-wave {
+.mic-wave {
   display: flex;
   align-items: center;
 }
 
 .capsule-wave {
-  height: 28px;
-  gap: 3px;
+  height: 16px;
+  gap: 2.5px;
 }
 
 .capsule-wave i {
-  width: 3px;
+  width: 2.5px;
   height: 100%;
-  border-radius: 3px;
-  background: linear-gradient(180deg, #c9f3da, var(--stage-accent));
+  border-radius: 2px;
+  background: #ffc7c7;
   transform: scaleY(0.14);
+}
+
+.voice-capsule.is-ai .capsule-wave i {
+  background: #fff;
+}
+
+/* 系统风格的转圈：处理中状态 */
+.capsule-spin,
+.mic-spin {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { rotate: 1turn; }
 }
 
 .capsule-body {
@@ -844,9 +903,10 @@ html[data-lang="zh"] h3 {
   transition: background 0.3s ease, color 0.3s ease;
 }
 
-.capsule-tag.is-agent {
-  background: var(--stage-accent);
-  color: #0c0e12;
+/* 标签颜色跟随胶囊状态：问 AI 用青色，与麦克风胶囊呼应 */
+.voice-capsule:is(.is-ai, .is-ai-busy) .capsule-tag {
+  background: color-mix(in srgb, var(--kb-teal) 22%, transparent);
+  color: #7fded4;
 }
 
 .capsule-line {
@@ -1219,7 +1279,7 @@ h3 {
 
 /* --------------------------------------------------------------------------
  * 9. 滚动叙事（三幕剧）
- * 状态类 s1…s8 由 site.js 依滚动进度累加到 .story 上；
+ * 消息类 m1/o1/m2/c2/o2/m3/c3/ev 与键盘 data-* 状态由 site.js 依滚动进度写到 .story 上；
  * 只有 .story.is-live（脚本已接管）时才进入「未发生 → 隐藏」的初始态，
  * 无 JavaScript 时手机直接展示最终画面。
  * -------------------------------------------------------------------------- */
@@ -1351,7 +1411,7 @@ h3 {
   transition: opacity 0.6s ease, transform 0.8s var(--ease-out);
 }
 
-.story.s2:not(.s3) .story-device::before {
+.story:is([data-mic="rec"], [data-mic="busy"]) .story-device::before {
   opacity: 1;
   transform: scale(1.08);
 }
@@ -1461,22 +1521,27 @@ h3 {
   font-size: 2.7cqw;
 }
 
+/* 底部对齐：新消息出现时把旧消息向上推，和真实聊天一样 */
 .chat-body {
   display: flex;
+  overflow: hidden;
   min-height: 0;
   flex: 1;
   flex-direction: column;
-  gap: 2.6cqw;
-  padding: 4cqw 4.4cqw;
+  justify-content: flex-end;
+  padding: 1cqw 4.4cqw 3cqw;
 }
 
 .bubble {
   position: relative;
+  flex: none;
   max-width: 76%;
-  padding: 2.3cqw 3.6cqw;
+  margin-top: 2.4cqw;
+  padding: 2.1cqw 3.4cqw;
   border-radius: 5cqw;
-  font-size: 3.85cqw;
-  transition: opacity 0.35s ease, transform 0.7s var(--ease-spring), box-shadow 0.4s ease;
+  font-size: 3.6cqw;
+  transition: opacity 0.35s ease, transform 0.7s var(--ease-spring), box-shadow 0.4s ease,
+    max-height 0.5s var(--ease-out), margin 0.5s var(--ease-out), padding 0.5s var(--ease-out);
 }
 
 .bubble.in {
@@ -1494,21 +1559,32 @@ h3 {
   transform-origin: 100% 100%;
 }
 
+/* 未出现的气泡不占位（高度收为 0），出现时弹簧放大 */
 .story.is-live .bubble {
+  max-height: 0;
+  margin-top: 0;
+  padding-block: 0;
   opacity: 0;
   transform: translateY(3cqw) scale(0.6);
 }
 
-.story.is-live.s1 .b-ask,
-.story.is-live.s4 .b-sent,
-.story.is-live.s5 .b-addr {
+.story.is-live.m1 .b-m1,
+.story.is-live.o1 .b-o1,
+.story.is-live.m2 .b-m2,
+.story.is-live.o2 .b-o2,
+.story.is-live.m3 .b-m3 {
+  max-height: 40cqw;
+  margin-top: 2.4cqw;
+  padding-block: 2.1cqw;
   opacity: 1;
   transform: none;
 }
 
-/* 第三幕：复制地址 → 气泡高亮 + 「已复制」提示 */
-.story.s6 .b-addr {
-  box-shadow: 0 0 0 0.8cqw color-mix(in srgb, var(--ph-out) 40%, transparent);
+/* 长按复制：气泡描边高亮 + 「已复制」提示 */
+.story.c2 .b-m2,
+.story.c3 .b-m3,
+.skills-demo.is-copied .sd-msg {
+  box-shadow: 0 0 0 0.8cqw color-mix(in srgb, var(--kb-accent) 40%, transparent);
 }
 
 .copy-toast {
@@ -1535,7 +1611,9 @@ h3 {
   stroke-width: 2.4;
 }
 
-.story.s6:not(.s7) .copy-toast {
+.story.c2 .b-m2 .copy-toast,
+.story.c3 .b-m3 .copy-toast,
+.skills-demo.is-copied .copy-toast {
   opacity: 1;
   transform: none;
 }
@@ -1564,7 +1642,7 @@ h3 {
   transform: translateY(-130%) scale(0.92);
 }
 
-.story.is-live.s8 .event-banner {
+.story.is-live.ev .event-banner {
   opacity: 1;
   transform: none;
 }
@@ -1631,7 +1709,7 @@ h3 {
   transform: scale(0);
 }
 
-.story.is-live.s8 .event-check {
+.story.is-live.ev .event-check {
   transform: none;
 }
 
@@ -1685,7 +1763,7 @@ h3 {
   visibility: hidden;
 }
 
-.story.s2:not(.s4) .compose .caret {
+.story.has-text .compose .caret {
   visibility: visible;
 }
 
@@ -1712,220 +1790,573 @@ h3 {
   transform: scale(1.05);
 }
 
-/* 键盘：顶部条在「聆听 / 语气 / 技能」三种状态间切换 */
+/*
+ * 键盘：按 App 真实的「AI 助手」界面复刻（AIKeyboardView）。
+ * 尺寸以 cqw 表示，等比映射原生 pt 尺寸（顶栏 44pt、麦克风 156×60pt、圆键 48pt）。
+ * 所有状态都由祖先元素上的 data-* 属性驱动，故事区与技能区共用同一套样式：
+ *   data-bar     顶栏：tabs 常规 / cancel 录音中 / paste AI 结果 / skills 复制后
+ *   data-mic     麦克风：idle / rec 听写 / ai 问 AI / busy 处理中 / done 已插入
+ *   data-ctx     上下文区：hint / live / think / extract / tip / none
+ *   data-surface 主体：main 常规 / variants 回复候选
+ *   data-pick    被点按的元素：0-2 回复卡片 / event 日程胶囊
+ *   data-undo    插入后出现撤销与改写按钮；data-action 回车键可用
+ */
 .kb {
   display: flex;
   flex: none;
   flex-direction: column;
-  gap: 2.4cqw;
-  padding: 2.6cqw 2.6cqw 6.4cqw;
+  padding: 1cqw 3cqw 7cqw;
   background: var(--ph-kb);
+  color: var(--ph-key-ink);
+  transition: background 0.4s ease;
+}
+
+.kb .i {
+  stroke-width: 2;
+}
+
+.kb-top {
+  position: relative;
+  height: 10.5cqw;
+  flex: none;
 }
 
 .kb-bar {
-  position: relative;
-  height: 8.6cqw;
-}
-
-.kb-status,
-.kb-tones,
-.kb-skills {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
+  gap: 1.6cqw;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(2cqw);
-  transition: opacity 0.35s ease, transform 0.6s var(--ease-spring);
+  transform: translateY(1.5cqw);
+  transition: opacity 0.3s ease, transform 0.55s var(--ease-spring);
 }
 
-.story.s2:not(.s3) .kb-status,
-.story.s3:not(.s4) .kb-tones,
-.story.s7 .kb-skills,
-.story:not(.is-live) .kb-skills {
+[data-bar="tabs"] .kb-bar-tabs,
+[data-bar="cancel"] .kb-bar-cancel,
+[data-bar="paste"] .kb-bar-paste,
+[data-bar="skills"] .kb-bar-skills {
   opacity: 1;
   transform: none;
 }
 
-.kb-status {
-  justify-content: center;
-  gap: 2cqw;
-  color: var(--ph-out);
-  font-size: 3.4cqw;
-  font-weight: 650;
+.kb-bar-tabs,
+.kb-bar-paste {
+  justify-content: space-between;
 }
 
-.kb-status i {
-  width: 2cqw;
-  height: 2cqw;
+.kb-bar-cancel {
+  justify-content: flex-end;
+}
+
+/* OSG 标志：两实一空的三个圆点 */
+.kb-logo {
+  display: flex;
+  gap: 0.8cqw;
+}
+
+.kb-logo i {
+  width: 3.4cqw;
+  height: 3.4cqw;
   border-radius: 50%;
   background: currentColor;
-  animation: caret-blink 1s steps(1) infinite;
 }
 
-.kb-tones {
-  gap: 1.8cqw;
+.kb-logo i:nth-child(2) {
+  background: transparent;
+  box-shadow: inset 0 0 0 0.45cqw currentColor;
 }
 
-.kb-tones > span,
-.kb-skills > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 1cqw;
-  padding: 1.5cqw 3cqw;
+/* AI / 中文 / EN 分段切换：固定在键盘水平中心，与真实界面一致 */
+.kb-seg {
+  position: absolute;
+  left: 50%;
+  display: flex;
+  gap: 0.5cqw;
+  padding: 0.5cqw;
   border-radius: 99px;
+  background: var(--ph-track);
+  translate: -50% 0;
+}
+
+.kb-seg > span {
+  display: grid;
+  width: 11.4cqw;
+  height: 7.2cqw;
+  place-items: center;
+  border-radius: 99px;
+  color: color-mix(in srgb, var(--ph-key-ink) 55%, transparent);
+  font-size: 2.85cqw;
+  font-weight: 500;
+}
+
+.kb-seg > .is-on {
   background: var(--ph-key);
-  font-size: 3.2cqw;
-  font-weight: 600;
-  transition: background 0.3s ease, color 0.3s ease, transform 0.6s var(--ease-spring),
-    opacity 0.3s ease;
+  box-shadow: 0 0 0 0.25cqw var(--ph-line);
+  color: var(--ph-key-ink);
 }
 
-.story.tone-0 [data-tone="0"],
-.story.tone-1 [data-tone="1"],
-.story.tone-2 [data-tone="2"] {
-  background: var(--ph-out);
+.kb-seg .i {
+  width: 3.7cqw;
+  height: 3.7cqw;
+}
+
+.kb-chips {
+  display: flex;
+  gap: 1.4cqw;
+}
+
+.kb-chip {
+  display: grid;
+  width: 8.2cqw;
+  height: 8.2cqw;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--ph-key);
+  box-shadow: 0 0 0 0.25cqw var(--ph-line);
+  color: color-mix(in srgb, var(--ph-key-ink) 60%, transparent);
+}
+
+.kb-chip .i {
+  width: 3.8cqw;
+  height: 3.8cqw;
+}
+
+/* 玻璃胶囊：粘贴与技能 */
+.kb-cap {
+  display: inline-flex;
+  height: 7.2cqw;
+  flex: none;
+  align-items: center;
+  padding: 0 3cqw;
+  border-radius: 99px;
+  background: var(--ph-glass);
+  box-shadow: 0 0.6cqw 1.6cqw -0.6cqw rgba(0, 0, 0, 0.2), inset 0 0 0 0.25cqw var(--ph-line);
+  font-size: 3cqw;
+  font-weight: 650;
+  white-space: nowrap;
+  transition: background 0.25s ease, color 0.25s ease, transform 0.45s var(--ease-spring);
+}
+
+.kb-caps {
+  display: flex;
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+  gap: 1.4cqw;
+  padding: 1cqw 0;
+  -webkit-mask-image: linear-gradient(90deg, #000 86%, transparent);
+  mask-image: linear-gradient(90deg, #000 86%, transparent);
+}
+
+/* 复制后技能胶囊依次弹出：模拟「按相关度挑出能用的技能」 */
+[data-bar="skills"] .kb-caps .kb-cap {
+  animation: cap-in 0.55s var(--ease-spring) both;
+}
+
+.kb-caps .kb-cap:nth-child(2) { animation-delay: 0.06s; }
+.kb-caps .kb-cap:nth-child(3) { animation-delay: 0.12s; }
+.kb-caps .kb-cap:nth-child(4) { animation-delay: 0.18s; }
+.kb-caps .kb-cap:nth-child(5) { animation-delay: 0.24s; }
+
+@keyframes cap-in {
+  from { opacity: 0; transform: translateY(2cqw) scale(0.7); }
+  to { opacity: 1; transform: none; }
+}
+
+[data-pick="event"] .cap-event {
+  background: var(--kb-accent);
   color: #fff;
-  transform: scale(1.07);
+  transform: scale(0.94);
 }
 
-.kb-tones em {
-  margin-left: auto;
-  color: var(--ph-muted);
-  font-size: 2.6cqw;
-  font-style: normal;
-}
-
-.kb-skills {
-  gap: 1.6cqw;
-}
-
-.kb-skills .i {
-  width: 3.6cqw;
-  height: 3.6cqw;
-}
-
-/* 技能芯片依次弹出，模拟「从技能目录里挑出相关操作」 */
-.story.is-live .kb-skills > span {
-  opacity: 0;
-  transform: translateY(3cqw) scale(0.7);
-}
-
-.story.is-live.s7 .kb-skills > span {
-  opacity: 1;
-  transform: none;
-}
-
-.kb-skills > span:nth-child(2) { transition-delay: 0.06s; }
-.kb-skills > span:nth-child(3) { transition-delay: 0.12s; }
-.kb-skills > span:nth-child(4) { transition-delay: 0.18s; }
-
-.story.is-live.s8 .kb-skills .skill-event,
-.story:not(.is-live) .kb-skills .skill-event {
-  background: var(--ph-out);
-  color: #fff;
-  transform: scale(1.1);
-  transition-delay: 0s;
+/* 主体：上下文区 + 两排操作键；回复候选出现时整体让位 */
+.kb-stage {
+  position: relative;
+  height: 51cqw;
+  flex: none;
 }
 
 .kb-main {
+  position: absolute;
+  inset: 0;
   display: flex;
-  height: 21cqw;
+  flex-direction: column;
+  transition: opacity 0.3s ease, transform 0.5s var(--ease-out);
+}
+
+[data-surface="variants"] .kb-main {
+  opacity: 0;
+  transform: scale(0.97);
+}
+
+.kb-ctx {
+  position: relative;
+  flex: 1;
+}
+
+.ctx {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  max-width: 88%;
+  font-size: 3.3cqw;
+  opacity: 0;
+  text-align: center;
+  transform: translate(-50%, -30%);
+  transition: opacity 0.3s ease, transform 0.5s var(--ease-out);
+  white-space: nowrap;
+}
+
+[data-ctx="hint"] .ctx-hint,
+[data-ctx="live"] .ctx-live,
+[data-ctx="think"] .ctx-think,
+[data-ctx="extract"] .ctx-extract,
+[data-ctx="tip"] .ctx-tip {
+  opacity: 1;
+  transform: translate(-50%, -50%);
+}
+
+.ctx-hint {
+  padding: 1.2cqw 3.2cqw;
+  border-radius: 99px;
+  box-shadow: inset 0 0 0 0.3cqw color-mix(in srgb, var(--ph-key-ink) 18%, transparent);
+  color: color-mix(in srgb, var(--ph-key-ink) 55%, transparent);
+  font-weight: 500;
+}
+
+/* 实时转写：听写时边说边出字 */
+.ctx-live {
+  width: 88%;
+  font-size: 3.7cqw;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.ctx-think,
+.ctx-extract {
+  color: color-mix(in srgb, var(--ph-key-ink) 55%, transparent);
+  font-size: 3.6cqw;
+}
+
+.ctx-tip {
+  padding: 1.6cqw 3.6cqw;
+  border-radius: 99px;
+  background: var(--ph-glass);
+  box-shadow: 0 1cqw 3cqw -1cqw rgba(0, 0, 0, 0.22), inset 0 0 0 0.25cqw var(--ph-line);
+  font-size: 3.6cqw;
+}
+
+.kb-row {
+  display: flex;
+  height: 14.3cqw;
+  flex: none;
   align-items: center;
-  justify-content: center;
-  gap: 4cqw;
+  justify-content: space-between;
+  padding: 0 2cqw;
 }
 
-.kb-wave {
-  height: 12cqw;
-  gap: 1.2cqw;
+.kb-row-low {
+  height: 11.4cqw;
+  margin-top: 5.2cqw;
 }
 
-.kb-wave i {
-  width: 1.1cqw;
-  height: 100%;
-  border-radius: 1cqw;
-  background: var(--ph-out);
-  opacity: 0.75;
-  transform: scaleY(0.1);
+.kb-circle {
+  display: grid;
+  width: 11.4cqw;
+  height: 11.4cqw;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--ph-key);
+  box-shadow: 0 1cqw 2.4cqw -1cqw rgba(0, 0, 0, 0.25), inset 0 0 0 0.25cqw var(--ph-line);
+  transition: opacity 0.35s ease, scale 0.5s var(--ease-spring);
+}
+
+.kb-circle .i {
+  width: 5cqw;
+  height: 5cqw;
+}
+
+/* 撤销与口述改写只在刚插入过文字后出现 */
+.kb-undo,
+.kb-edit {
+  opacity: 0;
+  scale: 0.7;
+}
+
+[data-undo="1"] .kb-undo,
+[data-undo="1"] .kb-edit {
+  opacity: 1;
+  scale: 1;
 }
 
 .kb-mic {
   position: relative;
   display: grid;
-  width: 17cqw;
-  height: 17cqw;
+  width: 37cqw;
+  height: 14.3cqw;
+  flex: none;
   place-items: center;
-  border-radius: 50%;
-  background: var(--ph-out);
-  box-shadow: 0 2cqw 6cqw -1cqw color-mix(in srgb, var(--ph-out) 70%, transparent);
+  border-radius: 99px;
+  background: var(--kb-accent);
+  box-shadow: inset 0 0.3cqw 0 rgba(255, 255, 255, 0.3),
+    0 1.6cqw 4cqw -1.6cqw color-mix(in srgb, var(--kb-accent) 85%, transparent);
   color: #fff;
-  transition: transform 0.6s var(--ease-spring);
+  transition: background-color 0.35s ease, box-shadow 0.35s ease, transform 0.5s var(--ease-spring);
 }
 
-.kb-mic .i {
-  width: 7.4cqw;
-  height: 7.4cqw;
-  stroke-width: 2;
+.kb-mic > * {
+  grid-area: 1 / 1;
+  transition: opacity 0.25s ease, transform 0.45s var(--ease-spring);
 }
 
-.kb-mic::before,
-.kb-mic::after {
-  position: absolute;
-  inset: 0;
-  border: 0.5cqw solid var(--ph-out);
-  border-radius: 50%;
-  content: "";
+.mic-icon {
+  width: 6.6cqw;
+  height: 6.6cqw;
+}
+
+.kb .mic-check {
+  width: 7cqw;
+  height: 7cqw;
+  stroke-width: 3;
+}
+
+.mic-wave {
+  height: 6.2cqw;
+  gap: 1cqw;
+}
+
+.mic-wave i {
+  width: 1cqw;
+  height: 100%;
+  border-radius: 1cqw;
+  background: #ffc7c7;
+  transform: scaleY(0.14);
+}
+
+.kb .mic-spin {
+  width: 5.2cqw;
+  height: 5.2cqw;
+  border-width: 0.7cqw;
+}
+
+.mic-wave,
+.mic-spin,
+.mic-check {
   opacity: 0;
+  transform: scale(0.6);
 }
 
-.story.s2:not(.s3) .kb-mic {
-  transform: scale(1.08);
+[data-mic="rec"] .kb-mic {
+  background: var(--kb-red);
+  box-shadow: inset 0 0.3cqw 0 rgba(255, 255, 255, 0.3),
+    0 1.6cqw 4.4cqw -1.6cqw color-mix(in srgb, var(--kb-red) 85%, transparent);
 }
 
-.story.s2:not(.s3) .kb-mic::before,
-.story.s2:not(.s3) .kb-mic::after {
-  animation: orb-ripple 1.6s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+[data-mic="ai"] .kb-mic {
+  background: var(--kb-teal);
+  transform: scale(1.03);
 }
 
-.story.s2:not(.s3) .kb-mic::after {
-  animation-delay: 0.8s;
+[data-mic="ai"] .mic-wave i {
+  background: #fff;
 }
 
-.kb-keys {
+[data-mic="busy"] .kb-mic {
+  background: color-mix(in srgb, var(--kb-red) 72%, var(--ph-kb));
+  box-shadow: none;
+}
+
+:is([data-mic="rec"], [data-mic="ai"], [data-mic="busy"], [data-mic="done"]) .mic-icon {
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+:is([data-mic="rec"], [data-mic="ai"]) .mic-wave,
+[data-mic="busy"] .mic-spin,
+[data-mic="done"] .mic-check {
+  opacity: 1;
+  transform: none;
+}
+
+/* 回车 / 发送：无可发送内容时为浅灰禁用态 */
+.kb-action {
   display: grid;
-  gap: 1.8cqw;
-  grid-template-columns: 1fr 3.4fr 1.5fr;
-}
-
-.kb-key {
-  display: grid;
-  height: 10cqw;
+  width: 31.4cqw;
+  height: 11.4cqw;
+  flex: none;
   place-items: center;
-  border-radius: 2.4cqw;
+  border-radius: 99px;
+  background: var(--ph-key-off);
+  color: color-mix(in srgb, var(--ph-key-ink) 45%, transparent);
+  transition: background 0.3s ease, color 0.3s ease, transform 0.45s var(--ease-spring);
+}
+
+.kb-action .i {
+  width: 5.4cqw;
+  height: 5.4cqw;
+}
+
+[data-action="on"] .kb-action {
   background: var(--ph-key);
-  box-shadow: 0 0.4cqw 0 rgba(0, 0, 0, 0.16);
-  font-size: 3.4cqw;
-  transition: transform 0.4s var(--ease-spring), background 0.3s ease;
+  box-shadow: 0 1cqw 2.4cqw -1cqw rgba(0, 0, 0, 0.25), inset 0 0 0 0.25cqw var(--ph-line);
+  color: var(--ph-key-ink);
 }
 
-.kb-key .i {
-  width: 4.8cqw;
-  height: 4.8cqw;
-}
-
-.kb-return {
-  background: var(--ph-out);
-  color: #fff;
-}
-
-.story.s4:not(.s5) .kb-return {
+.story.press-send .kb-action {
   animation: key-press 0.5s var(--ease-out);
 }
 
 @keyframes key-press {
   30% { transform: scale(0.9); }
+}
+
+/* 回复候选：三张玻璃卡片（普通 / 正式 / 轻松趣味），自下而上依次落定 */
+.kb-variants {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.8cqw;
+  padding: 1.2cqw 0.6cqw 0;
+  pointer-events: none;
+}
+
+.kb-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 2.6cqw;
+  padding: 2cqw 3cqw;
+  border-radius: 3.6cqw;
+  background: var(--ph-glass);
+  box-shadow: 0 0.8cqw 2.4cqw -1.2cqw rgba(0, 0, 0, 0.2), inset 0 0 0 0.25cqw var(--ph-line);
+  opacity: 0;
+  transform: translateY(5cqw) scale(0.96);
+  transition: opacity 0.35s ease, transform 0.6s var(--ease-spring), box-shadow 0.3s ease;
+}
+
+.kb-card:nth-child(2) { transition-delay: 0.07s; }
+.kb-card:nth-child(3) { transition-delay: 0.14s; }
+
+[data-surface="variants"] .kb-card {
+  opacity: 1;
+  transform: none;
+}
+
+.kb-card .i-solid {
+  width: 4.6cqw;
+  height: 4.6cqw;
+  flex: none;
+  margin-top: 0.4cqw;
+  fill: currentColor;
+  stroke: none;
+}
+
+.kb-card > span {
+  display: grid;
+  gap: 0.3cqw;
+  line-height: 1.32;
+}
+
+.kb-card small {
+  color: color-mix(in srgb, var(--ph-key-ink) 55%, transparent);
+  font-size: 2.7cqw;
+}
+
+.kb-card b {
+  font-size: 3.2cqw;
+  font-weight: 500;
+}
+
+[data-pick="0"] .kb-card[data-card="0"],
+[data-pick="1"] .kb-card[data-card="1"],
+[data-pick="2"] .kb-card[data-card="2"] {
+  box-shadow: 0 0 0 0.7cqw color-mix(in srgb, var(--kb-accent) 50%, transparent);
+  transform: scale(0.97);
+  transition-delay: 0s;
+}
+
+/* --------------------------------------------------------------------------
+ * 技能区演示：复用键盘复刻组件，独立的容器查询让它按自身宽度缩放
+ * -------------------------------------------------------------------------- */
+.skills-frame {
+  display: grid;
+  place-items: center;
+  padding: clamp(18px, 3vw, 34px);
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--accent) 14%, var(--surface)), var(--surface-soft));
+}
+
+.skills-demo {
+  display: flex;
+  overflow: hidden;
+  width: min(100%, 430px);
+  flex-direction: column;
+  border-radius: 22px;
+  background: var(--ph-bg);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.45), inset 0 0 0 1px var(--ph-line);
+  color: var(--ph-ink);
+  container-type: inline-size;
+  text-align: left;
+}
+
+/* 消息来源区：被复制的那条消息，最后被「已添加到日历」横幅替换 */
+.sd-source {
+  position: relative;
+  display: grid;
+  min-height: 34cqw;
+  align-items: center;
+  padding: 7cqw 5cqw;
+}
+
+.sd-msg {
+  position: relative;
+  justify-self: start;
+  max-width: 82%;
+  padding: 2.4cqw 3.8cqw;
+  border-radius: 5cqw 5cqw 5cqw 1.4cqw;
+  background: var(--ph-in);
+  font-size: 3.7cqw;
+  line-height: 1.4;
+  transition: box-shadow 0.4s ease, opacity 0.4s ease, transform 0.6s var(--ease-out);
+}
+
+.skills-demo .event-banner {
+  top: 50%;
+  right: 5cqw;
+  left: 5cqw;
+  translate: 0 -50%;
+}
+
+.skills-demo .event-banner,
+.skills-demo .event-check {
+  opacity: 0;
+  transform: translateY(-40%) scale(0.92);
+}
+
+.skills-demo .event-check {
+  transform: scale(0);
+}
+
+.skills-demo.is-done .event-banner {
+  opacity: 1;
+  transform: none;
+}
+
+.skills-demo.is-done .event-check {
+  opacity: 1;
+  transform: none;
+}
+
+.skills-demo.is-done .sd-msg {
+  opacity: 0;
+  transform: translateY(6cqw) scale(0.94);
+}
+
+.skills-demo .kb {
+  padding-bottom: 5cqw;
 }
 
 /* --------------------------------------------------------------------------
@@ -3068,13 +3499,9 @@ html.vt-theme::view-transition-new(root) {
     padding: 6px 14px 6px 6px;
   }
 
-  .capsule-orb {
-    width: 34px;
-    height: 34px;
-  }
-
-  .capsule-wave {
-    display: none;
+  .capsule-mic {
+    width: 62px;
+    height: 28px;
   }
 
   .capsule-body {
