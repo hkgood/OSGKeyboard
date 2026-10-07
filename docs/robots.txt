@@ -23,4 +23,4 @@ Allow: /
 User-agent: Bytespider
 Allow: /
 
-Sitemap: https://hkgood.github.io/OSGKeyboard/sitemap.xml
+Sitemap: https://osg.osglab.com/sitemap.xml
