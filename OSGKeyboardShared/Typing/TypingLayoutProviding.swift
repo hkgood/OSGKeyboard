@@ -22,12 +22,46 @@ public protocol TypingLayoutProviding: Sendable {
         language: TypingInputLanguage,
         shiftActive: Bool
     ) -> [[String]]
+
+    func rows(
+        for page: TypingKeyPage,
+        language: TypingInputLanguage,
+        shiftActive: Bool,
+        schema: TypingInputSchema
+    ) -> [[String]]
+}
+
+public extension TypingLayoutProviding {
+    /// Existing custom providers can retain their original layout until they
+    /// opt into schema-specific rows.
+    func rows(
+        for page: TypingKeyPage,
+        language: TypingInputLanguage,
+        shiftActive: Bool,
+        schema: TypingInputSchema
+    ) -> [[String]] {
+        rows(for: page, language: language, shiftActive: shiftActive)
+    }
 }
 
 /// Phone QWERTY + 123 / #+= pages aligned with iOS system keyboards
 /// (English US and Simplified Chinese Pinyin).
 public struct StandardTypingLayout: TypingLayoutProviding {
     public init() {}
+
+    public func rows(
+        for page: TypingKeyPage,
+        language: TypingInputLanguage,
+        shiftActive: Bool,
+        schema: TypingInputSchema
+    ) -> [[String]] {
+        if page == .letters, language == .chinese, schema == .zhuyin {
+            var rows = ZhuyinKeyboardLayout.rows
+            rows[rows.count - 1].append("⌫")
+            return rows
+        }
+        return rows(for: page, language: language, shiftActive: shiftActive)
+    }
 
     public func rows(
         for page: TypingKeyPage,

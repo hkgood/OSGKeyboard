@@ -1,0 +1,20 @@
+{
+  "source": "https://github.com/openvanilla/McBopomofo",
+  "commit": "be6564acad6c4d3265c34a2e1a872d80f9db6068",
+  "license": "MIT",
+  "files": {
+    "BPMFBase.txt": "46e64a53dc9c6baa2cbe6e0b1af572f8ef6aafb50597178b5fd53df804316ce7",
+    "BPMFMappings.txt": "394f3946754ebdd9d5e503f0f94c6977e5e19bd7cab21b4b18a6ea0167e00171",
+    "phrase.occ": "dcd11597090b2bef88fb385bdd567e235ccd916728c84b8d0d3f8069ccfc7b8d"
+  },
+  "statistics": {
+    "base": 14361,
+    "phrases": 145603,
+    "skipped": 4,
+    "unique": 159964
+  },
+  "output": {
+    "file": "osg_zhuyin.dict.yaml",
+    "sha256": "6a415cea3ccedcd2c658cdcedb9cb4f0713a3e5aa5478da97d7526e455da4097"
+  }
+}

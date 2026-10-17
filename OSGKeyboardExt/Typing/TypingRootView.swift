@@ -569,9 +569,14 @@ struct TypingRootView: View {
         // keyboard. Using `size` here would compare the grid's own width to
         // its height (always landscape) and could pick a different bucket than
         // the height constraint, clipping the bottom row.
+        let rows = typing.keyRows
         let metrics = TypingLayoutMetrics.metrics(isIPad: isIPad, width: state.layoutWidth)
-        let pageLabel = typing.page == .letters ? "123" : "ABC"
-        let spaceLabel = typing.language == .chinese ? "空格" : "space"
+            .fittingGrid(rowCount: rows.count)
+        let letterPageLabel = typing.language == .chinese && typing.schema == .zhuyin
+            ? "注音" : "ABC"
+        let pageLabel = typing.page == .letters ? "123" : letterPageLabel
+        let spaceLabel = typing.language == .chinese
+            ? (typing.schema == .zhuyin ? "空白" : "空格") : "space"
         let returnLabel: String = {
             if state.returnKeyRole.usesActionFill {
                 return ExtL10n.string(state.returnKeyRole.titleKey)
@@ -589,7 +594,7 @@ struct TypingRootView: View {
 
         let layout = TypingKeyLayoutBuilder.build(
             size: size,
-            letterRows: typing.keyRows,
+            letterRows: rows,
             pageSwitchLabel: pageLabel,
             spaceLabel: spaceLabel,
             returnLabel: returnLabel,
@@ -598,11 +603,12 @@ struct TypingRootView: View {
             punctuationKeys: punctuationKeys,
             // iPad top letter row carries the small number overlay (1–0),
             // mirroring the iOS system keyboard. iPhone keeps the clean row.
-            showTopRowNumbers: isIPad,
+            showTopRowNumbers: isIPad && !typing.isZhuyinLetterPage,
             keyWeight: { label, index, rowIndex in
                 keyWeight(label: label, index: index, rowIndex: rowIndex)
             }
         )
+        guard !typing.isZhuyinLetterPage else { return layout }
         let validNext = PinyinNextKeyResolver.validNextKeys(
             rawInput: typing.composition.rawInput,
             schema: typing.schema,
@@ -783,6 +789,7 @@ struct TypingRootView: View {
     }
 
     private func keyWeight(label: String, index: Int, rowIndex: Int) -> CGFloat {
+        if typing.isZhuyinLetterPage { return 1 }
         // Match system: page switchers + delete are wider than character keys.
         if label == "⌫" || label == "⇧" || label == "#+=" || label == "123" {
             return 1.35

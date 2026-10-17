@@ -59,10 +59,18 @@ OSGKeyboard is an AI voice keyboard for iPhone, iPad, and Mac: say it and it's t
 
 ### Chinese and English typing: the fallback when speaking is not convenient
 
-- **Chinese**: full pinyin, Ziranma, Xiaohe, Microsoft, and Sogou double pinyin — with fuzzy pairs, abbreviation ranking, candidate paging, number selection, swipe selection, and mixed Chinese-English input
+- **Chinese**: Traditional Chinese Zhuyin (default), full pinyin, and Microsoft / Sogou double pinyin. Zhuyin uses a four-row Dachen layout with tone-aware candidates; pinyin keeps its fuzzy pairs and abbreviation ranking. Candidate paging and Chinese-English switching remain available.
 - **English**: three-slot QuickType, a ~40k-word offline lexicon, prefix completion, autocorrect, next-word prediction, candidate undo, and sentence capitalization
 - Touch behavior: proximity correction, overlapping presses, hold-to-delete, double-space period, and system Return semantics
-- One personal dictionary participates in Chinese candidates, English suggestions, speech biasing, and polish protection
+- One personal dictionary participates in pinyin candidates, English suggestions, speech biasing, and polish protection
+
+#### Traditional Chinese Zhuyin
+
+New installations open directly on the Chinese typing surface with **Zhuyin (Traditional Chinese)** selected. Existing explicit keyboard preferences are preserved. Choose the scheme in **Settings → Typing Input**; full pinyin and double pinyin remain selectable.
+
+The four-row keyboard shows the standard Dachen symbols and tone marks. Tap a candidate to insert Traditional Chinese, use Space to confirm, and use the English / `123` controls for Latin text and numbers. Unfinished spelling stays readable as Zhuyin when switching languages.
+
+Open the host app once after installing or updating so it can prepare the offline dictionaries. The keyboard extension opens the compiled resources without downloading or compiling dictionaries while typing.
 
 ## Your AI voice double: it sounds like you wrote it
 
@@ -112,7 +120,7 @@ The iOS / iPadOS account center includes:
 |---|:---:|:---:|
 | System keyboard / global hotkey | Custom keyboard | Hold Option |
 | On-device speech | Apple SpeechAnalyzer | Qwen3 MLX (Apple Silicon) + Apple Speech fallback |
-| Chinese full / double pinyin / fuzzy pairs | Yes | — |
+| Traditional Chinese Zhuyin / full and double pinyin | Yes | — |
 | English completion / correction / next-word | Yes | — |
 | AI polish and translation | Yes | Yes |
 | Unified assistant and voice questions | Yes | — |

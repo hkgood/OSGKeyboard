@@ -17,6 +17,11 @@ Dictionary data
   MIT License
 - mozillazg/pinyin-data @ 923b108dc5d45dee061324c011b478fb649f8b73
   MIT License
+- openvanilla/McBopomofo @ be6564acad6c4d3265c34a2e1a872d80f9db6068
+  MIT License; see LICENSE-MCBOPOMOFO-MIT.txt.
+  Traditional-Chinese Zhuyin data generated from BPMFBase.txt,
+  BPMFMappings.txt and phrase.occ. Upstream's Source/Data/README.md
+  credits BPMFMappings.txt as modified from BSD-licensed libtabe tsi.src.
 
 The generated manifest.json records exact source URLs and SHA-256 values.
 OSGKeyboard's schema and transformation code is project-owned.

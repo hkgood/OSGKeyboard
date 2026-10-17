@@ -213,6 +213,32 @@ final class KeyboardSurfaceStateTests: XCTestCase {
         )
     }
 
+    func testRimeReadinessRequiresCompiledZhuyinAssets() throws {
+        let data = FileManager.default.temporaryDirectory
+            .appendingPathComponent("RimeReadinessTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: data) }
+        let build = data.appendingPathComponent("build", isDirectory: true)
+        try FileManager.default.createDirectory(at: build, withIntermediateDirectories: true)
+        for schema in TypingInputSchema.allCases {
+            for suffix in ["schema.yaml", "prism.bin"] {
+                _ = FileManager.default.createFile(
+                    atPath: build.appendingPathComponent("\(schema.rawValue).\(suffix)").path,
+                    contents: Data()
+                )
+            }
+        }
+        _ = FileManager.default.createFile(
+            atPath: build.appendingPathComponent("osg_pinyin.table.bin").path,
+            contents: Data()
+        )
+        XCTAssertFalse(RimeResourceInstaller.hasCompiledResources(in: data))
+        _ = FileManager.default.createFile(
+            atPath: build.appendingPathComponent("osg_zhuyin.table.bin").path,
+            contents: Data()
+        )
+        XCTAssertTrue(RimeResourceInstaller.hasCompiledResources(in: data))
+    }
+
     func testWideIPadMetricsTrackWidthNotOrientation() {
         // iPad portrait widths (744 mini … 1024 on 13") stay narrow.
         XCTAssertFalse(KeyboardChromeLayout.usesWideIPadMetrics(isIPad: true, width: 834))
@@ -350,6 +376,8 @@ final class KeyboardSurfaceStateTests: XCTestCase {
 
     func testShiftStateProducesUppercaseKeyRows() {
         let typing = TypingSessionController(engine: { TrackingStubRimeEngine() })
+        typing.precedingTextProvider = { "hello " }
+        _ = typing.setLanguage(.english)
         XCTAssertFalse(typing.shiftActive)
 
         _ = typing.handleKey("⇧")

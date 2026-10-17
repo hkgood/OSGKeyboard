@@ -27,17 +27,19 @@ struct TypingInputSettingsView: View {
                     schemaOptionsCard
                 }
 
-                settingsSection(
-                    title: AppL10n.string(
-                        "settings.typingInput.fuzzy.section",
-                        language: config.uiLanguage
-                    ),
-                    footer: AppL10n.string(
-                        "settings.typingInput.fuzzy.footer",
-                        language: config.uiLanguage
-                    )
-                ) {
-                    fuzzyPairsCard
+                if configuration.schema != .zhuyin {
+                    settingsSection(
+                        title: AppL10n.string(
+                            "settings.typingInput.fuzzy.section",
+                            language: config.uiLanguage
+                        ),
+                        footer: AppL10n.string(
+                            "settings.typingInput.fuzzy.footer",
+                            language: config.uiLanguage
+                        )
+                    ) {
+                        fuzzyPairsCard
+                    }
                 }
 
                 settingsSection(

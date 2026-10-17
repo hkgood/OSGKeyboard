@@ -357,13 +357,14 @@
 "settings.typingInput.default.title" = "Default Input";
 "settings.typingInput.default.description" = "Used when the keyboard opens";
 "settings.typingInput.default.mode.voice" = "Voice";
-"settings.typingInput.default.mode.pinyin" = "Pinyin";
+"settings.typingInput.default.mode.pinyin" = "Chinese keyboard";
 "settings.typingInput.default.mode.english" = "English";
 "settings.typingInput.rememberLast.title" = "Remember Last Choice";
 "settings.typingInput.rememberLast.description" = "Restore last surface on reopen";
 "settings.typingInput.schema.section" = "Input Method";
-"settings.typingInput.schema.picker" = "Pinyin Scheme";
+"settings.typingInput.schema.picker" = "Chinese Input Scheme";
 "typing.schema.fullPinyin" = "Full Pinyin";
+"typing.schema.zhuyin" = "Zhuyin (Traditional Chinese)";
 "typing.schema.microsoftDoublePinyin" = "Microsoft Shuangpin";
 "typing.schema.sogouDoublePinyin" = "Sogou Shuangpin";
 "settings.typingInput.fuzzy.section" = "Fuzzy Pinyin";

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Traditional Chinese Zhuyin**: add a four-row Dachen keyboard with tone-aware Traditional Chinese candidates and make Chinese Zhuyin the default for new installations; existing explicit input preferences are preserved. / **繁体中文注音**：新增四行大千注音键盘与按声调筛选的繁体中文候选，新安装默认打开中文注音键盘，并保留已明确设置的输入偏好。
+
 ### Changed
 - **Messaging shift to AI voice keyboard / voice double / agentic skills**: README and the product page now lead with “Say it. It’s typed. Speaks like you. Acts for you.” — the personalization story (learned style, three-tone replies) moves ahead of typing, clipboard skills are framed as agentic actions, and typing becomes the fallback capability. / **宣传定位转向 AI 语音键盘 / 嘴替 / Agentic 技能**：README 与产品页改用「开口即文字。会说你的话，会办你的事。」定位；个人化卖点（专属风格、三语气回复）提前，剪贴板技能表述升级为 Agentic 行动，打字退为兜底能力。
 - **Product page redesign**: rebuild the GitHub Pages home as a dark product stage with the new Icon Composer app icon, the three-device hero visual, and real on-device videos and UI cards replacing hand-drawn mockups; add 2.1 selling points (personal style, three-tone replies, monthly usage calendar, EventKit skills export, guided trials and credit rewards), a TestFlight link, and self-hosted inline SVG icons; bump page references to 2.1.0. / **产品页重设计**：GitHub Pages 主页改为深色产品舞台，启用 Icon Composer 新图标与三端同框主视觉，以实机视频与真实界面卡片取代手绘示意；补齐 2.1 卖点（专属风格、三语气个性回复、月度用量日历、EventKit 技能写入、引导体验与积分奖励），新增 TestFlight 入口，图标改为自托管内联 SVG；页面版本号更新至 2.1.0。

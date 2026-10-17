@@ -105,7 +105,7 @@ public protocol RimeEngineBridging: AnyObject {
     func processReturn() -> String?
     /// Commit candidate at index; returns text to insert (empty if invalid).
     func selectCandidate(at index: Int) -> String
-    /// Force-commit current preedit as raw latin (or empty).
+    /// Flush unfinished spelling as visible pinyin / Zhuyin (or empty).
     func flushPreedit() -> String
     func clearComposition()
 }

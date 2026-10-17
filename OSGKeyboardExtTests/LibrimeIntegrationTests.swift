@@ -24,6 +24,13 @@ final class LibrimeIntegrationTests: XCTestCase {
             at: dictionary,
             to: shared.appendingPathComponent("osg_pinyin.dict.yaml")
         )
+        let zhuyinDictionary = try XCTUnwrap(
+            bundle.url(forResource: "osg_zhuyin.dict", withExtension: "yaml")
+        )
+        try fileManager.copyItem(
+            at: zhuyinDictionary,
+            to: shared.appendingPathComponent("osg_zhuyin.dict.yaml")
+        )
         try RimeSchemaGenerator.defaultConfiguration().write(
             to: shared.appendingPathComponent("default.yaml"),
             atomically: true,
@@ -144,6 +151,51 @@ final class LibrimeIntegrationTests: XCTestCase {
         XCTAssertTrue(userFiles.contains(where: { $0.contains("userdb") }))
     }
 
+    func testToneAwareTraditionalZhuyinCandidates() throws {
+        let env = try deployedRimeEnvironment()
+        defer { try? env.fileManager.removeItem(at: env.root) }
+        let bridge = OSGRimeBridge(
+            sharedDataDirectory: env.shared.path,
+            userDataDirectory: env.user.path,
+            distributionVersion: "tests-zhuyin"
+        )
+        try bridge.start()
+        defer { bridge.finalizeRuntime() }
+        XCTAssertTrue(bridge.selectSchema(TypingInputSchema.zhuyin.rawValue))
+
+        let examples = [
+            ("su3cl3", "你好"),
+            ("w96j0", "台灣"),
+            ("5j4up", "注音"),
+            ("bj03wu3", "軟體"),
+            ("a8", "媽"),
+            ("a86", "麻"),
+            ("a83", "馬"),
+            ("a84", "罵"),
+            ("a87", "嗎")
+        ]
+        for (keystrokes, expected) in examples {
+            bridge.clearComposition()
+            for ascii in keystrokes.utf8 {
+                XCTAssertTrue(
+                    bridge.processKeyCode(Int32(ascii), modifiers: 0),
+                    "Unrecognized Zhuyin key: \(ascii)"
+                )
+            }
+            let snapshot = bridge.snapshot(withCandidateLimit: 160)
+            XCTAssertTrue(
+                snapshot.candidates.contains(where: { $0.text == expected }),
+                "Expected \(expected) from \(keystrokes), got "
+                    + "\(snapshot.candidates.map(\.text).prefix(20))"
+            )
+            if keystrokes == "su3cl3",
+               let hello = snapshot.candidates.first(where: { $0.text == expected }) {
+                XCTAssertTrue(bridge.selectCandidate(at: hello.index))
+                XCTAssertEqual(bridge.snapshot(withCandidateLimit: 10).commitText, expected)
+            }
+        }
+    }
+
     func testNLFuzzyMapsLihaoToNihao() throws {
         let env = try stagedRimeEnvironment(fuzzyPairs: [.nL])
         defer { try? env.fileManager.removeItem(at: env.root) }
@@ -192,6 +244,13 @@ final class LibrimeIntegrationTests: XCTestCase {
             to: shared.appendingPathComponent("osg_pinyin.dict.yaml"),
             atomically: true,
             encoding: .utf8
+        )
+        let zhuyinDictionaryURL = try XCTUnwrap(
+            bundle.url(forResource: "osg_zhuyin.dict", withExtension: "yaml")
+        )
+        try fileManager.copyItem(
+            at: zhuyinDictionaryURL,
+            to: shared.appendingPathComponent("osg_zhuyin.dict.yaml")
         )
 
         // Unique personal phrase on a common code — must outrank baseline “你好”.
@@ -559,6 +618,13 @@ final class LibrimeIntegrationTests: XCTestCase {
         try fileManager.copyItem(
             at: dictionary,
             to: shared.appendingPathComponent("osg_pinyin.dict.yaml")
+        )
+        let zhuyinDictionary = try XCTUnwrap(
+            bundle.url(forResource: "osg_zhuyin.dict", withExtension: "yaml")
+        )
+        try fileManager.copyItem(
+            at: zhuyinDictionary,
+            to: shared.appendingPathComponent("osg_zhuyin.dict.yaml")
         )
         try RimeSchemaGenerator.defaultConfiguration().write(
             to: shared.appendingPathComponent("default.yaml"),

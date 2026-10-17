@@ -45,11 +45,23 @@ enum OpenSourceLicenseCatalog {
             id: "librime-static",
             name: "librime 1.17.0 + static dependencies",
             licenseName: "BSD-3-Clause and others",
-            purpose: "Chinese typing runtime packaged by librime-xcframework 1.17.0-pack.1 (full pinyin and double pinyin). Includes complete notices for Boost, OpenCC, LevelDB, yaml-cpp, glog, marisa-trie, RapidJSON, Darts and other statically linked components.",
+            purpose: "Chinese typing runtime packaged by librime-xcframework 1.17.0-pack.1 (Zhuyin, full pinyin and double pinyin). Includes complete notices for Boost, OpenCC, LevelDB, yaml-cpp, glog, marisa-trie, RapidJSON, Darts and other statically linked components.",
             url: URL(string: "https://github.com/ghostflyby/librime-xcframework"),
             licenseText: resourceText(
                 named: "LIBRIME-COMBINED-NOTICES",
                 fallback: bsd3Text
+            ),
+            platforms: [.iOS]
+        ),
+        .init(
+            id: "mcbopomofo-zhuyin",
+            name: "McBopomofo dictionary data",
+            licenseName: "MIT",
+            purpose: "Traditional-Chinese character readings, phrase readings and frequency weights used to generate the tone-aware Zhuyin dictionary. Upstream documents BPMFMappings.txt as modified from BSD-licensed libtabe data.",
+            url: URL(string: "https://github.com/openvanilla/McBopomofo"),
+            licenseText: resourceText(
+                named: "LICENSE-MCBOPOMOFO-MIT",
+                fallback: mitLicenseText(copyright: "Copyright (c) 2011-2026 Mengjuei Hsieh et al.")
             ),
             platforms: [.iOS]
         ),
