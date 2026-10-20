@@ -51,6 +51,13 @@ public protocol CloudASRStreamingSession: Sendable {
     /// Signal end-of-audio and wait for the polish-ready final transcript.
     func finish() async throws -> String
     func cancel()
+    /// False once the session has failed, closed, or been cancelled, so a
+    /// pre-opened session is not adopted after its transport already died.
+    var acceptsAudio: Bool { get }
+}
+
+public extension CloudASRStreamingSession {
+    var acceptsAudio: Bool { true }
 }
 
 /// Providers that can open an utterance-level streaming session.

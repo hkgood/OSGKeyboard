@@ -6,6 +6,7 @@
 
 import OSGKeyboardShared
 import SwiftUI
+import UIKit
 
 struct AIKeyboardView: View {
     private enum Layout {
@@ -35,6 +36,7 @@ struct AIKeyboardView: View {
         static let pageDotSize: CGFloat = 5
         static let skillPaginationBottomInset: CGFloat = 6
         static let maximumSemanticSkills = 5
+        static let statusViewportHeight = UIFont.systemFont(ofSize: 15).lineHeight * 3
     }
 
     private struct SemanticBadgeContent {
@@ -685,13 +687,37 @@ struct AIKeyboardView: View {
     }
 
     private func statusText(_ text: String, color: Color) -> some View {
-        Text(text)
-            .font(TypeStyle.body)
-            .foregroundStyle(color)
-            .lineLimit(2)
-            .multilineTextAlignment(.center)
-            .truncationMode(.tail)
-            .frame(maxWidth: .infinity)
+        GeometryReader { geometry in
+            ScrollViewReader { proxy in
+                ScrollView(.vertical, showsIndicators: false) {
+                    // Match the viewport height while short, then grow upward one
+                    // complete line at a time as the live transcript wraps.
+                    Text(text)
+                        .font(TypeStyle.body)
+                        .foregroundStyle(color)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(
+                            maxWidth: .infinity,
+                            minHeight: geometry.size.height,
+                            alignment: .center
+                        )
+                        .id("assistant.status.text")
+                }
+                .scrollDisabled(true)
+                .scrollEdgeEffectHidden()
+                .onAppear {
+                    proxy.scrollTo("assistant.status.text", anchor: .bottom)
+                }
+                .onChange(of: text) { _, _ in
+                    // ASR partials update per word. Jump only by the resulting
+                    // layout delta instead of animating every partial update.
+                    proxy.scrollTo("assistant.status.text", anchor: .bottom)
+                }
+            }
+        }
+        .frame(height: Layout.statusViewportHeight)
+        .frame(maxWidth: .infinity)
     }
 
     private var activeStatus: (text: String, color: Color)? {

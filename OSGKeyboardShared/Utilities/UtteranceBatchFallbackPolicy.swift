@@ -10,13 +10,18 @@ public enum UtteranceBatchFallbackPolicy {
     public static let defaultCharacterAdvantage = UtteranceTranscriptGuard.defaultPartialAdvantage
 
     /// True when chunked output likely lost trailing content vs the live partial.
+    ///
+    /// `recognitionStalled` means the ASR wait expired before the recognizer
+    /// finished (e.g. the streaming socket went quiet). That is a failure, not
+    /// silence, so the captured PCM still deserves a batch attempt.
     public static func shouldRunBatchFallback(
         stitchedFinal: String,
         partialSnapshot: String,
         recognitionFailed: Bool = false,
+        recognitionStalled: Bool = false,
         minimumCharacterAdvantage: Int = defaultCharacterAdvantage
     ) -> Bool {
-        if recognitionFailed { return true }
+        if recognitionFailed || recognitionStalled { return true }
         let final = stitchedFinal.trimmingCharacters(in: .whitespacesAndNewlines)
         let partial = partialSnapshot.trimmingCharacters(in: .whitespacesAndNewlines)
 
