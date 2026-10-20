@@ -369,10 +369,6 @@ struct HomeView: View {
         layout: UsageStatsClusterLayout,
         compact: Bool
     ) -> some View {
-            #if DEBUG
-            HostBundleProbeCard()
-            #endif
-
             AccountRewardsCard {
                 path.append(HomeRoute.account)
             }
