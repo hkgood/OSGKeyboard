@@ -399,6 +399,9 @@ targets:
           - "include/**"
     info:
       path: OSGKeyboardShared/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.shared
@@ -433,6 +436,9 @@ targets:
       - path: OSGKeyboardHostSupport
     info:
       path: OSGKeyboardHostSupport/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.hostsupport
@@ -465,6 +471,9 @@ targets:
       - path: Tests/ProviderToolRequestCoordinatorTests.swift
     info:
       path: OSGKeyboardTests/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
     dependencies:
       - target: OSGKeyboard
       - target: OSGKeyboardHostSupport
@@ -488,6 +497,9 @@ targets:
         buildPhase: resources
     info:
       path: OSGKeyboardExtTests/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
     dependencies:
       - target: OSGKeyboardShared
     settings:
@@ -507,6 +519,9 @@ targets:
       - path: OSGKeyboardUITests
     info:
       path: OSGKeyboardUITests/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
     dependencies:
       - target: OSGKeyboard
     settings:
@@ -531,6 +546,9 @@ targets:
       - path: Tests/ProviderToolRequestCoordinatorTests.swift
     info:
       path: OSGKeyboardMacTests/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
     dependencies:
       - target: OSGKeyboardMac
     settings:
