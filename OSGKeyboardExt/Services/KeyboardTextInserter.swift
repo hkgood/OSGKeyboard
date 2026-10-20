@@ -547,12 +547,6 @@ final class KeyboardTextInserter {
             guard !Task.isCancelled else { return }
             state?.assistantInsertionSucceeded = false
         }
-        let hint = ExtL10n.string("keyboard.edit.hint.available")
-        editHintScheduler.show(
-            message: hint,
-            isPositive: true,
-            duration: .seconds(10)
-        )
     }
 
     private func clearEditHintIfPositive() {
