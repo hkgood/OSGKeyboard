@@ -12,7 +12,7 @@ protocol PublicContentHTTPTransport: Sendable {
 
 final class URLSessionPublicContentHTTPTransport:
     PublicContentHTTPTransport,
-    @unchecked Sendable {
+    Sendable {
     private let session: URLSession
 
     init(session: URLSession = .shared) {

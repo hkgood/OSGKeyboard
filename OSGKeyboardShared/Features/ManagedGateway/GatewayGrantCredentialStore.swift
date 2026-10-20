@@ -13,7 +13,7 @@ public protocol GatewayGrantCredentialStore: Sendable {
     func delete() async throws
 }
 
-public struct GatewayGrantKeychainStore: GatewayGrantCredentialStore, @unchecked Sendable {
+public struct GatewayGrantKeychainStore: GatewayGrantCredentialStore, Sendable {
     public enum Slot: String, Sendable {
         case account = "scope-limited.active"
         case oobe = "scope-limited.oobe"

@@ -12,7 +12,7 @@
 import Foundation
 import Security
 
-public enum Keychain: @unchecked Sendable {
+public enum Keychain: Sendable {
 
     public enum KeychainError: Error, Sendable, Equatable {
         case unexpectedStatus(OSStatus)

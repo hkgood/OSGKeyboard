@@ -12,10 +12,10 @@
 import Combine
 import Foundation
 
-/// UI-owned ObservableObject; construct and mutate it on the main thread.
-/// `@unchecked Sendable` does not make `@Published` thread-safe. Credential
-/// observers write only Keychain, while non-secret configuration uses App Group defaults.
-public final class ProviderConfig: ObservableObject, @unchecked Sendable {
+/// UI-owned ObservableObject, isolated to the main actor. Credential observers
+/// write only Keychain, while non-secret configuration uses App Group defaults.
+@MainActor
+public final class ProviderConfig: ObservableObject {
     public static let shared = ProviderConfig()
 
     @Published public var providerId: String {
