@@ -97,9 +97,7 @@ struct MainAppRoot: View {
             AppL10n.string("account.error.title"),
             isPresented: accountOperationErrorBinding
         ) {
-            Button(AppL10n.string("common.done")) {
-                accountSession.dismissOperationError()
-            }
+            Button(AppL10n.string("common.done")) {}
         } message: {
             if let key = accountSession.operationErrorKey {
                 Text(AppL10n.string(key))
@@ -326,7 +324,11 @@ struct MainAppRoot: View {
             get: { accountSession.operationErrorKey != nil },
             set: { isPresented in
                 if !isPresented {
-                    accountSession.dismissOperationError()
+                    // SwiftUI writes this binding while updating the alert.
+                    // Defer ObservableObject mutations until that update ends.
+                    Task { @MainActor in
+                        accountSession.dismissOperationError()
+                    }
                 }
             }
         )
