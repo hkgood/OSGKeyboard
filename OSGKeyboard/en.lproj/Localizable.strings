@@ -715,6 +715,7 @@
 "personalReplyStyle.generatedAt" = "Generated";
 "personalReplyStyle.evidenceSummary" = "%lld ASR characters · %lld reply choices · %lld final edits";
 "personalReplyStyle.confidence" = "Confidence: %lld%%";
+"personalReplyStyle.newSinceLast" = "New since last generation: %lld / %lld characters";
 "personalReplyStyle.regenerate" = "Regenerate";
 "personalReplyStyle.regenerating" = "Regenerating…";
 "personalReplyStyle.privacy" = "Sent to your configured AI only when you generate. Review and edit before saving.";

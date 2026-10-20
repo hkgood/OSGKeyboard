@@ -715,6 +715,7 @@
 "personalReplyStyle.generatedAt" = "生成于";
 "personalReplyStyle.evidenceSummary" = "%lld 个 ASR 字符 · %lld 次回复选择 · %lld 次最终改稿";
 "personalReplyStyle.confidence" = "置信度：%lld%%";
+"personalReplyStyle.newSinceLast" = "自上次生成后新增 %lld / %lld 字";
 "personalReplyStyle.regenerate" = "重新生成";
 "personalReplyStyle.regenerating" = "重新生成中…";
 "personalReplyStyle.privacy" = "仅在生成时发送给你配置的 AI，保存前可预览和修改。";

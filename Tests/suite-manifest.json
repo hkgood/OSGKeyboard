@@ -81,6 +81,7 @@
         "OSGKeyboardTests/PolishStylePackTests",
         "OSGKeyboardTests/PolishStyleCorpusExportStoreTests",
         "OSGKeyboardTests/PolishStyleLearningServiceTests",
+        "OSGKeyboardTests/PersonalStyleLearningStateStoreTests",
         "OSGKeyboardTests/PolishStylesL10nTests",
         "OSGKeyboardTests/LLMClientTests",
         "OSGKeyboardTests/TranscriptLanguageDetectorTests",

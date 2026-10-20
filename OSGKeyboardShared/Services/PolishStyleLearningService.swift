@@ -91,6 +91,9 @@ public struct PolishStyleLearningEvidence: Codable, Equatable, Sendable {
         case replyFinalEdit
         case replyCrossContextSelection
         case replyAcceptance
+        /// A trait retained from the previous generation's accumulated
+        /// evidence, which is no longer present as raw examples.
+        case priorProfile
     }
 
     public struct Trait: Codable, Equatable, Sendable {
@@ -147,6 +150,20 @@ public struct PolishStyleLearningCorpus: Equatable, Sendable {
         effectiveCharacterCount
             >= PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount
     }
+
+    /// Examples recorded after `date`, i.e. not yet absorbed by a prior
+    /// generation.
+    public func examples(after date: Date) -> PolishStyleLearningCorpus {
+        let newer = examples.filter { $0.createdAt > date }
+        return PolishStyleLearningCorpus(
+            examples: newer,
+            effectiveCharacterCount: newer.reduce(into: 0) { count, example in
+                count += PolishStyleLearningCorpusBuilder.effectiveCharacterCount(
+                    in: example.prePolishText
+                )
+            }
+        )
+    }
 }
 
 public enum PolishStyleLearningCorpusBuilder {
@@ -159,6 +176,10 @@ public enum PolishStyleLearningCorpusBuilder {
     /// without dictating a full production corpus. The threshold is
     /// still a real gate; the previous "0 / unlimited" bypass is gone.
     public static let testBuildEffectiveCharacterCount = 1_250
+
+    /// New effective characters required since the last saved generation
+    /// before an incremental relearn is worth a request.
+    public static let incrementalEffectiveCharacterCount = 500
 
     /// Upper bound on effective characters included in a single
     /// training-corpus export. Even when the user has accumulated
@@ -459,8 +480,16 @@ public actor PolishStyleLearningService {
         let examples: [ReplyExamplePayload]
     }
 
+    private struct PriorInput: Codable {
+        let learnedThrough: Date
+        let asr: PolishStyleLearningPriorEvidence.Domain
+        let reply: PolishStyleLearningPriorEvidence.Domain
+    }
+
     private struct EvidenceRequestPayload: Codable {
         let schemaVersion: Int
+        /// Omitted from the JSON entirely on a full (non-incremental) run.
+        let prior: PriorInput?
         let asr: ASRInput
         let reply: ReplyInput
     }
@@ -488,7 +517,16 @@ public actor PolishStyleLearningService {
     private static let maximumEvidenceItemsPerDomain = 24
     private static let maximumContradictionsPerDomain = 12
     private static let maximumEvidenceFieldCharacters = 320
-    private static let learningSchemaVersion = 3
+    private static let learningSchemaVersion = 4
+    /// Each relearn without fresh support shrinks a prior trait; below the
+    /// floor it is no longer sent, so unsupported traits fade out in a few
+    /// rounds without per-trait bookkeeping.
+    static let priorConfidenceDecay = 0.8
+    static let priorRetentionFloor = 0.15
+    static let maximumPriorTraitsPerDomain = 8
+    static let maximumPriorContradictionsPerDomain = 6
+    /// Keeps the prior well inside the 30,000-character request budget.
+    static let maximumPriorCharacters = 4_000
     private static let generationOptions = LLMGenerationOptions(
         temperature: 0.1,
         topP: 0.9,
@@ -513,7 +551,33 @@ public actor PolishStyleLearningService {
         minimumEffectiveCharacterCount: Int =
             PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount
     ) async throws -> PolishStylePack {
-        let requiredCharacterCount = max(0, minimumEffectiveCharacterCount)
+        try await learnStyle(
+            from: corpus,
+            replyExamples: replyExamples,
+            outputLanguage: outputLanguage,
+            minimumEffectiveCharacterCount: minimumEffectiveCharacterCount
+        ).pack
+    }
+
+    /// With a `prior`, learns incrementally: only examples recorded after
+    /// `prior.learnedThrough` are sent, merged with the decayed prior, and
+    /// the incremental gate replaces `minimumEffectiveCharacterCount`.
+    public func learnStyle(
+        from fullCorpus: PolishStyleLearningCorpus,
+        replyExamples allReplyExamples: [PolishStyleReplyLearningExample] = [],
+        outputLanguage: AppUILanguage,
+        minimumEffectiveCharacterCount: Int =
+            PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount,
+        prior: PolishStyleLearningPriorEvidence? = nil
+    ) async throws -> PolishStyleLearningResult {
+        let corpus = prior.map { fullCorpus.examples(after: $0.learnedThrough) }
+            ?? fullCorpus
+        let replyExamples = prior.map { prior in
+            allReplyExamples.filter { $0.createdAt > prior.learnedThrough }
+        } ?? allReplyExamples
+        let requiredCharacterCount = prior == nil
+            ? max(0, minimumEffectiveCharacterCount)
+            : PolishStyleLearningCorpusBuilder.incrementalEffectiveCharacterCount
         let verifiedCharacterCount = corpus.examples.reduce(into: 0) { count, example in
             count += PolishStyleLearningCorpusBuilder.effectiveCharacterCount(
                 in: example.prePolishText
@@ -540,7 +604,8 @@ public actor PolishStyleLearningService {
             replyExamples: selectedReplyExamples,
             activeStyleID: configuration.activePolishStyleId,
             catalog: configuration.polishStyleCatalog,
-            outputLanguage: outputLanguage
+            outputLanguage: outputLanguage,
+            prior: prior.map(Self.decayedPrior)
         )
         let service = PolishingService(
             store: configuration,
@@ -554,21 +619,30 @@ public actor PolishStyleLearningService {
             requiresBestEffortASRCandidate: !selectedASRExamples.isEmpty,
             notifiesManagedCredits: notifiesManagedCredits
         )
+        // Counts are cumulative across incremental generations so the card
+        // reflects everything this style has learned, not just this round.
+        let asrExampleCount = (prior?.cumulativeASRExampleCount ?? 0)
+            + selectedASRExamples.count
+        let asrEffectiveCharacterCount = (prior?.cumulativeASREffectiveCharacterCount ?? 0)
+            + selectedASRExamples.reduce(into: 0) { count, example in
+                count += PolishStyleLearningCorpusBuilder.effectiveCharacterCount(
+                    in: example.prePolishText
+                )
+            }
+        let replyExampleCount = (prior?.cumulativeReplyExampleCount ?? 0)
+            + selectedReplyExamples.count
+        let replyFinalEditCount = (prior?.cumulativeReplyFinalEditCount ?? 0)
+            + selectedReplyExamples.filter { Self.normalized($0.finalEdit) != nil }.count
+        let generatedAt = Date()
         let metadata = PolishStylePack.LearningMetadata(
             schemaVersion: Self.learningSchemaVersion,
             evidenceStatus: evidence.status.rawValue,
             confidence: evidence.confidence,
-            asrExampleCount: selectedASRExamples.count,
-            asrEffectiveCharacterCount: selectedASRExamples.reduce(into: 0) { count, example in
-                count += PolishStyleLearningCorpusBuilder.effectiveCharacterCount(
-                    in: example.prePolishText
-                )
-            },
-            replyExampleCount: selectedReplyExamples.count,
-            replyFinalEditCount: selectedReplyExamples.filter {
-                Self.normalized($0.finalEdit) != nil
-            }.count,
-            generatedAt: Date()
+            asrExampleCount: asrExampleCount,
+            asrEffectiveCharacterCount: asrEffectiveCharacterCount,
+            replyExampleCount: replyExampleCount,
+            replyFinalEditCount: replyFinalEditCount,
+            generatedAt: generatedAt
         )
         // Always synthesize from this operation's evidence. Low-confidence
         // profiles use their strongest candidate traits; only genuinely empty
@@ -577,12 +651,29 @@ public actor PolishStyleLearningService {
             evidence: evidence,
             metadata: metadata
         )
-        return try await synthesizeStyle(
+        let pack = try await synthesizeStyle(
             payload: synthesisPayload,
             service: service,
             learningMetadata: metadata,
             outputLanguage: outputLanguage,
             notifiesManagedCredits: notifiesManagedCredits
+        )
+        let newestLearnedExample = (
+            selectedASRExamples.map(\.createdAt) + selectedReplyExamples.map(\.createdAt)
+        ).max()
+        let learnedThrough = [newestLearnedExample, prior?.learnedThrough]
+            .compactMap { $0 }
+            .max() ?? generatedAt
+        return PolishStyleLearningResult(
+            pack: pack,
+            prior: Self.compactPrior(
+                from: evidence,
+                learnedThrough: learnedThrough,
+                cumulativeASRExampleCount: asrExampleCount,
+                cumulativeASREffectiveCharacterCount: asrEffectiveCharacterCount,
+                cumulativeReplyExampleCount: replyExampleCount,
+                cumulativeReplyFinalEditCount: replyFinalEditCount
+            )
         )
     }
 
@@ -687,7 +778,8 @@ public actor PolishStyleLearningService {
         replyExamples: [PolishStyleReplyLearningExample],
         activeStyleID: String,
         catalog: PolishStyleCatalog,
-        outputLanguage: AppUILanguage
+        outputLanguage: AppUILanguage,
+        prior: PolishStyleLearningPriorEvidence? = nil
     ) throws -> String {
         let activeStyle = PolishStylePackCatalog.resolve(
             id: activeStyleID,
@@ -706,6 +798,9 @@ public actor PolishStyleLearningService {
         )
         let payload = EvidenceRequestPayload(
             schemaVersion: learningSchemaVersion,
+            prior: prior.map {
+                PriorInput(learnedThrough: $0.learnedThrough, asr: $0.asr, reply: $0.reply)
+            },
             asr: ASRInput(
                 residualBaseline: reference(
                     for: baselineStyle,
@@ -896,9 +991,33 @@ public actor PolishStyleLearningService {
           The ASR domain may be empty only when asr.examples itself is empty.
         - Set status to "sufficient" only when total confidence is at least 0.5.
 
+        INCREMENTAL MERGE (only when the payload contains prior):
+        - prior is this user's previously learned profile, already decayed for
+          age. It summarizes older evidence that is no longer in the payload.
+          Unlike the contamination style prompts, it is evidence about the user.
+          asr.examples and reply.examples contain only newer observations.
+        - Return one merged profile covering prior and the newer examples.
+        - Keep every prior trait the newer examples do not contradict, at its
+          given confidence or lower. Never raise a prior trait without new
+          support.
+        - When newer examples support a prior trait, keep its name, add the new
+          support to its supportCount, and you may raise its confidence.
+        - When newer examples contradict a prior trait, lower its confidence and
+          add a contradictions entry; drop it only when the contradiction is
+          clear and repeated. Keep prior contradictions unless resolved.
+        - Cite retained prior traits with source priorProfile and the prior
+          supportCount. priorProfile ranks with asrRepeatedBefore and
+          replyCrossContextSelection: after user edits, before single
+          observations.
+        - Keep prior ASR and reply traits in their own domains.
+        - When over the trait limit, drop the lowest-confidence prior traits.
+        - status and confidence describe the merged profile. "insufficient"
+          requires overall and every trait confidence at most 0.35;
+          "sufficient" requires overall confidence at least 0.5.
+
         Allowed source values:
         asrUserEdit, asrRepeatedBefore, asrObservedBefore, replyFinalEdit,
-        replyCrossContextSelection, replyAcceptance.
+        replyCrossContextSelection, replyAcceptance, priorProfile.
 
         Return this exact Codable shape:
         {
@@ -1094,6 +1213,118 @@ public actor PolishStyleLearningService {
             }
         }
         return references
+    }
+
+    // MARK: - Incremental prior
+
+    /// Ages the prior before it is sent: every trait loses confidence, and
+    /// traits that fall below the retention floor are dropped. Decay is local
+    /// and deterministic rather than delegated to the model.
+    static func decayedPrior(
+        _ prior: PolishStyleLearningPriorEvidence
+    ) -> PolishStyleLearningPriorEvidence {
+        func decayed(
+            _ domain: PolishStyleLearningPriorEvidence.Domain
+        ) -> PolishStyleLearningPriorEvidence.Domain {
+            PolishStyleLearningPriorEvidence.Domain(
+                traits: domain.traits.compactMap { trait in
+                    let confidence = trait.confidence * priorConfidenceDecay
+                    guard confidence >= priorRetentionFloor else { return nil }
+                    return PolishStyleLearningEvidence.Trait(
+                        name: trait.name,
+                        description: trait.description,
+                        confidence: confidence,
+                        supportCount: trait.supportCount
+                    )
+                },
+                contradictions: domain.contradictions
+            )
+        }
+        return PolishStyleLearningPriorEvidence(
+            asr: decayed(prior.asr),
+            reply: decayed(prior.reply),
+            learnedThrough: prior.learnedThrough,
+            cumulativeASRExampleCount: prior.cumulativeASRExampleCount,
+            cumulativeASREffectiveCharacterCount: prior.cumulativeASREffectiveCharacterCount,
+            cumulativeReplyExampleCount: prior.cumulativeReplyExampleCount,
+            cumulativeReplyFinalEditCount: prior.cumulativeReplyFinalEditCount
+        )
+    }
+
+    /// Reduces validated evidence to what the next relearn needs: the
+    /// strongest traits and a few contradictions per domain, within
+    /// `maximumPriorCharacters`. Evidence items are not kept; the next run
+    /// cites retained traits as `priorProfile`.
+    static func compactPrior(
+        from evidence: PolishStyleLearningEvidence,
+        learnedThrough: Date,
+        cumulativeASRExampleCount: Int,
+        cumulativeASREffectiveCharacterCount: Int,
+        cumulativeReplyExampleCount: Int,
+        cumulativeReplyFinalEditCount: Int
+    ) -> PolishStyleLearningPriorEvidence {
+        func strongest(
+            _ traits: [PolishStyleLearningEvidence.Trait]
+        ) -> [PolishStyleLearningEvidence.Trait] {
+            Array(
+                traits
+                    .filter { $0.confidence >= priorRetentionFloor }
+                    .sorted { $0.confidence > $1.confidence }
+                    .prefix(maximumPriorTraitsPerDomain)
+            )
+        }
+
+        var asrTraits = strongest(evidence.asr.traits)
+        var replyTraits = strongest(evidence.reply.traits)
+        var asrContradictions = Array(
+            evidence.asr.contradictions.prefix(maximumPriorContradictionsPerDomain)
+        )
+        var replyContradictions = Array(
+            evidence.reply.contradictions.prefix(maximumPriorContradictionsPerDomain)
+        )
+
+        func makePrior() -> PolishStyleLearningPriorEvidence {
+            PolishStyleLearningPriorEvidence(
+                asr: .init(traits: asrTraits, contradictions: asrContradictions),
+                reply: .init(traits: replyTraits, contradictions: replyContradictions),
+                learnedThrough: learnedThrough,
+                cumulativeASRExampleCount: cumulativeASRExampleCount,
+                cumulativeASREffectiveCharacterCount: cumulativeASREffectiveCharacterCount,
+                cumulativeReplyExampleCount: cumulativeReplyExampleCount,
+                cumulativeReplyFinalEditCount: cumulativeReplyFinalEditCount
+            )
+        }
+
+        var prior = makePrior()
+        // Over budget: shed contradictions first, then the weakest trait
+        // across both domains, until the prior fits.
+        while priorCharacterCount(prior) > maximumPriorCharacters {
+            if !replyContradictions.isEmpty {
+                replyContradictions.removeLast()
+            } else if !asrContradictions.isEmpty {
+                asrContradictions.removeLast()
+            } else if let weakestASR = asrTraits.last,
+                      weakestASR.confidence <= (replyTraits.last?.confidence ?? .infinity) {
+                asrTraits.removeLast()
+            } else if !replyTraits.isEmpty {
+                replyTraits.removeLast()
+            } else {
+                break
+            }
+            prior = makePrior()
+        }
+        return prior
+    }
+
+    static func priorCharacterCount(_ prior: PolishStyleLearningPriorEvidence) -> Int {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        let domains = [prior.asr, prior.reply]
+        guard let data = try? encoder.encode(domains),
+              let text = String(data: data, encoding: .utf8) else {
+            return 0
+        }
+        return text.count
     }
 
     private static func boundedExample(
@@ -1303,7 +1534,8 @@ public actor PolishStyleLearningService {
                   allowedSources: [
                       .asrUserEdit,
                       .asrRepeatedBefore,
-                      .asrObservedBefore
+                      .asrObservedBefore,
+                      .priorProfile
                   ]
               ),
               isValid(
@@ -1311,7 +1543,8 @@ public actor PolishStyleLearningService {
                   allowedSources: [
                       .replyFinalEdit,
                       .replyCrossContextSelection,
-                      .replyAcceptance
+                      .replyAcceptance,
+                      .priorProfile
                   ]
               ) else {
             return false
@@ -1369,7 +1602,8 @@ public actor PolishStyleLearningService {
         switch item.source {
         case .asrRepeatedBefore, .replyCrossContextSelection:
             return item.supportCount >= 2
-        case .asrUserEdit, .asrObservedBefore, .replyFinalEdit, .replyAcceptance:
+        case .asrUserEdit, .asrObservedBefore, .replyFinalEdit, .replyAcceptance,
+             .priorProfile:
             return true
         }
     }
@@ -1388,7 +1622,7 @@ public actor PolishStyleLearningService {
         switch source {
         case .asrUserEdit, .replyFinalEdit:
             return 0
-        case .asrRepeatedBefore, .replyCrossContextSelection:
+        case .asrRepeatedBefore, .replyCrossContextSelection, .priorProfile:
             return 1
         case .asrObservedBefore, .replyAcceptance:
             return 2
