@@ -17,6 +17,13 @@ public enum OSGColor {
     public static let fixedLightContent = Color.white
     public static let fixedDarkContent = Color.black
 
+    // MARK: - Invitation poster
+
+    /// Shared artwork must look identical for every recipient, so these do not
+    /// follow the app appearance. The background matches the app icon.
+    public static let invitePosterBackground = color(0x252527)
+    public static let invitePosterHint = color(0xA1A1A6)
+
     // MARK: - iOS app theme
 
     public static let darkBackground = color(0x0A0A0B)

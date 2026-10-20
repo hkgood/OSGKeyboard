@@ -188,6 +188,7 @@ targets:
         NSContactsUsageDescription: "OSGKeyboard uses Contacts only when you choose Create Contact for a copied phone number."
         NSRemindersFullAccessUsageDescription: "OSGKeyboard adds reminders only when you choose Extract To-dos for copied text."
         NSCalendarsFullAccessUsageDescription: "OSGKeyboard adds calendar events only when you choose Extract Events for copied text."
+        NSPhotoLibraryAddUsageDescription: "OSGKeyboard saves your invitation poster to Photos only when you choose Save Image."
         UIBackgroundModes:
           - audio
         BGTaskSchedulerPermittedIdentifiers:
@@ -579,6 +580,7 @@ targets:
       - path: OSGKeyboard/Views/Account/AccountCreditPurchaseManager.swift
       - path: OSGKeyboard/Views/Account/LiveAccountServices.swift
       - path: OSGKeyboard/Views/Account/ReferralProfileViewModel.swift
+      - path: OSGKeyboard/Views/Account/InvitePoster.swift
       - path: OSGKeyboard/Views/Account/AccountAppleAuthorizationFactories.swift
       - path: OSGKeyboard/Services/AccountAnalyticsBearerBridge.swift
       - path: OSGKeyboardHostSupport

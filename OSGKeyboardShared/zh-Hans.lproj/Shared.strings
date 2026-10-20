@@ -498,6 +498,16 @@
 "mac.account.invite.rewarded" = "已奖励邀请";
 "mac.account.invite.pending" = "待生效邀请";
 "mac.account.invite.footnote" = "受邀好友达成条件后，双方都可获得积分。";
+"mac.account.invite.qr" = "二维码";
+"mac.account.invite.qrHint" = "用手机扫码，或保存海报发给好友。";
+"mac.account.invite.savePoster" = "保存海报…";
+"mac.account.invite.saveFailed" = "海报保存失败。";
+"invite.poster.slogan" = "你的 AI 嘴替";
+"invite.poster.hint" = "扫一扫 · 下载体验领积分";
+"invite.poster.defaultInviter" = "OSG 用户";
+"invite.poster.inviter" = "%@ 邀你体验\nOSG AI 输入法";
+"invite.poster.scan" = "扫码下载，输入邀请码获取积分";
+"invite.poster.code" = "邀请码：%@";
 "mac.account.delete.title" = "注销账号";
 "mac.account.delete.body" = "注销会删除你的账号及剩余积分，且无法撤销。";
 "mac.account.delete.action" = "注销账号…";
@@ -523,6 +533,11 @@
 "account.referral.error.notFound" = "邀请链接暂不可用。";
 "account.referral.error.session" = "请重新登录后加载邀请链接。";
 "account.referral.error.unavailable" = "邀请服务暂时不可用。";
+"account.referral.redeem.error.invalid" = "邀请链接无效，或活动已结束。";
+"account.referral.redeem.error.expired" = "这个账号已超过补填邀请的期限。";
+"account.referral.redeem.error.self" = "不能使用自己的邀请。";
+"account.referral.redeem.error.alreadyBound" = "这个账号已经接受过其他好友的邀请。";
+"account.referral.redeem.error.ineligible" = "这个账号暂时不能接受该邀请。";
 
 /* 输入法引擎错误 */
 "error.rime.appGroupUnavailable" = "App Group 不可用。";

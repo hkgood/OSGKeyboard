@@ -111,12 +111,7 @@ struct AccountCenterView: View {
                     AccountAppleAuthorizationButton(purpose: .signIn)
                         .disabled(coordinator.operation != nil)
 
-                    if coordinator.pendingReferralCode != nil {
-                        Label(AppL10n.string("account.referral.pendingAfterSignIn"), systemImage: "link")
-                            .font(.footnote)
-                            .foregroundStyle(palette.textSecondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+                    ReferralCodeEntryRow()
 
                     Text(AppL10n.string("account.signedOut.localUnaffected"))
                         .font(.footnote)
@@ -136,6 +131,10 @@ struct AccountCenterView: View {
         ScrollView {
             CardPageContent {
                 accountSummarySection(session: session)
+                SignedInReferralCodeCard(
+                    profile: coordinator.referralProfile,
+                    session: session
+                )
                 accountRewardsContent(session: session)
                 securitySection
             }
@@ -769,62 +768,63 @@ struct AccountCreditProgress: View {
 
 struct AccountInvitationButton: View {
     @Environment(\.themePalette) private var palette
+    @EnvironmentObject private var coordinator: AccountSessionCoordinator
     @State private var showsShareDrawer = false
 
     let invitationURL: URL?
+    var shortCode: String?
 
     var body: some View {
         Button {
             guard invitationURL != nil else { return }
             showsShareDrawer = true
         } label: {
-            Label(AppL10n.string("account.referral.inviteTitle"), systemImage: "person.badge.plus")
-                .font(TypeStyle.bodyEmph)
-                .foregroundStyle(OSGColor.fixedLightContent)
-                .padding(.horizontal, Spacing.sm)
-                .frame(minHeight: 38)
-                .background(
-                    palette.success,
-                    in: RoundedRectangle(
-                        cornerRadius: Radius.medium,
-                        style: .continuous
-                    )
-                )
+            AccountReferralActionLabel(
+                titleKey: "account.referral.inviteTitle",
+                systemImage: "person.badge.plus"
+            )
         }
         .buttonStyle(.plain)
         .disabled(invitationURL == nil)
         .accessibilityIdentifier("account.referral.share")
         .sheet(isPresented: $showsShareDrawer) {
             if let invitationURL {
-                AccountInvitationActivityView(invitationURL: invitationURL)
-                    .presentationDetents([.medium, .large])
+                InviteShareSheet(
+                    invitationURL: invitationURL,
+                    shortCode: shortCode,
+                    referralProfile: coordinator.referralProfile
+                )
+                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
         }
     }
 }
 
-private struct AccountInvitationActivityView: UIViewControllerRepresentable {
-    let invitationURL: URL
+/// Green rounded-rectangle label shared by the Invite and "I have a code"
+/// buttons so the two read as one family on the account card.
+struct AccountReferralActionLabel: View {
+    @Environment(\.themePalette) private var palette
 
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        let controller = UIActivityViewController(
-            activityItems: [invitationURL],
-            applicationActivities: nil
-        )
-        controller.completionWithItemsHandler = { _, completed, _, _ in
-            guard completed else { return }
-            Task { @MainActor in
-                AnalyticsHostService.shared.client.recordReferralShared()
-            }
-        }
-        return controller
+    let titleKey: String
+    let systemImage: String
+    /// Full-width form for a sheet's primary action.
+    var fillsWidth = false
+
+    var body: some View {
+        Label(AppL10n.string(titleKey), systemImage: systemImage)
+            .font(TypeStyle.bodyEmph)
+            .foregroundStyle(OSGColor.fixedLightContent)
+            .padding(.horizontal, Spacing.sm)
+            .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: fillsWidth ? 44 : 38)
+            .background(
+                palette.success,
+                in: RoundedRectangle(
+                    cornerRadius: Radius.medium,
+                    style: .continuous
+                )
+            )
     }
-
-    func updateUIViewController(
-        _ uiViewController: UIActivityViewController,
-        context: Context
-    ) {}
 }
 
 #if DEBUG

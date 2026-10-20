@@ -32,7 +32,9 @@
         "OSGKeyboardTests/AccountSignInCoordinatorTests",
         "OSGKeyboardTests/AccountSnapshotLoaderTests",
         "OSGKeyboardTests/DeviceIntegrityTests",
-        "OSGKeyboardTests/ReferralProfileTests"
+        "OSGKeyboardTests/ReferralProfileTests",
+        "OSGKeyboardTests/InvitePosterTests",
+        "OSGKeyboardTests/ScreenBrightnessBoostTests"
       ]
     },
     "managed_gateway": {

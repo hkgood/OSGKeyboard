@@ -5,3 +5,4 @@
 "NSContactsUsageDescription" = "OSGKeyboard uses Contacts only when you choose Create Contact for a copied phone number.";
 "NSRemindersFullAccessUsageDescription" = "OSGKeyboard adds reminders only when you choose Extract To-dos for copied text.";
 "NSCalendarsWriteOnlyAccessUsageDescription" = "OSGKeyboard adds calendar events only when you choose Extract Events for copied text. It never reads your existing events.";
+"NSPhotoLibraryAddUsageDescription" = "OSGKeyboard saves your invitation poster to Photos only when you choose Save Image.";

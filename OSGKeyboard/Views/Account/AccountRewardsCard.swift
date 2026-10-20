@@ -63,6 +63,9 @@ struct AccountRewardsCard: View {
 
             AccountAppleAuthorizationButton(purpose: .signIn)
                 .disabled(coordinator.operation != nil)
+
+            Divider().background(palette.divider)
+            ReferralCodeEntryRow()
         }
         .padding(Spacing.md)
     }
@@ -90,8 +93,16 @@ struct AccountRewardsCard: View {
             }
 
             Divider().background(palette.divider)
-            AccountReferralLinkView(viewModel: coordinator.referralProfile)
+            AccountReferralLinkView(
+                viewModel: coordinator.referralProfile,
+                session: signedInSession
+            )
         }
+    }
+
+    private var signedInSession: AccountSession? {
+        guard case let .signedIn(session) = coordinator.sessionPhase else { return nil }
+        return session
     }
 
     private func creditSummary(_ snapshot: AccountCenterSnapshot) -> some View {
@@ -185,6 +196,9 @@ struct AccountRewardsCard: View {
 private struct AccountReferralLinkView: View {
     @Environment(\.themePalette) private var palette
     @ObservedObject var viewModel: ReferralProfileViewModel
+    let session: AccountSession?
+
+    @State private var isCodeEntryPresented = false
 
     var body: some View {
         Group {
@@ -217,12 +231,27 @@ private struct AccountReferralLinkView: View {
     private func loadedContent(_ profile: ReferralProfile) -> some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             HStack(spacing: Spacing.md) {
-                Text(AppL10n.string("account.referral.equalRewardDescription"))
-                    .font(TypeStyle.body.weight(.bold))
-                    .foregroundStyle(palette.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                Text(AppL10n.string(
+                    showsCodeEntry(profile)
+                        ? "account.referral.codeEntry.windowDescription"
+                        : "account.referral.equalRewardDescription"
+                ))
+                .font(TypeStyle.body.weight(.bold))
+                .foregroundStyle(palette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: Spacing.xs)
-                AccountInvitationButton(invitationURL: profile.code.inviteURL)
+                if showsCodeEntry(profile) {
+                    // Inviting stays reachable from the bottom of the sheet.
+                    ReferralCodeEntryButton(
+                        isPresented: $isCodeEntryPresented,
+                        invitation: profile.code
+                    )
+                } else {
+                    AccountInvitationButton(
+                        invitationURL: profile.code.inviteURL,
+                        shortCode: profile.code.displayShortCode
+                    )
+                }
             }
 
             if viewModel.isRefreshing {
@@ -237,6 +266,15 @@ private struct AccountReferralLinkView: View {
                 retryRow(messageKey: refreshErrorKey, actionKey: "account.retry")
             }
         }
+    }
+
+    /// New accounts that can still bind an inviter see "I have a code" in
+    /// place of Invite. The open sheet keeps the button mounted, so a
+    /// redemption that closes the window cannot tear the sheet down mid-confirmation.
+    private func showsCodeEntry(_ profile: ReferralProfile) -> Bool {
+        if isCodeEntryPresented { return true }
+        guard let session else { return false }
+        return ReferralBindingWindow.isOpen(for: session, profile: profile)
     }
 
     private func retryRow(
