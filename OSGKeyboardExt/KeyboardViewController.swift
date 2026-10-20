@@ -155,6 +155,9 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewDidLoad() {
         super.viewDidLoad()
+        #if DEBUG
+        HostBundleProbe.installLogging()
+        #endif
         state.showsSystemGlobeKey = UIDevice.current.userInterfaceIdiom == .pad
         // Voice-first keyboard — hide the misleading "English" subtitle in Settings.
         primaryLanguage = "mis"
@@ -227,6 +230,7 @@ public final class KeyboardViewController: UIInputViewController {
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         isKeyboardPresentationActive = false
+        HostAppIdentity.invalidate()
         typingDocumentPresentationID = nil
         typingSessionStorage?.endDocumentPresentation()
         assistantFieldActionRefreshTask?.cancel()
@@ -353,6 +357,7 @@ public final class KeyboardViewController: UIInputViewController {
             self.flowCoordinator.ensurePiPReadyOnKeyboardOpen()
         }
         #if DEBUG
+        HostBundleProbe.recordPresentationAndPing()
         WhatsNewDemoDriver.resetForNewPresentation()
         WhatsNewDemoDriver.startIfNeeded(
             state: state,

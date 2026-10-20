@@ -353,6 +353,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.keyboard
+        SWIFT_OBJC_BRIDGING_HEADER: OSGKeyboardExt/OSGKeyboardExt-Bridging-Header.h
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO

@@ -112,12 +112,16 @@ final class AppSceneDelegate: NSObject, UIWindowSceneDelegate {
         MainActor.assumeIsolated {
             for item in items {
                 // `sourceApplication` is only non-nil when the caller belongs to
-                // the same Apple Developer Team (our own keyboard extension) —
-                // exactly what the host-return whitelist relies on. Record it
-                // ONLY for the `startflow` handoff: overwriting it for every
-                // deep link (e.g. `osgkeyboard://settings`) could point a later
-                // cold-start "return to host" at the wrong app.
-                if let source = item.source, item.url.host == "startflow" {
+                // the same Apple Developer Team, so for the keyboard handoff it is
+                // our own extension, not the app the user was typing in. The
+                // keyboard publishes the real host before opening `startflow`;
+                // never overwrite that with an OSG bundle id. Record it ONLY for
+                // the `startflow` handoff: overwriting it for every deep link
+                // (e.g. `osgkeyboard://settings`) could point a later cold-start
+                // "return to host" at the wrong app.
+                if let source = item.source,
+                   item.url.host == "startflow",
+                   !HostAppURLRegistry.isOwnBundleId(source) {
                     FlowSessionBridge.setPendingHostBundleId(source)
                 }
                 AppOpenURLRouter.shared.route(item.url)

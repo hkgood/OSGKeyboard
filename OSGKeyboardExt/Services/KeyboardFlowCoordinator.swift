@@ -1138,6 +1138,7 @@ final class KeyboardFlowCoordinator {
         state.lastTranscript = ""
         recomputeMicVoiceAvailability()
         FlowSessionBridge.markPiPArmAttempt()
+        HostAppIdentity.publishReturnTarget()
         OSGDiag.log(
             "beginFlowStart → openHostApp(startflow) recordAfterHandoff=\(recordAfterHandoff) "
                 + "\(OSGDiag.memoryTag())",
