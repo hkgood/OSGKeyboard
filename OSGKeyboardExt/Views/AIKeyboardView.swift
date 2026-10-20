@@ -1048,6 +1048,9 @@ struct AIKeyboardView: View {
                     .regular.tint(microphoneTint).interactive(),
                     in: Capsule()
                 )
+            if let timeline = activeDictationProgress {
+                dictationProgressFill(timeline)
+            }
             microphoneContent
         }
         .frame(width: primaryButtonWidth, height: primaryButtonHeight)
@@ -1096,11 +1099,41 @@ struct AIKeyboardView: View {
         }
     }
 
+    /// Dictation wait rendered as a fill; AI phases keep their own spinner.
+    private var activeDictationProgress: DictationProgressTimeline? {
+        guard state.phase == .processing, !state.aiSession.isBusy else { return nil }
+        return state.dictationProgress
+    }
+
+    /// Leading-edge fill in the brand colour. The real result swaps the
+    /// capsule to the solid accent success state, which reads as reaching 100 %.
+    private func dictationProgressFill(_ timeline: DictationProgressTimeline) -> some View {
+        TimelineView(.animation) { context in
+            let fraction = DictationProgressEstimator.fraction(
+                for: timeline,
+                at: context.date.timeIntervalSince1970
+            )
+            GeometryReader { proxy in
+                Rectangle()
+                    .fill(palette.accent)
+                    .frame(width: proxy.size.width * fraction)
+            }
+        }
+        .clipShape(Capsule())
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
     @ViewBuilder
     private var ordinaryMicrophoneContent: some View {
         switch state.phase {
         case .recording:
             waveform(color: OSGColor.recordingWaveform)
+        case .processing where activeDictationProgress != nil:
+            Image(systemName: "ellipsis")
+                .font(.system(size: 25, weight: .bold))
+                .foregroundStyle(OSGColor.fixedLightContent)
+                .symbolEffect(.variableColor.iterative, options: .repeating)
         case .requestingPermissions, .processing:
             ProgressView().tint(OSGColor.fixedLightContent)
         case .error:
@@ -1146,6 +1179,9 @@ struct AIKeyboardView: View {
         switch state.phase {
         case .recording:
             return palette.recordRed
+        case .processing where activeDictationProgress != nil:
+            // Unfilled track of the progress fill.
+            return palette.accent.opacity(0.35)
         case .requestingPermissions, .processing:
             return palette.recordRed.opacity(0.72)
         case .error, .denied:

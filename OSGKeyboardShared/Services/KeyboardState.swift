@@ -89,7 +89,17 @@ public final class KeyboardState: ObservableObject {
         public var id: String { rawValue }
     }
 
-    @Published public var phase: Phase = .idle
+    @Published public var phase: Phase = .idle {
+        didSet {
+            // A timeline only describes the current processing wait.
+            if phase != .processing, dictationProgress != nil {
+                dictationProgress = nil
+            }
+        }
+    }
+    /// Dictation wait shown as the microphone capsule's progress fill.
+    /// Nil outside dictation processing (AI, edit, and cancellation waits).
+    @Published public var dictationProgress: DictationProgressTimeline?
     /// Active chrome. Forced to `.voice` while recording / processing.
     @Published public var surface: Surface = .voice
     /// Surface the user was on when auto mode switched them to `.voice` to show

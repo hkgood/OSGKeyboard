@@ -67,6 +67,7 @@ final class KeyboardFlowCoordinator {
     private var currentUtteranceId: UUID?
     private var currentStartDeadlineAt: TimeInterval?
     private var currentUtteranceRequest: FlowUtteranceRequest?
+    private let polishLatencyCalibration = DictationPolishLatencyCalibration()
     private var audioPrimeID: UUID?
     private var audioPrimeCancelTask: Task<Void, Never>?
     private var editHostConfirmed = false
@@ -471,6 +472,7 @@ final class KeyboardFlowCoordinator {
             if state.lastTranscript.isEmpty {
                 state.lastTranscript = ExtL10n.string("keyboard.flow.transcribing")
             }
+            beginDictationProgressIfNeeded()
             startFlowResultWatchdog()
             traceState("adoptHostBusy.processing", extra: "session=\(sessionId)")
         }
@@ -801,6 +803,7 @@ final class KeyboardFlowCoordinator {
             finishLocalCancel()
             return
         }
+        state.dictationProgress = nil
         let inserted = registerCancelledUtterance(utteranceID, kind: kind)
         if !inserted, isAwaitingFlowResult {
             state.phase = .processing
@@ -1101,6 +1104,7 @@ final class KeyboardFlowCoordinator {
             onAIRecognitionStarted(currentUtteranceId)
         } else if currentUtteranceRequest?.isEdit != true {
             state.lastTranscript = ExtL10n.string("keyboard.flow.transcribing")
+            beginDictationProgressIfNeeded()
         }
         startFlowResultWatchdog()
         recomputeMicVoiceAvailability()
@@ -2152,11 +2156,50 @@ final class KeyboardFlowCoordinator {
                 state.lastTranscript = partial
                 if result.resolvedUtteranceMode == .aiQuestion {
                     onAITranscript(partial, result.utteranceId, result.status)
+                } else if result.status == .rawReady {
+                    markDictationPolishing(characterCount: partial.count)
                 }
             }
         default:
             break
         }
+    }
+
+    // MARK: - Dictation progress
+
+    /// Starts the microphone progress fill for a dictation wait. Keeps an
+    /// existing timeline for the same utterance so re-adoption does not rewind.
+    private func beginDictationProgressIfNeeded() {
+        guard let utteranceID = currentUtteranceId,
+              currentUtteranceRequest?.isAIQuestion != true,
+              currentUtteranceRequest?.isEdit != true,
+              state.dictationProgress?.utteranceID != utteranceID else { return }
+        state.dictationProgress = DictationProgressTimeline(
+            utteranceID: utteranceID,
+            transcribingStartedAt: Date().timeIntervalSince1970
+        )
+    }
+
+    private func markDictationPolishing(characterCount: Int) {
+        guard var timeline = state.dictationProgress,
+              timeline.polishingStartedAt == nil else { return }
+        timeline.markPolishing(
+            at: Date().timeIntervalSince1970,
+            characterCount: characterCount,
+            expectedSeconds: polishLatencyCalibration.expectedSeconds(
+                forCharacterCount: characterCount
+            )
+        )
+        state.dictationProgress = timeline
+    }
+
+    private func recordDictationPolishLatency() {
+        guard let timeline = state.dictationProgress,
+              let polishStart = timeline.polishingStartedAt else { return }
+        polishLatencyCalibration.record(
+            observedSeconds: Date().timeIntervalSince1970 - polishStart,
+            characterCount: timeline.polishCharacterCount
+        )
     }
 
     private func startFlowResultWatchdog(
@@ -2212,6 +2255,7 @@ final class KeyboardFlowCoordinator {
                         self.completeAIResult(result)
                         return
                     }
+                    self.recordDictationPolishLatency()
                     self.textInserter.handleFlowTranscript(
                         TranscriptionDelivery(
                             text: text,
