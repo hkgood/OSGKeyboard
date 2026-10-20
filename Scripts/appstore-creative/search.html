@@ -1,0 +1,365 @@
+<!doctype html>
+<!--
+  OSGKeyboard · App Store creative · Search Results scene (3:2).
+
+  Two layers, composited with the real screen recordings by compose_search.py:
+    ?layer=under  opaque   — background, waveform, device bodies, shadows
+    ?layer=over   alpha    — glass sheen, floating label chips
+  `window.LAYOUT` exposes the screen rects so ffmpeg can place the footage.
+  Query: ?w=3840&h=2560&lang=zh|en&layer=under|over
+  Safe area (Apple template, 3840×2560): x=836 y=765 w=2168 h=1030.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: transparent; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+(() => {
+  const q = new URLSearchParams(location.search);
+  const W = +q.get('w') || 3840;
+  const H = +q.get('h') || 2560;
+  const LANG = q.get('lang') === 'en' ? 'en' : 'zh';
+  const LAYER = q.get('layer') === 'over' ? 'over' : 'under';
+  const DURATION = 10;
+  const TAU = Math.PI * 2;
+  const K = W / 3840; // everything below is authored at 3840 wide
+  const SAFE = { x: 836 * K, y: 765 * K, w: 2168 * K, h: 1030 * K };
+
+  const FONT = LANG === 'en'
+    ? '"SF Pro Display", system-ui, "PingFang SC", sans-serif'
+    : '"PingFang SC", "SF Pro Display", system-ui, sans-serif';
+
+  // Left → right reads as the product story: reply · speak · ask.
+  // [accent, rest] — the verb carries the brand green.
+  const LABELS = {
+    zh: { clipboard: ['复制', '即回复'], voice: ['说完', '就写好'], ask: ['长按', '问 AI'] },
+    en: { clipboard: ['Copy', ' to reply'], voice: ['Talk', ' to type'], ask: ['Ask', ' AI'] },
+  }[LANG];
+
+  const canvas = document.getElementById('c');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0)); return t * t * (3 - 2 * t); };
+
+  // ---------- Device geometry ----------
+  // Footage is 1290×2796 (iPhone 16 Plus); the body is drawn to match it.
+  //
+  // Vertical budget is the 1030 px safe band. Label chips straddle the top of
+  // each device (over the status bar / host title only), and the screen is
+  // sized so the keyboard down to its main key row (~88 % of the screen)
+  // still lands inside the band; only the home-indicator strip may crop.
+  const SCREEN_ASPECT = 1290 / 2796;
+  const screenH = 1100 * K;
+  const screenTop = 802 * K;
+  const bezel = 15 * K;
+  const frame = 7 * K;
+  const bodyW = screenH * SCREEN_ASPECT + 2 * (bezel + frame);
+  const cy = screenTop + screenH / 2;
+
+  // Label chips: measured first, because they — not the devices — decide how
+  // far apart the devices can sit while every chip stays inside the safe area.
+  const CHIP_GAP = 40 * K;
+  let chipSize = 96 * K;
+  const chipWidth = ([a, b], size) => {
+    ctx.font = `600 ${size}px ${FONT}`;
+    return ctx.measureText(a + b).width + size * 1.24;
+  };
+  let pitch;
+  for (;;) {
+    const [wl, wm, wr] = [LABELS.clipboard, LABELS.voice, LABELS.ask].map((l) => chipWidth(l, chipSize));
+    const fit = Math.min(
+      (SAFE.w - bodyW) / 2,
+      W / 2 - SAFE.x - Math.max(wl, bodyW) / 2,
+      SAFE.x + SAFE.w - W / 2 - Math.max(wr, bodyW) / 2,
+    );
+    const need = Math.max(wl / 2 + wm / 2, wm / 2 + wr / 2) + CHIP_GAP;
+    if (fit >= need || chipSize < 72 * K) { pitch = Math.max(need, Math.min(fit, need + 80 * K)); break; }
+    chipSize *= 0.96;
+  }
+
+  function phone(id, cx, label) {
+    const sw = screenH * SCREEN_ASPECT;
+    return {
+      id, label, scale: 1,
+      screen: { x: cx - sw / 2, y: screenTop, w: sw, h: screenH, r: sw * 0.128 },
+      bezel, frame,
+    };
+  }
+  const PHONES = [
+    phone('clipboard', W / 2 - pitch, LABELS.clipboard),
+    phone('voice', W / 2, LABELS.voice),
+    phone('ask', W / 2 + pitch, LABELS.ask),
+  ];
+
+  // Integer pixel rects for ffmpeg (even sizes keep yuv420 happy).
+  const even = (v) => Math.round(v / 2) * 2;
+  window.LAYOUT = {
+    width: W, height: H, duration: DURATION,
+    screens: PHONES.map((p) => ({
+      id: p.id,
+      x: Math.round(p.screen.x), y: Math.round(p.screen.y),
+      w: even(p.screen.w), h: even(p.screen.h),
+      r: Math.round(p.screen.r),
+    })),
+  };
+
+  function rr(c, x, y, w, h, r) { c.beginPath(); c.roundRect(x, y, w, h, r); }
+
+  // ---------- Under layer ----------
+  const grain = (() => {
+    const g = new OffscreenCanvas(256, 256);
+    const gc = g.getContext('2d');
+    const img = gc.createImageData(256, 256);
+    let seed = 4242;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = 128 + (rnd() - 0.5) * 255;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+      img.data[i + 3] = 10;
+    }
+    gc.putImageData(img, 0, 0);
+    return g;
+  })();
+
+  function drawBackground(c, t) {
+    const base = c.createLinearGradient(0, 0, 0, H);
+    base.addColorStop(0, '#FAF9F6');
+    base.addColorStop(1, '#EFF3EC');
+    c.fillStyle = base;
+    c.fillRect(0, 0, W, H);
+    const R = Math.max(W, H);
+    const blobs = [
+      { x: 0.16, y: 0.22, r: 0.40, col: [168, 226, 186], a: 0.62, k: 1, ph: 0.0 },
+      { x: 0.86, y: 0.20, r: 0.36, col: [176, 230, 220], a: 0.55, k: 1, ph: 2.1 },
+      { x: 0.55, y: 0.98, r: 0.42, col: [200, 236, 186], a: 0.55, k: 1, ph: 4.0 },
+      { x: 0.04, y: 0.90, r: 0.28, col: [250, 236, 210], a: 0.55, k: 2, ph: 1.0 },
+      { x: 0.98, y: 0.86, r: 0.28, col: [250, 240, 222], a: 0.55, k: 1, ph: 3.2 },
+    ];
+    for (const b of blobs) {
+      const a = TAU * b.k * t / DURATION + b.ph;
+      const x = (b.x + 0.03 * Math.cos(a)) * W;
+      const y = (b.y + 0.04 * Math.sin(a)) * H;
+      const g = c.createRadialGradient(x, y, 0, x, y, b.r * R);
+      const [r, gg, bb] = b.col;
+      g.addColorStop(0, `rgba(${r},${gg},${bb},${b.a})`);
+      g.addColorStop(0.55, `rgba(${r},${gg},${bb},${b.a * 0.35})`);
+      g.addColorStop(1, `rgba(${r},${gg},${bb},0)`);
+      c.fillStyle = g;
+      c.fillRect(0, 0, W, H);
+    }
+  }
+
+  // Same voice ribbon as the header, running behind the devices.
+  const STRANDS = [
+    { f: 3.0, k: 4, ph: 0.0, a: 1.00, w: 6.0, col: [58, 160, 90] },
+    { f: 4.2, k: 5, ph: 1.7, a: 0.70, w: 4.0, col: [43, 175, 164] },
+    { f: 2.2, k: 3, ph: 3.1, a: 0.82, w: 3.5, col: [110, 200, 120] },
+  ];
+  function strandGradient(c, col, alpha) {
+    const g = c.createLinearGradient(0, 0, W, 0);
+    const [r, gg, b] = col;
+    g.addColorStop(0.00, `rgba(${r},${gg},${b},0)`);
+    g.addColorStop(0.18, `rgba(${r},${gg},${b},${alpha})`);
+    g.addColorStop(0.50, `rgba(${r},${gg},${b},${alpha * 0.6})`);
+    g.addColorStop(0.82, `rgba(${r},${gg},${b},${alpha})`);
+    g.addColorStop(1.00, `rgba(${r},${gg},${b},0)`);
+    return g;
+  }
+  function drawWave(c, t) {
+    const waveY = cy;
+    const level = 0.55 + 0.25 * Math.sin(TAU * 2 * t / DURATION) + 0.12 * Math.sin(TAU * 7 * t / DURATION);
+    for (const s of STRANDS) {
+      c.beginPath();
+      for (let x = 0; x <= W; x += 6) {
+        const u = (x - W / 2) / (W / 2);
+        const au = Math.abs(u);
+        const env = Math.exp(-Math.pow((au - 0.72) / 0.2, 2));
+        const y = waveY + 200 * K * level * s.a * env
+          * Math.sin(TAU * s.f * au + TAU * s.k * t / DURATION + s.ph);
+        x === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
+      }
+      c.lineWidth = s.w * K;
+      c.lineCap = 'round';
+      c.strokeStyle = strandGradient(c, s.col, 0.75);
+      c.stroke();
+    }
+  }
+
+  function drawDeviceBody(c, p) {
+    const { x, y, w, h, r } = p.screen;
+    const b = p.bezel;
+    const f = p.frame;
+    const ox = x - b - f, oy = y - b - f, ow = w + 2 * (b + f), oh = h + 2 * (b + f), or = r + b + f;
+
+    // Contact shadow + long ambient shadow.
+    c.save();
+    c.filter = `blur(${60 * K}px)`;
+    c.fillStyle = 'rgba(30,60,40,0.20)';
+    c.beginPath();
+    c.ellipse(ox + ow / 2, oy + oh + 30 * K, ow * 0.46, 46 * K, 0, 0, TAU);
+    c.fill();
+    c.restore();
+    c.save();
+    rr(c, ox, oy, ow, oh, or);
+    c.shadowColor = 'rgba(28,64,42,0.22)';
+    c.shadowBlur = 140 * K;
+    c.shadowOffsetY = 70 * K;
+    c.fillStyle = '#d9dbd8';
+    c.fill();
+    c.restore();
+
+    // Titanium band: brushed light metal with a bright upper-left rim.
+    const metal = c.createLinearGradient(ox, oy, ox + ow, oy + oh);
+    metal.addColorStop(0, '#f4f5f3');
+    metal.addColorStop(0.35, '#c9ccc8');
+    metal.addColorStop(0.6, '#e7e9e6');
+    metal.addColorStop(1, '#a9ada8');
+    rr(c, ox, oy, ow, oh, or);
+    c.fillStyle = metal;
+    c.fill();
+    c.lineWidth = 2 * K;
+    c.strokeStyle = 'rgba(255,255,255,0.9)';
+    c.stroke();
+
+    // Side buttons.
+    c.fillStyle = '#bfc2be';
+    const btn = (bx, by, bw, bh) => { rr(c, bx, by, bw, bh, bw / 2); c.fill(); };
+    btn(ox - 5 * K * p.scale, oy + oh * 0.19, 7 * K * p.scale, oh * 0.045);
+    btn(ox - 5 * K * p.scale, oy + oh * 0.26, 7 * K * p.scale, oh * 0.07);
+    btn(ox - 5 * K * p.scale, oy + oh * 0.345, 7 * K * p.scale, oh * 0.07);
+    btn(ox + ow - 2 * K * p.scale, oy + oh * 0.28, 7 * K * p.scale, oh * 0.1);
+
+    // Black glass bezel + screen well (footage lands on top of this).
+    rr(c, x - b, y - b, w + 2 * b, h + 2 * b, r + b);
+    c.fillStyle = '#0b0b0c';
+    c.fill();
+    rr(c, x, y, w, h, r);
+    c.fillStyle = '#000';
+    c.fill();
+  }
+
+  // ---------- Over layer ----------
+  function drawSheen(c, p) {
+    const { x, y, w, h, r } = p.screen;
+    c.save();
+    rr(c, x, y, w, h, r);
+    c.clip();
+    const g = c.createLinearGradient(x, y, x + w, y + h * 0.6);
+    g.addColorStop(0, 'rgba(255,255,255,0.10)');
+    g.addColorStop(0.35, 'rgba(255,255,255,0.03)');
+    g.addColorStop(0.36, 'rgba(255,255,255,0)');
+    c.fillStyle = g;
+    c.fillRect(x, y, w, h);
+    c.restore();
+  }
+
+  // Search cards render at ~0.28× on iPhone, so label copy stays near the
+  // ~100 px floor for legibility.
+  function drawChip(c, p, t, index) {
+    const { x, y, w, h } = p.screen;
+    const size = chipSize;
+    const [accent, rest] = p.label;
+    c.font = `600 ${size}px ${FONT}`;
+    const accentW = c.measureText(accent).width;
+    const textW = accentW + c.measureText(rest).width;
+    const padX = size * 0.62;
+    const chipH = size * 1.62;
+    const chipW = textW + padX * 2;
+    // Gentle float, one cycle per loop, phases offset per device.
+    const bob = Math.sin(TAU * t / DURATION + index * 2.1) * 7 * K;
+    const cxp = x + w / 2;
+    // Centred on the status bar / host title strip, never on host content.
+    const cyp = y + h * 0.055 + bob;
+    const x0 = cxp - chipW / 2, y0 = cyp - chipH / 2;
+
+    c.save();
+    rr(c, x0, y0, chipW, chipH, chipH / 2);
+    c.shadowColor = 'rgba(28,64,42,0.22)';
+    c.shadowBlur = 60 * K;
+    c.shadowOffsetY = 24 * K;
+    c.fillStyle = 'rgba(255,255,255,0.94)';
+    c.fill();
+    c.restore();
+    c.save();
+    rr(c, x0 + 1, y0 + 1, chipW - 2, chipH - 2, chipH / 2);
+    c.lineWidth = 2 * K;
+    c.strokeStyle = 'rgba(255,255,255,1)';
+    c.stroke();
+    c.restore();
+
+    c.textBaseline = 'middle';
+    const tx = x0 + padX;
+    const ty = cyp + size * 0.04;
+    const g = c.createLinearGradient(tx, 0, tx + accentW, 0);
+    g.addColorStop(0, '#2F9A50');
+    g.addColorStop(1, '#3FBF8A');
+    c.fillStyle = g;
+    c.fillText(accent, tx, ty);
+    c.fillStyle = '#111118';
+    c.fillText(rest, tx + accentW, ty);
+  }
+
+  // Brand mark (OSGLogo.svg) in the open band above the chips — decorative,
+  // so it may crop away on the tightest layouts.
+  const MARK = [
+    'M627.511 512.419C627.511 448.783 576.127 397.197 512.741 397.197C449.355 397.197 397.971 448.783 397.971 512.419C397.971 576.054 449.355 627.641 512.741 627.641V637.837C443.746 637.837 387.814 581.686 387.814 512.419C387.814 443.152 443.746 387 512.741 387C581.736 387 637.668 443.152 637.668 512.419C637.668 581.686 581.736 637.837 512.741 637.837V627.641C576.127 627.641 627.511 576.054 627.511 512.419Z',
+    'M56.2632 512.419C56.2632 581.686 112.195 637.837 181.19 637.837C250.185 637.837 306.117 581.686 306.117 512.419C306.117 443.152 250.185 387 181.19 387C112.195 387 56.2632 443.152 56.2632 512.419Z',
+    'M399.618 562.094L399.618 552.257L512.74 552.257L512.74 562.094L399.618 562.094Z',
+    'M512.741 483.398V473.561H625.864V483.398H512.741Z',
+    'M843.308 387.981C910.987 387.981 966.093 441.8 968.171 508.975H843.308V518.812H968.096C965.014 585.066 910.324 637.836 843.308 637.836C774.313 637.836 718.381 581.904 718.381 512.909C718.381 443.914 774.312 387.981 843.308 387.981ZM968.234 518.812H968.096C968.187 516.855 968.234 514.888 968.234 512.909C968.234 511.593 968.211 510.281 968.171 508.975H968.234V518.812Z',
+  ].map((d) => new Path2D(d));
+  function drawMark(c) {
+    const markH = 84 * K;
+    const scale = markH / 251;
+    const top = 520 * K;
+    c.save();
+    c.translate(W / 2 - (912 * scale) / 2 - 56 * scale, top - 387 * scale);
+    c.scale(scale, scale);
+    c.fillStyle = '#3AA05A';
+    for (const p of MARK) c.fill(p);
+    c.restore();
+  }
+
+  window.render = (t) => {
+    t = ((t % DURATION) + DURATION) % DURATION;
+    ctx.clearRect(0, 0, W, H);
+    if (LAYER === 'under') {
+      drawBackground(ctx, t);
+      drawWave(ctx, t);
+      drawMark(ctx);
+      for (const p of PHONES) drawDeviceBody(ctx, p);
+      ctx.fillStyle = ctx.createPattern(grain, 'repeat');
+      ctx.fillRect(0, 0, W, H);
+    } else {
+      // The simulator footage already carries the Dynamic Island.
+      PHONES.forEach((p, i) => {
+        drawSheen(ctx, p);
+        drawChip(ctx, p, t, i);
+      });
+    }
+    return true;
+  };
+
+  window.SAFE_DEBUG = () => {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,0,80,0.9)';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([24, 16]);
+    ctx.strokeRect(SAFE.x, SAFE.y, SAFE.w, SAFE.h);
+    ctx.restore();
+  };
+  window.DURATION = DURATION;
+  window.READY = document.fonts.ready.then(() => true);
+})();
+</script>
+</body>
+</html>

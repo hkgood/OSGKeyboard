@@ -4,7 +4,8 @@
 // What's New 1.7.0 recording host. Voice chrome + clipboard panel are the
 // **real** extension views (`KeyboardTopControls`, `RecordButton`,
 // `KeyboardTranslationMenuButton`, `ClipboardHistoryPanelView`, …) driven by
-// scripted `KeyboardState`. Launch with `--clipboard-demo`.
+// scripted `KeyboardState`. Launch with `--clipboard-demo` and optional
+// `--whats-new-lang=zh|en`.
 
 #if DEBUG
 import OSGKeyboardShared
@@ -35,8 +36,15 @@ struct ClipboardHistoryDemoView: View {
     /// Closing beat: hand the copied text to the real AI skill row.
     @State private var showsSkills = false
 
+    private static let language = FeaturePreviewFlags.language
+    private static var isEnglish: Bool { language == .en }
+
     private var palette: ThemePalette {
         colorScheme == .dark ? Palette.dark : Palette.light
+    }
+
+    init() {
+        FeaturePreviewFlags.applyRecordingLanguage()
     }
 
     var body: some View {
@@ -48,13 +56,10 @@ struct ClipboardHistoryDemoView: View {
             }
             VStack(spacing: 0) {
                 if FeaturePreviewFlags.isFullscreen {
-                    // Chinese-only recording — see the `zh-Hans` locale pin on
-                    // this view's body; the sample conversation has no English
-                    // variant, so the host chrome stays Chinese to match.
                     FeaturePreviewHostDocument(
                         kind: .messages,
-                        title: "信息",
-                        language: .zh,
+                        title: Self.isEnglish ? "Messages" : "信息",
+                        language: Self.language,
                         text: hostDraft,
                         incoming: Self.incomingMessage
                     )
@@ -71,7 +76,7 @@ struct ClipboardHistoryDemoView: View {
             }
         }
         .environment(\.themePalette, palette)
-        .environment(\.locale, Locale(identifier: "zh-Hans"))
+        .environment(\.locale, Locale(identifier: Self.isEnglish ? "en" : "zh-Hans"))
         .preferredColorScheme(.light)
         .task { await runTimeline() }
     }
@@ -290,7 +295,9 @@ struct ClipboardHistoryDemoView: View {
         }) else { return }
         await runReplySkill(
             skill: generic,
-            answer: "好的，预算版我整理一下，明天上午发你。"
+            answer: Self.isEnglish
+                ? "Sure, I'll pull the budget version together and send it tomorrow morning."
+                : "好的，预算版我整理一下，明天上午发你。"
         )
         state.pendingClipboardSkillID = nil
         try? await sleep(0.6)
@@ -337,6 +344,7 @@ struct ClipboardHistoryDemoView: View {
     /// Demo copy per reply style. Keyed by skill so the answer matches whatever
     /// chip the ranker put in the row.
     private static func answer(for skillID: String) -> String {
+        if isEnglish { return englishAnswer(for: skillID) }
         switch skillID {
         case AIClipboardSkillCatalog.playfulReplyID:
             return "行嘞，预算表这就去梳妆打扮，明早准时上桌。"
@@ -350,6 +358,23 @@ struct ClipboardHistoryDemoView: View {
             return "没问题，你要的是含人力成本的那版，还是只要采购部分？"
         default:
             return "好的，我整理一下，明天上午发你。"
+        }
+    }
+
+    private static func englishAnswer(for skillID: String) -> String {
+        switch skillID {
+        case AIClipboardSkillCatalog.playfulReplyID:
+            return "On it! The budget sheet is getting dressed up and will be on your desk by morning."
+        case AIClipboardSkillCatalog.businessReplyID:
+            return "Noted. I'll finalize the budget version tonight and send it over tomorrow morning."
+        case AIClipboardSkillCatalog.empathyReplyID:
+            return "Totally get that you need this soon. I'll prioritize it and send it first thing tomorrow."
+        case AIClipboardSkillCatalog.acceptTaskID:
+            return "Got it, I'll take this on and send the budget version tomorrow morning."
+        case AIClipboardSkillCatalog.clarifyRequestID:
+            return "Sure. Do you need the version with staffing costs, or just procurement?"
+        default:
+            return "Sure, I'll put it together and send it tomorrow morning."
         }
     }
 
@@ -394,6 +419,8 @@ struct ClipboardHistoryDemoView: View {
         state.layoutWidth = 390
         state.usesIPadLayoutMetrics = false
         state.showsSystemGlobeKey = false
+        // The skill ranker localizes chip titles off this.
+        state.uiLanguage = Self.isEnglish ? .english : .chinese
         // `AIKeyboardView.showsClipboardSkills` gates on this — without it the
         // real skill row never appears no matter what the ranker returns.
         state.clipboardHistoryEnabled = true
@@ -414,7 +441,10 @@ struct ClipboardHistoryDemoView: View {
 
     private func seedHistory() {
         history.clearAll()
-        _ = history.ingest(rawText: "订单号 OSG-20260811-8842", changeCount: 3)
+        _ = history.ingest(
+            rawText: Self.isEnglish ? "Order OSG-20260811-8842" : "订单号 OSG-20260811-8842",
+            changeCount: 3
+        )
         _ = history.ingest(rawText: "https://osglab.com", changeCount: 2)
         _ = history.ingest(rawText: Self.incomingMessage, changeCount: 1)
         history.reload()
@@ -422,7 +452,11 @@ struct ClipboardHistoryDemoView: View {
 
     /// The message the clip replies to. Copying it is what puts the reply
     /// skills in the row, so it has to be the newest clipboard entry.
-    static let incomingMessage = "方案我看了，明天能不能把预算那一版也发我？" 
+    static var incomingMessage: String {
+        isEnglish
+            ? "Read the proposal. Could you also send me the budget version tomorrow?"
+            : "方案我看了，明天能不能把预算那一版也发我？"
+    }
 
     private func sleep(_ seconds: Double) async throws {
         try await Task.sleep(nanoseconds: UInt64(seconds * 2.4 * 1_000_000_000))

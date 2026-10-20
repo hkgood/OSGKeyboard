@@ -59,6 +59,8 @@ xcrun simctl install "$UDID" \
 # 3) 录制（脚本会先校验 App Group 容器，缺失直接报错退出）
 Scripts/record_feature_previews.sh "$UDID"            # 全部四段
 Scripts/record_feature_previews.sh "$UDID" ask-ai     # 只录一段
+# 英文文案（--whats-new-lang=en），素材落在 .tmp/feature-previews/raw-en
+PREVIEW_LANG=en Scripts/record_feature_previews.sh "$UDID" voice-polish clipboard-agent ask-ai
 
 # 4) 合成。需要 Pillow —— 这版 ffmpeg 没有 libfreetype / libass，
 #    所有文字都由 PIL 渲染成 RGBA PNG 再 overlay。
@@ -136,6 +138,24 @@ app 里**没有**「点一次回复，弹出多条候选」这种交互：点一
 **25fps**，不加 `-framerate 30` 出来的片长会短 25/30；另外推拉运镜不要用单条
 `zoompan` 表达式同时做进和出——它的实际出帧数对不上 `duration * FPS`，片子会
 停在半路，循环处肉眼可见地跳。现在的做法是只渲染推近的一半再 `reverse` 拼接。
+
+## App Store 创意素材（Header / Search Results）
+
+同一批原始素材（中英文各一套）还驱动 iOS 27 起的 App Store 创意素材，脚本在
+`Scripts/appstore-creative/`：`header.html` / `search.html` 是逐帧确定的 canvas
+场景，`render.cjs` 用 Playwright 的 Chromium 渲染，`compose.py` 把录屏合进设备
+屏幕并按 App Store Connect 规格出片。
+
+```bash
+(cd .tmp/appstore-assets && npm install playwright-core)
+NODE_PATH=$PWD/.tmp/appstore-assets/node_modules \
+  python3 Scripts/appstore-creative/compose.py            # header + stills + search
+```
+
+- 5244×2950 只接受 PNG；视频 Header 只能是 3840×1646。
+- 安全区取自 Apple 官方 Sketch 模板，`compose.py` 顶部有数值。
+- 3840×2560 的 H.264 需要 Level 6，另出一份 3072×2048 / Level 5.1 兼容版。
+- `compose.py` 的 `WINDOWS` 是照 0.5 秒联系表量出来的，重录后要重新对时。
 
 ## 改动了 demo 时间轴之后
 

@@ -18,6 +18,26 @@ enum FeaturePreviewFlags {
     static var isFullscreen: Bool {
         ProcessInfo.processInfo.arguments.contains("--preview-fullscreen")
     }
+
+    /// Recording language from `--whats-new-lang=zh|en`; Chinese when absent.
+    static var language: WhatsNewDemoScenario.Language {
+        let prefix = "--whats-new-lang="
+        guard let argument = ProcessInfo.processInfo.arguments.first(
+            where: { $0.hasPrefix(prefix) }
+        ) else {
+            return .zh
+        }
+        return WhatsNewDemoScenario.Language(
+            rawValue: String(argument.dropFirst(prefix.count))
+        ) ?? .zh
+    }
+
+    /// Points the extension strings (`ExtL10n` reads the App Group setting)
+    /// at the recording language before the first frame renders.
+    @MainActor
+    static func applyRecordingLanguage() {
+        ProviderConfig.shared.uiLanguage = language == .en ? .english : .chinese
+    }
 }
 
 /// A Notes- or Messages-like document that reacts to the demo timeline.
