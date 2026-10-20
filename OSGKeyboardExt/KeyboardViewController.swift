@@ -269,9 +269,11 @@ public final class KeyboardViewController: UIInputViewController {
         if !preserve {
             prepareSurfaceForNextPresentation()
         }
-        if state.surface != .typing {
-            deactivateTypingSurface()
-        }
+        // Always finalize librime on hide, even on the typing surface: its
+        // LevelDB userdb holds `Rime/UserData/*.userdb/LOCK` in the App Group,
+        // and RunningBoard kills a suspended extension holding that lock
+        // (0xdead10cc). `viewWillAppear` re-prepares Rime (~30–50 ms).
+        deactivateTypingSurface()
         if preserve {
             return
         }

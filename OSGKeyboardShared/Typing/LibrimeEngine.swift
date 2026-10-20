@@ -47,7 +47,9 @@ public final class LibrimeEngine: RimeEngineBridging {
         let configured = configurationProvider()
         schema = configured.schema
         guard runtime.selectSchema(schema.rawValue) else {
-            runtime.stopSession()
+            // `start()` already initialized the shared runtime; finalize it so
+            // no user dictionary stays open without an owning bridge.
+            runtime.finalizeRuntime()
             throw LibrimeEngineError.schemaUnavailable(schema.rawValue)
         }
         _ = runtime.setASCIIMode(language == .english)
