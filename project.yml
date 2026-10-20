@@ -581,6 +581,7 @@ targets:
       - path: OSGKeyboard/Views/Account/AccountCreditPurchaseManager.swift
       - path: OSGKeyboard/Views/Account/LiveAccountServices.swift
       - path: OSGKeyboard/Views/Account/ReferralProfileViewModel.swift
+      # Invitation QR poster: pure SwiftUI + Core Image, shared with iOS.
       - path: OSGKeyboard/Views/Account/InvitePoster.swift
       - path: OSGKeyboard/Views/Account/AccountAppleAuthorizationFactories.swift
       - path: OSGKeyboard/Services/AccountAnalyticsBearerBridge.swift
