@@ -21,7 +21,7 @@ struct ClipboardHistoryDemoView: View {
             (actionClusterTopGap - micToButtonGap) / 2
     }
 
-    @StateObject private var state = KeyboardState()
+    @State private var state = KeyboardState()
     @StateObject private var typing = TypingSessionController()
     // `AIKeyboardView` ranks its skill row off `ClipboardHistoryStore.shared`
     // and `ClipboardSemanticRankingStore.shared`. Driving a private store here

@@ -112,7 +112,7 @@ struct KeyboardTopControls: View {
     @Environment(\.keyboardTabSelectionNamespace) private var sharedSelectionNamespace
     @Namespace private var fallbackSelectionNamespace
 
-    @ObservedObject var state: KeyboardState
+    var state: KeyboardState
     @ObservedObject var typing: TypingSessionController
 
     let palette: ThemePalette

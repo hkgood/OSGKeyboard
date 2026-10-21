@@ -64,7 +64,7 @@ struct AIKeyboardView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @ObservedObject var state: KeyboardState
+    var state: KeyboardState
     @ObservedObject var typing: TypingSessionController
     @ObservedObject private var clipboardHistory = ClipboardHistoryStore.shared
     @ObservedObject private var semanticRanking = ClipboardSemanticRankingStore.shared
@@ -604,9 +604,9 @@ struct AIKeyboardView: View {
     @ViewBuilder
     private var contextArea: some View {
         ZStack {
-            if showsOOBEClipboardSkill, activeStatus == nil {
+            if showsOOBEClipboardSkill, !hasActiveStatus {
                 clipboardSkillPager
-            } else if let onboardingPracticeHint, activeStatus == nil {
+            } else if let onboardingPracticeHint, !hasActiveStatus {
                 Text(onboardingPracticeHint)
                     .font(TypeStyle.footnote.weight(.semibold))
                     .foregroundStyle(palette.textPrimary)
@@ -636,8 +636,12 @@ struct AIKeyboardView: View {
                 }
             } else if let content = semanticBadgeContent {
                 semanticBadge(content)
-            } else if let status = activeStatus {
-                statusText(status.text, color: status.color)
+            } else if hasActiveStatus {
+                LiveTranscriptReader(state: state) { transcript in
+                    if let status = activeStatus(lastTranscript: transcript) {
+                        statusText(status.text, color: status.color)
+                    }
+                }
             } else if showsLongPressCoach {
                 Text(ExtL10n.string("keyboard.assistant.longPressCoach"))
                     .font(TypeStyle.footnote.weight(.medium))
@@ -720,7 +724,14 @@ struct AIKeyboardView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private var activeStatus: (text: String, color: Color)? {
+    /// Whether a status line replaces the idle content. Never depends on the
+    /// transcript text, so this surface does not re-render per ASR partial.
+    private var hasActiveStatus: Bool {
+        activeStatus(lastTranscript: "") != nil
+    }
+
+    /// `lastTranscript` is passed in so only `LiveTranscriptReader` tracks it.
+    private func activeStatus(lastTranscript: String) -> (text: String, color: Color)? {
         if let error = state.aiSession.errorMessage,
            !error.isEmpty,
            !ordinaryPipelineIsActive {
@@ -757,18 +768,18 @@ struct AIKeyboardView: View {
             return nil
         case .requestingPermissions:
             return (
-                state.lastTranscript.isEmpty
+                lastTranscript.isEmpty
                     ? ExtL10n.string("keyboard.placeholder.preparing")
-                    : state.lastTranscript,
+                    : lastTranscript,
                 palette.textSecondary
             )
         case .recording:
-            return (state.lastTranscript.isEmpty ? " " : state.lastTranscript, palette.textPrimary)
+            return (lastTranscript.isEmpty ? " " : lastTranscript, palette.textPrimary)
         case .processing:
             return (
-                state.lastTranscript.isEmpty
+                lastTranscript.isEmpty
                     ? ExtL10n.string("keyboard.placeholder.processing")
-                    : state.lastTranscript,
+                    : lastTranscript,
                 palette.textSecondary
             )
         case .error(_, let message):
@@ -1149,14 +1160,7 @@ struct AIKeyboardView: View {
     }
 
     private func waveform(color: Color) -> some View {
-        WaveformView(
-            level: state.level,
-            barCount: 7,
-            color: color,
-            active: true
-        )
-        .frame(width: 38, height: 26)
-        .clipped()
+        AssistantWaveform(state: state, color: color)
     }
 
     private var microphoneTint: Color {
@@ -1562,6 +1566,35 @@ struct AIKeyboardView: View {
 /// Uses a subview's intrinsic width until it reaches a visual cap. Unlike
 /// `frame(maxWidth:)`, this layout does not expand short labels to the cap,
 /// so each capsule and its complete hit target follow the actual content.
+/// Reads `state.level` in its own body so the 200 ms mic level tick re-renders
+/// only these bars instead of the whole assistant surface.
+private struct AssistantWaveform: View {
+    let state: KeyboardState
+    let color: Color
+
+    var body: some View {
+        WaveformView(
+            level: state.level,
+            barCount: 7,
+            color: color,
+            active: true
+        )
+        .frame(width: 38, height: 26)
+        .clipped()
+    }
+}
+
+/// Reads `state.lastTranscript` in its own body so per-word ASR partials
+/// re-render only the status line.
+private struct LiveTranscriptReader<Content: View>: View {
+    let state: KeyboardState
+    @ViewBuilder let content: (String) -> Content
+
+    var body: some View {
+        content(state.lastTranscript)
+    }
+}
+
 private struct IntrinsicWidthCap: Layout {
     let maxWidth: CGFloat
 

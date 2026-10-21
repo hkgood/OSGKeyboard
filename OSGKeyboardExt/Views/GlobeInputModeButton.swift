@@ -12,7 +12,7 @@ import SwiftUI
 import UIKit
 
 struct GlobeInputModeButton: UIViewRepresentable {
-    @ObservedObject var state: KeyboardState
+    var state: KeyboardState
     @Binding var isPressed: Bool
 
     func makeUIView(context: Context) -> GlobeInputModeButtonView {
@@ -41,7 +41,7 @@ struct GlobeInputModeButton: UIViewRepresentable {
 struct SystemGlobeKey: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.themePalette) private var palette
-    @ObservedObject var state: KeyboardState
+    var state: KeyboardState
     @State private var isPressed = false
 
     var width: CGFloat = 44

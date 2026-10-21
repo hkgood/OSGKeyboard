@@ -14,7 +14,7 @@ import SwiftUI
 
 struct SmartReplyDemoView: View {
     @StateObject private var config = ProviderConfig.shared
-    @StateObject private var state = KeyboardState()
+    @State private var state = KeyboardState()
     @StateObject private var typing = TypingSessionController()
 
     var body: some View {

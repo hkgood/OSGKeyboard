@@ -12,7 +12,7 @@ struct LastInputEditView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @ObservedObject var state: KeyboardState
+    var state: KeyboardState
     @State private var selectedPage: Int? = 0
 
     private var palette: ThemePalette {

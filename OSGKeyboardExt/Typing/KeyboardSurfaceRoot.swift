@@ -10,7 +10,7 @@ struct KeyboardSurfaceRoot: View {
     @Environment(\.colorScheme) private var colorScheme
     @Namespace private var keyboardTabSelectionNamespace
 
-    @ObservedObject var state: KeyboardState
+    var state: KeyboardState
     @ObservedObject var typing: TypingSessionController
 
     var onInsert: (String) -> Void

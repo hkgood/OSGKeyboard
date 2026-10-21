@@ -31,7 +31,7 @@ struct EditDemoView: View {
         case editing
     }
 
-    @StateObject private var state = KeyboardState()
+    @State private var state = KeyboardState()
     @State private var scene: Scene = .hint
     /// Mirrors the host document for `--preview-fullscreen` recordings.
     @State private var hostText: String = EditDemoView.originalText
