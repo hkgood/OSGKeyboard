@@ -19,7 +19,7 @@ public final class LibrimeEngine: RimeEngineBridging {
     private let candidateLimit: Int
 
     public init(
-        schema: TypingInputSchema = .fullPinyin,
+        schema: TypingInputSchema = .zhuyin,
         candidateLimit: Int = 160,
         configurationProvider: @escaping () -> TypingInputConfigurationSnapshot = {
             TypingInputConfiguration.shared.snapshot
@@ -92,8 +92,9 @@ public final class LibrimeEngine: RimeEngineBridging {
     }
 
     public func processCharacter(_ character: Character) -> String? {
+        let input = schema == .zhuyin ? ZhuyinKeyboardLayout.key(for: character) : character
         guard language == .chinese,
-              let scalar = character.asciiValue,
+              let scalar = input?.asciiValue,
               bridge?.processKeyCode(Int32(scalar), modifiers: 0) == true else {
             return nil
         }
@@ -111,14 +112,22 @@ public final class LibrimeEngine: RimeEngineBridging {
         guard bridge?.processKeyCode(32, modifiers: 0) == true else {
             return " "
         }
-        return refresh()
+        // A handled key may advance the composition without committing text.
+        // Return an empty string so the controller does not insert a literal space.
+        return refresh() ?? ""
     }
 
     public func processReturn() -> String? {
+        if schema == .zhuyin, !composition.preedit.isEmpty {
+            if let candidate = composition.candidates.first {
+                return selectCandidate(at: candidate.engineIndex)
+            }
+            return flushPreedit()
+        }
         guard bridge?.processKeyCode(OSGRimeKeyReturn, modifiers: 0) == true else {
             return "\n"
         }
-        return refresh()
+        return refresh() ?? ""
     }
 
     public func selectCandidate(at index: Int) -> String {
@@ -130,7 +139,7 @@ public final class LibrimeEngine: RimeEngineBridging {
         let raw = bridge?.rawInput() ?? ""
         bridge?.clearComposition()
         composition = .empty
-        return raw
+        return schema == .zhuyin ? ZhuyinKeyboardLayout.displayText(for: raw) : raw
     }
 
     public func clearComposition() {
@@ -146,7 +155,11 @@ public final class LibrimeEngine: RimeEngineBridging {
             composition = .empty
             return nil
         }
-        let preedit = snapshot.preedit
+        // Rime preedit is its ASCII Dachen code. Show phonetic symbols, not
+        // 'su3', while the user composes 'ㄋㄧˇ'.
+        let preedit = schema == .zhuyin
+            ? ZhuyinKeyboardLayout.displayText(for: snapshot.preedit)
+            : snapshot.preedit
         let raw = bridge?.rawInput() ?? ""
         composition = TypingComposition(
             preedit: preedit,

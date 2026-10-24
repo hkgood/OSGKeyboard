@@ -8,6 +8,7 @@ import Combine
 import Foundation
 
 public enum TypingInputSchema: String, CaseIterable, Identifiable, Codable, Sendable {
+    case zhuyin = "osg_zhuyin"
     case fullPinyin = "osg_pinyin"
     case microsoftDoublePinyin = "osg_double_pinyin_mspy"
     case sogouDoublePinyin = "osg_double_pinyin_sogou"
@@ -16,6 +17,7 @@ public enum TypingInputSchema: String, CaseIterable, Identifiable, Codable, Send
 
     public var shortLabel: String {
         switch self {
+        case .zhuyin: return "注"
         case .fullPinyin: return "全"
         case .microsoftDoublePinyin: return "微"
         case .sogouDoublePinyin: return "搜"
@@ -25,6 +27,7 @@ public enum TypingInputSchema: String, CaseIterable, Identifiable, Codable, Send
     /// Stable Rime schema `name:` (not UI copy). Keep Chinese so redeploy fingerprints stay stable.
     public var displayName: String {
         switch self {
+        case .zhuyin: return "注音（繁體）"
         case .fullPinyin: return "全拼"
         case .microsoftDoublePinyin: return "微软双拼"
         case .sogouDoublePinyin: return "搜狗双拼"
@@ -34,6 +37,7 @@ public enum TypingInputSchema: String, CaseIterable, Identifiable, Codable, Send
     /// Localizable UI label key (`AppL10n` / `SharedL10n`).
     public var labelKey: String {
         switch self {
+        case .zhuyin: return "typing.schema.zhuyin"
         case .fullPinyin: return "typing.schema.fullPinyin"
         case .microsoftDoublePinyin: return "typing.schema.microsoftDoublePinyin"
         case .sogouDoublePinyin: return "typing.schema.sogouDoublePinyin"
@@ -44,6 +48,7 @@ public enum TypingInputSchema: String, CaseIterable, Identifiable, Codable, Send
 /// Default keyboard open mode when "remember last" is off.
 public enum DefaultInputMode: String, CaseIterable, Identifiable, Codable, Sendable {
     case voice
+    /// Legacy persisted identifier; means any Chinese typing scheme.
     case pinyin
     case english
 
@@ -151,7 +156,7 @@ public final class TypingInputConfiguration: ObservableObject {
     public init(defaults: UserDefaults? = nil) {
         self.defaults = defaults ?? AppGroup.defaults
         let schemaId = self.defaults.string(forKey: Key.schema) ?? ""
-        schema = TypingInputSchema(rawValue: schemaId) ?? .fullPinyin
+        schema = TypingInputSchema(rawValue: schemaId) ?? .zhuyin
         let fuzzyIds = self.defaults.stringArray(forKey: Key.fuzzyPairs) ?? []
         fuzzyPairs = Set(fuzzyIds.compactMap(PinyinFuzzyPair.init(rawValue:)))
         defaultInputMode = Self.resolveDefaultInputMode(from: self.defaults)
@@ -174,7 +179,7 @@ public final class TypingInputConfiguration: ObservableObject {
     public func reload() {
         isHydrating = true
         schema = TypingInputSchema(rawValue: defaults.string(forKey: Key.schema) ?? "")
-            ?? .fullPinyin
+            ?? .zhuyin
         let fuzzyIds = defaults.stringArray(forKey: Key.fuzzyPairs) ?? []
         fuzzyPairs = Set(fuzzyIds.compactMap(PinyinFuzzyPair.init(rawValue:)))
         defaultInputMode = Self.resolveDefaultInputMode(from: defaults)
@@ -230,7 +235,7 @@ public final class TypingInputConfiguration: ObservableObject {
         defaults: UserDefaults? = nil
     ) -> (surface: KeyboardState.Surface, typingLanguage: TypingInputLanguage?) {
         let store = defaults ?? AppGroup.defaultsIfAvailable
-        guard let store else { return (.voice, nil) }
+        guard let store else { return (.typing, .chinese) }
 
         // Older builds persisted a dedicated AI surface. It now migrates to
         // the unified assistant surface.
@@ -300,13 +305,17 @@ public final class TypingInputConfiguration: ObservableObject {
     nonisolated private static func resolveDefaultInputMode(
         from defaults: UserDefaults?
     ) -> DefaultInputMode {
-        guard let defaults else { return .voice }
+        guard let defaults else { return .pinyin }
         if let raw = defaults.string(forKey: Key.defaultInputMode),
            let mode = DefaultInputMode(rawValue: raw) {
             return mode
         }
-        // Migrate legacy toggle: on → pinyin, off → voice.
-        return defaults.bool(forKey: Key.defaultToTyping) ? .pinyin : .voice
+        // Preserve an explicitly saved legacy preference. A missing toggle is
+        // a fresh install, which opens on the Chinese keyboard (Zhuyin).
+        if defaults.object(forKey: Key.defaultToTyping) != nil {
+            return defaults.bool(forKey: Key.defaultToTyping) ? .pinyin : .voice
+        }
+        return .pinyin
     }
 
     nonisolated private static func persistedTypingLanguage(

@@ -18,6 +18,7 @@ binary dependency licenses are bundled beside `NOTICE.txt`.
 | [fxsjy/jieba](https://github.com/fxsjy/jieba) | `67fa2e3…` | MIT | Modern Simplified-Chinese word frequencies |
 | [phrase-pinyin-data](https://github.com/mozillazg/phrase-pinyin-data) | `cee0ed6…` | MIT | Phrase pronunciations |
 | [pinyin-data](https://github.com/mozillazg/pinyin-data) | `923b108…` | MIT | Character-pronunciation fallback |
+| [McBopomofo](https://github.com/openvanilla/McBopomofo) | `be6564acad6c4d3265c34a2e1a872d80f9db6068` | MIT (upstream also credits BSD-licensed libtabe phrase data) | Traditional-Chinese Zhuyin readings and frequency weights |
 | [Google Material Icons](https://github.com/google/material-design-icons) | Bundled font snapshot | Apache-2.0 | iOS Settings and navigation iconography |
 
 `Scripts/typing/build_rime_dictionary.py` deterministically merges these
@@ -29,7 +30,16 @@ commit, SHA-256 and output SHA-256.
 - SwiftUI QWERTY / candidate UI, `RimeEngineBridging`, and the English
   suggestion / autocorrect / next-word session layer.
 - Objective-C++ C-API bridge for librime.
-- Full-pinyin, Microsoft-double-pinyin and Sogou-double-pinyin schemas.
+- Zhuyin, full-pinyin, Microsoft-double-pinyin and Sogou-double-pinyin schemas.
+- The Zhuyin schema and standard Dachen key mapping are independently
+  implemented. Its generated dictionary uses McBopomofo's `BPMFBase.txt`,
+  `BPMFMappings.txt` and `phrase.occ` at the commit above. The full upstream
+  MIT license is bundled as `LICENSE-MCBOPOMOFO-MIT.txt`. Upstream's
+  `Source/Data/README.md` credits the phrase mappings as modified from
+  BSD-licensed libtabe `tsi.src` data.
+  Rebuild offline with `python3 Scripts/typing/build_zhuyin_dictionary.py`
+  from a local pinned McBopomofo checkout; `--check` verifies the retained
+  SHA-256 values without writing files. The generator never downloads sources.
 - Microsoft/Sogou mappings were independently encoded from public key-map
   specifications; GPL schema files were not copied.
 - Eight opt-in fuzzy-pinyin rule groups.

@@ -73,6 +73,7 @@ static NSString *OSGRimeString(const char *value) {
 @property(nonatomic, copy) NSString *userDataDirectory;
 @property(nonatomic, copy) NSString *distributionVersion;
 @property(nonatomic) RimeSessionId session;
+@property(nonatomic) BOOL reordersPinyinCandidates;
 @end
 
 @implementation OSGRimeBridge
@@ -370,7 +371,15 @@ static NSArray<OSGRimeCandidate *> *OSGAssembleDisplayCandidates(
     if (![self running]) {
         return NO;
     }
-    return OSGRimeAPI()->select_schema(self.session, schemaIdentifier.UTF8String);
+    BOOL selected = OSGRimeAPI()->select_schema(self.session, schemaIdentifier.UTF8String);
+    if (selected) {
+        // Dachen key sequences are not Latin pinyin. Keep Rime's tone-aware
+        // ordering for Zhuyin instead of applying the pinyin prefix heuristic.
+        self.reordersPinyinCandidates =
+            [schemaIdentifier isEqualToString:@"osg_pinyin"] ||
+            [schemaIdentifier hasPrefix:@"osg_double_pinyin_"];
+    }
+    return selected;
 }
 
 - (BOOL)setASCIIMode:(BOOL)enabled {
@@ -443,7 +452,8 @@ static NSArray<OSGRimeCandidate *> *OSGAssembleDisplayCandidates(
     NSString *rawInput = [self rawInput];
     NSInteger safeLimit = MAX((NSInteger)0, limit);
     NSString *firstUnit = OSGFirstSpellingUnit(rawInput);
-    BOOL hasRemainder = firstUnit.length > 0 && rawInput.length > firstUnit.length;
+    BOOL hasRemainder = self.reordersPinyinCandidates &&
+        firstUnit.length > 0 && rawInput.length > firstUnit.length;
     NSMutableArray<OSGRimeCandidate *> *scanned = [NSMutableArray array];
     // Deep-scan only when a trailing spelling unit exists so we can still
     // surface first-syllable characters buried under completion flood.
@@ -507,7 +517,9 @@ static NSArray<OSGRimeCandidate *> *OSGAssembleDisplayCandidates(
     }
 
     NSArray<OSGRimeCandidate *> *display =
-        OSGAssembleDisplayCandidates(scanned, rawInput, safeLimit);
+        self.reordersPinyinCandidates
+            ? OSGAssembleDisplayCandidates(scanned, rawInput, safeLimit)
+            : [scanned copy];
 
     return [[OSGRimeSnapshot alloc] initWithPreedit:preedit
                                         candidates:display

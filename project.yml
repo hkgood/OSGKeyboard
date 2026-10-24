@@ -143,6 +143,8 @@ targets:
       # CLM uses a unique iOS-only path (`HostCLM/`): XcodeGen dedupes identical
       # file paths across iOS/Mac, which previously left the iOS app without CLM.
       - path: OSGKeyboard/Resources/Typing/Rime/osg_pinyin.dict.yaml
+      - path: OSGKeyboard/Resources/Typing/Rime/osg_zhuyin.dict.yaml
+      - path: OSGKeyboard/Resources/Typing/Rime/osg_zhuyin.manifest.json
       - path: OSGKeyboard/Resources/Typing/Rime/manifest.json
       - path: OSGKeyboard/Resources/HostCLM/v1/OSGKeyboardCLM.bin
       - path: OSGKeyboard/Resources/HostCLM/v1/compiled-manifest.json
@@ -152,6 +154,7 @@ targets:
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-PINYIN-SIMP-APACHE.txt
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-MATERIAL-ICONS-APACHE.txt
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-JIEBA-MIT.txt
+      - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-MCBOPOMOFO-MIT.txt
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-PHRASE-PINYIN-DATA-MIT.txt
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-PINYIN-DATA-MIT.txt
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-NORVIG-PD.txt
@@ -494,6 +497,8 @@ targets:
       - path: OSGKeyboardExt/Services/ClipboardCaptureCoordinator.swift
       # Host-only dict fixture for librime deploy tests (not linked into Ext).
       - path: OSGKeyboard/Resources/Typing/Rime/osg_pinyin.dict.yaml
+        buildPhase: resources
+      - path: OSGKeyboard/Resources/Typing/Rime/osg_zhuyin.dict.yaml
         buildPhase: resources
     info:
       path: OSGKeyboardExtTests/Info.plist

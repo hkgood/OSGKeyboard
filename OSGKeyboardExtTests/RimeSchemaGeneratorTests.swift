@@ -51,13 +51,25 @@ final class RimeSchemaGeneratorTests: XCTestCase {
     }
 
     func testAllSchemasEraseDialectSyllables() {
-        for schema in TypingInputSchema.allCases {
+        // Zhuyin phonetics do not use Latin pinyin spellings or fuzzy pairs.
+        for schema in TypingInputSchema.allCases where schema != .zhuyin {
             let yaml = RimeSchemaGenerator.schema(for: schema, fuzzyPairs: [])
             XCTAssertTrue(yaml.contains("erase/^hm$/"), schema.rawValue)
             XCTAssertTrue(yaml.contains("erase/^m$/"), schema.rawValue)
             XCTAssertTrue(yaml.contains("erase/^n$/"), schema.rawValue)
             XCTAssertTrue(yaml.contains("erase/^ng$/"), schema.rawValue)
         }
+    }
+
+    func testTraditionalZhuyinUsesItsOwnDictionaryAndDachenAlphabet() {
+        let defaults = RimeSchemaGenerator.defaultConfiguration()
+        XCTAssertTrue(defaults.contains("schema: osg_zhuyin"))
+        let yaml = RimeSchemaGenerator.schema(for: .zhuyin, fuzzyPairs: [.nL])
+        XCTAssertTrue(yaml.contains("dictionary: osg_zhuyin"))
+        XCTAssertTrue(yaml.contains("alphabet: \"1qaz2wsxedcrfv5tgbyhnujm8ik,9ol.0p;/-6734\""))
+        XCTAssertFalse(yaml.contains("derive/^n/l/"))
+        XCTAssertFalse(yaml.contains("xform/"))
+        XCTAssertFalse(yaml.contains("dictionary: osg_pinyin"))
     }
 
     func testZhAbbrevIsFullPinyinOnly() {
@@ -73,30 +85,33 @@ final class RimeSchemaGeneratorTests: XCTestCase {
     }
 
     @MainActor
-    func testTypingConfigurationDefaultsToFullPinyinWithoutFuzzyPairs() {
+    func testTypingConfigurationDefaultsToZhuyinWithoutFuzzyPairs() {
         let suiteName = "TypingInputConfigurationTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let configuration = TypingInputConfiguration(defaults: defaults)
-        XCTAssertEqual(configuration.schema, .fullPinyin)
+        XCTAssertEqual(configuration.schema, .zhuyin)
         XCTAssertTrue(configuration.fuzzyPairs.isEmpty)
-        XCTAssertEqual(configuration.defaultInputMode, .voice)
+        XCTAssertEqual(configuration.defaultInputMode, .pinyin)
         XCTAssertFalse(configuration.rememberLastSurface)
     }
 
     @MainActor
-    func testDefaultInputModePersistsAndDefaultsToVoice() {
+    func testDefaultInputModePersistsAndDefaultsToChinese() {
         let suiteName = "TypingInputConfigurationTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        XCTAssertFalse(TypingInputConfiguration.prefersTypingOnOpen(defaults: defaults))
+        XCTAssertTrue(TypingInputConfiguration.prefersTypingOnOpen(defaults: defaults))
         XCTAssertEqual(
             TypingInputConfiguration.preferredSurfaceOnOpen(defaults: defaults),
-            .voice
+            .typing
         )
-        XCTAssertNil(TypingInputConfiguration.preferredTypingLanguageOnOpen(defaults: defaults))
+        XCTAssertEqual(
+            TypingInputConfiguration.preferredTypingLanguageOnOpen(defaults: defaults),
+            .chinese
+        )
 
         let configuration = TypingInputConfiguration(defaults: defaults)
         configuration.defaultInputMode = .pinyin

@@ -186,6 +186,7 @@
         "OSGKeyboardExtTests/RimeSchemaGeneratorTests",
         "OSGKeyboardExtTests/RimePersonalDictionaryExporterTests",
         "OSGKeyboardExtTests/TypingTouchTrackerTests",
+        "OSGKeyboardExtTests/ZhuyinKeyboardTests",
         "OSGKeyboardTests/AssistantFieldActionTests",
         "OSGKeyboardTests/AppleNaturalLanguageCapabilityTests",
         "OSGKeyboardTests/KeyboardTranslationConfigProtectionTests",

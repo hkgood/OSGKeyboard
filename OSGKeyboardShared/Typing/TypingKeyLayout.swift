@@ -86,6 +86,22 @@ public enum TypingKeyLayoutBuilder {
             self.gridToBottomSpacing = gridToBottomSpacing
             self.derivesSecondRowInsetFromKeyWidth = derivesSecondRowInsetFromKeyWidth
         }
+
+        /// Fits an alternate character grid into the same three-row area.
+        /// The bottom actions and overall keyboard height stay fixed when
+        /// switching between Zhuyin, Pinyin, English and the symbol pages.
+        public func fittingGrid(rowCount: Int) -> Metrics {
+            guard rowCount > 0, rowCount != 3 else { return self }
+            var fitted = self
+            let gridHeight = keyRowHeight * 3 + keyRowSpacing * 2
+            fitted.keyRowHeight = max(
+                1,
+                (gridHeight - keyRowSpacing * CGFloat(rowCount - 1)) / CGFloat(rowCount)
+            )
+            fitted.secondRowInset = 0
+            fitted.derivesSecondRowInsetFromKeyWidth = false
+            return fitted
+        }
     }
 
     /// Inset that makes `row` keys as wide as a full `referenceCount` row.

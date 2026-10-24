@@ -67,6 +67,7 @@ public final class TypingSessionController: ObservableObject {
     private let hostHeavyProvider: @MainActor () -> Bool
     private let learningStore: EnglishLearningStore
     private let frequentTermStore: FrequentTermStore
+    private let configuration: TypingInputConfiguration
     private var engineStorage: RimeEngineBridging?
     private var englishStorage: EnglishSuggestionEngine?
     private var prepared = false
@@ -114,18 +115,25 @@ public final class TypingSessionController: ObservableObject {
         englishEngine: (@MainActor () -> EnglishSuggestionEngine)? = nil,
         learningStore: EnglishLearningStore = EnglishLearningStore(),
         frequentTermStore: FrequentTermStore = FrequentTermStore(),
+        configuration: TypingInputConfiguration = .shared,
         hostHeavyProvider: @escaping @MainActor () -> Bool = {
             FlowSessionBridge.isHostHeavy()
         }
     ) {
-        self.engineFactory = engine ?? { LibrimeEngine() }
+        self.configuration = configuration
+        self.engineFactory = engine ?? {
+            LibrimeEngine(
+                schema: configuration.schema,
+                configurationProvider: { configuration.snapshot }
+            )
+        }
         self.layout = layout
         self.englishFactory = englishEngine ?? { EnglishSuggestionEngine() }
         self.hostHeavyProvider = hostHeavyProvider
         self.learningStore = learningStore
         self.frequentTermStore = frequentTermStore
         // Avoid constructing librime until the first Chinese keystroke / prepare.
-        schema = TypingInputConfiguration.shared.schema
+        schema = configuration.schema
     }
 
     /// Letter keys and Shift glyph follow any armed / held / Caps Lock state.
@@ -133,15 +141,20 @@ public final class TypingSessionController: ObservableObject {
         shiftActive || capsLock || shiftHeld
     }
 
+    public var isZhuyinLetterPage: Bool {
+        language == .chinese && schema == .zhuyin && page == .letters
+    }
+
     public var keyRows: [[String]] {
         var rows = layout.rows(
             for: page,
             language: language,
-            shiftActive: isShiftEnabled
+            shiftActive: isShiftEnabled,
+            schema: schema
         )
         if page == .letters,
            language == .chinese,
-           schema != .fullPinyin,
+           (schema == .microsoftDoublePinyin || schema == .sogouDoublePinyin),
            rows.indices.contains(2),
            rows[2].first == "⇧" {
             // Microsoft/Sogou use semicolon for "ing"; Chinese composition
@@ -163,7 +176,7 @@ public final class TypingSessionController: ObservableObject {
                 + "hostHeavy=\(hostHeavy ? 1 : 0) \(OSGDiag.memoryTag())",
             category: "boot"
         )
-        TypingInputConfiguration.shared.reload()
+        _ = reloadInputConfiguration()
         refreshPersonalTerms()
         // mmap the English table only while English is active. Chinese typing
         // already has Rime; loading both on appear is what jetsams the extension.
@@ -299,6 +312,7 @@ public final class TypingSessionController: ObservableObject {
         language = newLanguage
         engineStorage?.setLanguage(newLanguage)
         page = .letters
+        resetShiftState()
         isCandidatePanelExpanded = false
         clearPeriodShortcut()
         if newLanguage == .english {
@@ -326,6 +340,42 @@ public final class TypingSessionController: ObservableObject {
         }
     }
 
+    /// Applies host-side input-method changes to an already-visible keyboard.
+    /// The caller inserts the returned visible preedit before the layout
+    /// changes, so switching settings cannot silently discard unfinished text.
+    @discardableResult
+    public func reloadInputConfiguration() -> TypingOutput {
+        configuration.reload()
+        let selectedSchema = configuration.schema
+        guard schema != selectedSchema else { return .none }
+
+        let raw = language == .chinese && !composition.preedit.isEmpty
+            ? engine.flushPreedit() : ""
+        let output: TypingOutput = raw.isEmpty ? .none : .insert(raw)
+        if let engineStorage {
+            let selected = engineStorage.setSchema(selectedSchema)
+            guard selected || engineStorage.schema == selectedSchema else {
+                composition = language == .chinese ? engineStorage.composition : composition
+                syncCandidatePanelVisibility()
+                lastError = LibrimeEngineError.schemaUnavailable(selectedSchema.rawValue)
+                    .localizedDescription
+                return output
+            }
+        }
+        schema = selectedSchema
+        lastError = nil
+        lastErrorNeedsHostDeployment = false
+        page = .letters
+        resetShiftState()
+        if language == .chinese {
+            composition = engineStorage?.composition ?? .empty
+        } else {
+            syncAutocapitalization()
+        }
+        isCandidatePanelExpanded = false
+        return output
+    }
+
     /// Flushes raw preedit, selects the next built-in scheme, and returns the
     /// text that the caller should insert before switching.
     public func cycleSchema() -> TypingOutput {
@@ -333,9 +383,11 @@ public final class TypingSessionController: ObservableObject {
         let schemas = TypingInputSchema.allCases
         let current = schemas.firstIndex(of: schema) ?? 0
         let next = schemas[(current + 1) % schemas.count]
-        if engine.setSchema(next) {
+        if engine.setSchema(next) || engine.schema == next {
             schema = next
-            TypingInputConfiguration.shared.schema = next
+            configuration.schema = next
+            page = .letters
+            resetShiftState()
         }
         composition = engine.composition
         syncCandidatePanelVisibility()
@@ -389,7 +441,7 @@ public final class TypingSessionController: ObservableObject {
         case "#+=":
             setPage(.symbols)
             return .none
-        case "ABC", "abc":
+        case "ABC", "abc", "注音":
             setPage(.letters)
             return .none
         default:
@@ -397,6 +449,11 @@ public final class TypingSessionController: ObservableObject {
         }
 
         if page != .letters {
+            if language == .chinese, suggestionsEnabled, !composition.preedit.isEmpty {
+                if schema == .zhuyin {
+                    return commitChineseComposition(before: label)
+                }
+            }
             let out = commitEnglishWordIfNeededBeforeNonLetter()
             clearOneShotShiftIfNeeded()
             if out.isEmpty {
@@ -417,17 +474,28 @@ public final class TypingSessionController: ObservableObject {
             return .insert(String(ch))
         }
 
+        // Resolve the lazy engine before inspecting its schema. The production
+        // factory starts from the saved preference; injected engines may
+        // deliberately select a different schema.
+        let chineseEngine = engine
+
         // Chinese + Shift: insert Latin directly (iOS-style mix-in), leave Rime
         // composition untouched. Rime's alphabet is lowercase-only, so uppercase
         // keycodes would otherwise be rejected with no output.
-        if isShiftEnabled, ch.isLetter {
+        if isShiftEnabled, ch.isASCII, ch.isLetter {
             clearOneShotShiftIfNeeded()
             return .insert(String(ch))
         }
 
+        if schema == .zhuyin, ZhuyinKeyboardLayout.key(for: ch) == nil {
+            // iPad's bottom-row punctuation is not a Dachen key. Commit any
+            // pending Chinese text before inserting the literal punctuation.
+            return commitChineseComposition(before: label)
+        }
+
         // Chinese letters → compose
-        let committed = engine.processCharacter(ch) ?? ""
-        composition = engine.composition
+        let committed = chineseEngine.processCharacter(ch) ?? ""
+        composition = chineseEngine.composition
         syncCandidatePanelVisibility()
         clearOneShotShiftIfNeeded()
         recordChineseCommit(committed)
@@ -506,7 +574,29 @@ public final class TypingSessionController: ObservableObject {
         frequentTermStore.recordCommittedText(text)
     }
 
-    /// Drop in-flight pinyin so secure fields cannot commit into userdb.
+    /// Commit every pending segment before a literal key. Rime may select one
+    /// word at a time; stop on lack of progress and preserve an unmatched tail
+    /// as visible phonetic text instead of dropping it or reordering it.
+    private func commitChineseComposition(before literal: String) -> TypingOutput {
+        var committed = ""
+        let selectionLimit = max(composition.rawInput.count, composition.preedit.count) + 1
+        for _ in 0..<selectionLimit {
+            let before = engine.composition
+            guard !before.preedit.isEmpty, let candidate = before.candidates.first else { break }
+            committed += engine.selectCandidate(at: candidate.engineIndex)
+            guard engine.composition != before else { break }
+        }
+        if !engine.composition.preedit.isEmpty {
+            committed += engine.flushPreedit()
+        }
+        composition = engine.composition
+        isCandidatePanelExpanded = false
+        clearOneShotShiftIfNeeded()
+        recordChineseCommit(committed)
+        return .insert(committed + literal)
+    }
+
+    /// Drop in-flight Chinese text so secure fields cannot commit into userdb.
     private func abandonChineseComposition() {
         engineStorage?.clearComposition()
         composition = .empty

@@ -357,13 +357,14 @@
 "settings.typingInput.default.title" = "默认输入方式";
 "settings.typingInput.default.description" = "打开键盘时使用此方式";
 "settings.typingInput.default.mode.voice" = "语音";
-"settings.typingInput.default.mode.pinyin" = "拼音";
+"settings.typingInput.default.mode.pinyin" = "中文鍵盤";
 "settings.typingInput.default.mode.english" = "英文";
 "settings.typingInput.rememberLast.title" = "记住上次选择";
 "settings.typingInput.rememberLast.description" = "下次打开时恢复上次界面";
 "settings.typingInput.schema.section" = "输入方案";
-"settings.typingInput.schema.picker" = "拼音方案";
+"settings.typingInput.schema.picker" = "中文輸入方案";
 "typing.schema.fullPinyin" = "全拼";
+"typing.schema.zhuyin" = "注音（繁體中文）";
 "typing.schema.microsoftDoublePinyin" = "微软双拼";
 "typing.schema.sogouDoublePinyin" = "搜狗双拼";
 "settings.typingInput.fuzzy.section" = "模糊音";

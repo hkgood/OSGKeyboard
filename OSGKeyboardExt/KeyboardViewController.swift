@@ -554,6 +554,7 @@ public final class KeyboardViewController: UIInputViewController {
             onConfigChanged: { [weak self] in
                 // Only an already-live typing session can be showing the setup
                 // error; never force-create one just to retry.
+                self?.reloadTypingInputConfiguration()
                 self?.typingSessionStorage?.reloadPersonalDictionaryTerms()
                 self?.typingSessionStorage?.retryPrepareAfterResourceDeployment()
                 self?.refreshMultipleReplyVariantsSetting()
@@ -854,6 +855,20 @@ public final class KeyboardViewController: UIInputViewController {
         refreshKeyboardHeight()
     }
 
+    private func reloadTypingInputConfiguration() {
+        guard isKeyboardPresentationActive,
+              let output = typingSessionStorage?.reloadInputConfiguration() else {
+            return
+        }
+        for _ in 0..<output.deleteCount {
+            deleteBackwardFromDocument()
+        }
+        if !output.text.isEmpty {
+            state.noteUserDidInputText()
+            insertTextIntoDocument(output.text, source: .manualKeyboard)
+        }
+    }
+
     private func activateTypingPresentationIfNeeded() {
         guard isKeyboardPresentationActive,
               state.surface == .typing,
@@ -865,6 +880,9 @@ public final class KeyboardViewController: UIInputViewController {
             isTypingSurfaceActive = true
         }
         typingDocumentPresentationID = typingSession.beginDocumentPresentation()
+        // Warm sessions survive keyboard dismissal. Apply any host preference
+        // change after opening the new, empty document scope as well.
+        reloadTypingInputConfiguration()
         refreshEnglishSupplementaryLexicon()
         if heightPhase == .presented {
             refreshReturnKeyRole()

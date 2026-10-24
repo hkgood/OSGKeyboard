@@ -72,7 +72,7 @@ public struct RimeResourcePaths: Sendable {
 public actor RimeResourceInstaller {
     public static let shared = RimeResourceInstaller()
     /// Bump when SharedSupport layout / schema / import_tables contract changes.
-    public static let resourceVersion = "2.4.0"
+    public static let resourceVersion = "2.5.0"
 
     public init() {}
 
@@ -81,9 +81,20 @@ public actor RimeResourceInstaller {
               let paths = try? RimeResourcePaths.resolve() else {
             return false
         }
-        return FileManager.default.fileExists(
-            atPath: paths.userData.appendingPathComponent("build").path
-        )
+        return hasCompiledResources(in: paths.userData)
+    }
+
+    /// Maintenance can finish even when one schema failed to compile. Verify
+    /// every shipped scheme before allowing the extension to open the runtime.
+    static func hasCompiledResources(in userData: URL) -> Bool {
+        let build = userData.appendingPathComponent("build", isDirectory: true)
+        let schemaFiles = TypingInputSchema.allCases.flatMap {
+            ["\($0.rawValue).schema.yaml", "\($0.rawValue).prism.bin"]
+        }
+        let dictionaryFiles = ["osg_pinyin.table.bin", "osg_zhuyin.table.bin"]
+        return (schemaFiles + dictionaryFiles).allSatisfy {
+            FileManager.default.fileExists(atPath: build.appendingPathComponent($0).path)
+        }
     }
 
     /// Full deployment is forbidden inside an app-extension process. Keeping
@@ -152,6 +163,14 @@ public actor RimeResourceInstaller {
             encoding: .utf8
         )
 
+        guard let zhuyinSource = Self.bundledURL(forResource: "osg_zhuyin.dict", withExtension: "yaml") else {
+            throw RimeResourceError.bundledResourceMissing("osg_zhuyin.dict.yaml")
+        }
+        try fileManager.copyItem(
+            at: zhuyinSource,
+            to: staging.appendingPathComponent("osg_zhuyin.dict.yaml")
+        )
+
         guard let manifestSource = Self.bundledURL(forResource: "manifest", withExtension: "json") else {
             throw RimeResourceError.bundledResourceMissing("manifest.json")
         }
@@ -198,6 +217,9 @@ public actor RimeResourceInstaller {
             // Version bumps already rebuild SharedSupport from scratch; skip the
             // heavier full integrity pass unless the caller forced a redeploy.
             try bridge.deploy(withFullCheck: force)
+            guard Self.hasCompiledResources(in: paths.userData) else {
+                throw RimeResourceError.deploymentFailed
+            }
         } catch {
             bridge.finalizeRuntime()
             throw error
