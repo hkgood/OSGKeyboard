@@ -10,6 +10,10 @@ import Foundation
 public final class EnglishLearningStore: @unchecked Sendable {
     public static let defaultsKey = "englishTyping.learnedBoosts.v1"
 
+    /// Static because several instances share the same defaults key; a
+    /// per-instance lock would not serialize their read-modify-write.
+    private static let mutationLock = NSLock()
+
     private let defaults: UserDefaults
 
     public init(defaults: UserDefaults = AppGroupStore().defaults) {
@@ -42,8 +46,10 @@ public final class EnglishLearningStore: @unchecked Sendable {
     private func mutate(word: String, delta: Int) {
         let key = word.lowercased()
         guard !key.isEmpty else { return }
-        var map = snapshot()
-        map[key] = min(10_000, (map[key] ?? 0) + delta)
-        defaults.set(map, forKey: Self.defaultsKey)
+        Self.mutationLock.withLock {
+            var map = snapshot()
+            map[key] = min(10_000, (map[key] ?? 0) + delta)
+            defaults.set(map, forKey: Self.defaultsKey)
+        }
     }
 }

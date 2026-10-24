@@ -155,6 +155,9 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewDidLoad() {
         super.viewDidLoad()
+        #if DEBUG
+        HostBundleProbe.installLogging()
+        #endif
         state.showsSystemGlobeKey = UIDevice.current.userInterfaceIdiom == .pad
         // Voice-first keyboard — hide the misleading "English" subtitle in Settings.
         primaryLanguage = "mis"
@@ -227,6 +230,7 @@ public final class KeyboardViewController: UIInputViewController {
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         isKeyboardPresentationActive = false
+        HostAppIdentity.invalidate()
         typingDocumentPresentationID = nil
         typingSessionStorage?.endDocumentPresentation()
         assistantFieldActionRefreshTask?.cancel()
@@ -265,9 +269,11 @@ public final class KeyboardViewController: UIInputViewController {
         if !preserve {
             prepareSurfaceForNextPresentation()
         }
-        if state.surface != .typing {
-            deactivateTypingSurface()
-        }
+        // Always finalize librime on hide, even on the typing surface: its
+        // LevelDB userdb holds `Rime/UserData/*.userdb/LOCK` in the App Group,
+        // and RunningBoard kills a suspended extension holding that lock
+        // (0xdead10cc). `viewWillAppear` re-prepares Rime (~30–50 ms).
+        deactivateTypingSurface()
         if preserve {
             return
         }
@@ -353,6 +359,7 @@ public final class KeyboardViewController: UIInputViewController {
             self.flowCoordinator.ensurePiPReadyOnKeyboardOpen()
         }
         #if DEBUG
+        HostBundleProbe.recordPresentationAndPing()
         WhatsNewDemoDriver.resetForNewPresentation()
         WhatsNewDemoDriver.startIfNeeded(
             state: state,
@@ -772,28 +779,38 @@ public final class KeyboardViewController: UIInputViewController {
     }
 
     private func installSurfaceObservers() {
-        state.$phase
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                if self.state.locksTypingSurface, self.state.surface == .typing {
-                    self.applySurface(.voice)
-                }
+        let state = state
+        // `Phase` is not Sendable; reading it only registers the dependency.
+        observe(Observations { _ = state.phase }) { [weak self] in
+            guard let self else { return }
+            if self.state.locksTypingSurface, self.state.surface == .typing {
+                self.applySurface(.voice)
             }
-            .store(in: &cancellables)
+        }
 
-        state.$surface
-            .receive(on: RunLoop.main)
-            .sink { [weak self] surface in
-                guard let self else { return }
-                if surface == .typing {
-                    self.activateTypingPresentationIfNeeded()
-                } else {
-                    self.deactivateTypingSurface()
-                }
-                self.refreshKeyboardHeight()
+        observe(Observations { state.surface }) { [weak self] surface in
+            guard let self else { return }
+            if surface == .typing {
+                self.activateTypingPresentationIfNeeded()
+            } else {
+                self.deactivateTypingSurface()
             }
-            .store(in: &cancellables)
+            self.refreshKeyboardHeight()
+        }
+    }
+
+    /// Runs `handler` for the current value and every later change. The loop
+    /// is cancelled together with `cancellables` when the controller goes away.
+    private func observe<Element: Sendable>(
+        _ values: Observations<Element, Never>,
+        handler: @escaping @MainActor (Element) -> Void
+    ) {
+        let task = Task { @MainActor in
+            for await value in values {
+                handler(value)
+            }
+        }
+        cancellables.insert(AnyCancellable { task.cancel() })
     }
 
     /// This App Group property is supplied by the parallel settings module.

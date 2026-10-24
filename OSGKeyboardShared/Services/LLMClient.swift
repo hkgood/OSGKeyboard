@@ -418,6 +418,7 @@ public struct OpenAICompatibleClient: LLMClient {
 
 public enum LLMClientFactory {
     /// Build a client from the current `ProviderConfig`.
+    @MainActor
     public static func make(from config: ProviderConfig) -> LLMClient {
         make(
             providerId: config.providerId,

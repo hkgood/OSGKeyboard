@@ -765,6 +765,12 @@ private final class ManagedVolcengineASRSession: CloudASRStreamingSession, @unch
         }
     }
 
+    var acceptsAudio: Bool {
+        lock.withLock { state in
+            !state.cancelled && state.failure == nil && !state.receiveClosed && !state.endSent
+        }
+    }
+
     func cancel() {
         let changed = lock.withLock { state -> Bool in
             guard !state.cancelled else { return false }

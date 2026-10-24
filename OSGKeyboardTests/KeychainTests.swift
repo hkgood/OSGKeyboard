@@ -235,6 +235,7 @@ final class KeychainTests: XCTestCase {
     /// value must be moved to the Keychain and removed from UserDefaults
     /// — otherwise a fresh install in a clean simulator would inherit the
     /// stale plaintext value.
+    @MainActor
     func testLegacyUserDefaultsKeyIsMigratedToKeychain() {
         let suiteName = "group.com.osgkeyboard.shared.tests.migration.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -271,6 +272,7 @@ final class KeychainTests: XCTestCase {
     /// — possible on a downgrade or a torn update — Keychain wins. We
     /// don't delete the UserDefaults value, but the running app reads from
     /// the Keychain only.
+    @MainActor
     func testKeychainWinsOverLegacyWhenBothPresent() {
         let suiteName = "group.com.osgkeyboard.shared.tests.migration2.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

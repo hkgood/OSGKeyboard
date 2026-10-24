@@ -37,6 +37,59 @@ final class ReferralProfileTests: XCTestCase {
         XCTAssertEqual(profile.code.inviteURL.absoluteString, inviteURL)
         XCTAssertNil(profile.code.campaignID)
         XCTAssertNotNil(profile.binding)
+        XCTAssertNil(profile.code.shortCode)
+        XCTAssertNil(profile.bindingDeadline)
+    }
+
+    func testReferralProfileDecodesShortCodeAndBindingDeadlineAndSurvivesCache() throws {
+        let data = Data(
+            """
+            {
+              "code": {
+                "code": "Abcdefghij_1234567890-",
+                "inviteUrl": "https://osglab.com/i/Abcdefghij_1234567890-",
+                "createdAt": "2026-08-20T12:34:56Z",
+                "shortCode": "K7M2Q9XA"
+              },
+              "bindingDeadline": "2026-08-27T12:34:56Z"
+            }
+            """.utf8
+        )
+
+        let profile = try JSONDecoder().decode(ReferralProfile.self, from: data)
+        let cached = try JSONDecoder().decode(
+            ReferralProfile.self,
+            from: JSONEncoder().encode(profile)
+        )
+
+        XCTAssertEqual(profile.code.shortCode, "K7M2Q9XA")
+        XCTAssertEqual(profile.code.displayShortCode, "K7M2-Q9XA")
+        XCTAssertEqual(
+            profile.bindingDeadline,
+            ISO8601DateFormatter().date(from: "2026-08-27T12:34:56Z")
+        )
+        XCTAssertEqual(cached, profile)
+    }
+
+    func testMalformedShortCodeIsDroppedWithoutRejectingTheProfile() throws {
+        let data = Data(
+            """
+            {
+              "code": {
+                "code": "Abcdefghij_1234567890-",
+                "inviteUrl": "https://osglab.com/i/Abcdefghij_1234567890-",
+                "createdAt": "2026-08-20T12:34:56Z",
+                "shortCode": "0OIL0OIL"
+              },
+              "bindingDeadline": "not a date"
+            }
+            """.utf8
+        )
+
+        let profile = try JSONDecoder().decode(ReferralProfile.self, from: data)
+
+        XCTAssertNil(profile.code.shortCode)
+        XCTAssertNil(profile.bindingDeadline)
     }
 
     func testLiveReferralServiceUsesAuthenticatedGETWithBoundedTimeout() async throws {

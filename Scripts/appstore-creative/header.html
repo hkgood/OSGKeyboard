@@ -1,0 +1,506 @@
+<!doctype html>
+<!--
+  OSGKeyboard · App Store creative · Header scene「开口即文字 / Speak it. It's typed.」
+
+  Deterministic: `window.render(t)` paints frame t ∈ [0, DURATION) and every
+  periodic motion completes whole cycles in DURATION, so frame 0 == frame N.
+  Query: ?w=3840&h=1646&safe=x,y,w,h&lang=zh|en
+  Safe areas come from Apple's creative-asset Sketch template.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: #F4F3EF; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+(() => {
+  const q = new URLSearchParams(location.search);
+  const W = +q.get('w') || 3840;
+  const H = +q.get('h') || 1646;
+  const [SX, SY, SW, SH] = (q.get('safe') || '1097,493,1646,661').split(',').map(Number);
+  const LANG = q.get('lang') === 'en' ? 'en' : 'zh';
+  // Stills only: the voice wave at full energy beside the finished line.
+  const HERO = q.get('hero') === '1';
+  const HERO_WAVE_T = 1.74; // peak of speechLevel()
+  const HERO_TEXT_T = 7.4;
+  const DURATION = 10;
+  const TAU = Math.PI * 2;
+
+  // Brand palette (OSGKeyboardShared/DesignSystem/ColorLibrary.swift).
+  const C = {
+    ink: '#111118',
+    inkSoft: '#64646F',
+    green: '#3AA05A',
+    greenHi: '#4CC27A',
+    teal: '#2BAFA4',
+    paper: '#F4F3EF',
+  };
+
+  const COPY = {
+    zh: { lead: '开口即', accent: '文字。', typed: '明天下午三点，3 楼会议室见。' },
+    en: { lead: 'Speak it. ', accent: "It's typed.", typed: 'See you tomorrow at 3 PM in Room 3.' },
+  }[LANG];
+
+  const FONT_CJK = '"PingFang SC", "SF Pro Display", system-ui, sans-serif';
+  const FONT_LATIN = '"SF Pro Display", system-ui, "PingFang SC", sans-serif';
+  const FONT = LANG === 'en' ? FONT_LATIN : FONT_CJK;
+
+  const canvas = document.getElementById('c');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // Offscreen layers: background + wave, reused for the frosted-glass field.
+  const scene = new OffscreenCanvas(W, H);
+  const sctx = scene.getContext('2d');
+  const glow = new OffscreenCanvas(W, H);
+  const gctx = glow.getContext('2d');
+
+  // ---------- Layout (design units = header safe area 1646×661) ----------
+  const S = Math.min(SW / 1646, SH / 661);
+  const cx = SX + SW / 2;
+  const markH = 100 * S;
+  const headlineSize = (LANG === 'en' ? 150 : 172) * S;
+  const fieldH = 150 * S;
+  const fieldW = 1380 * S;
+  const gap1 = 60 * S;
+  const gap2 = 70 * S;
+  const blockH = markH + gap1 + headlineSize * 1.08 + gap2 + fieldH;
+  const top = SY + (SH - blockH) / 2;
+  const markY = top;
+  const headlineBaseline = markY + markH + gap1 + headlineSize * 0.9;
+  const fieldY = markY + markH + gap1 + headlineSize * 1.08 + gap2;
+  const fieldX = cx - fieldW / 2;
+  const waveY = fieldY + fieldH / 2;
+
+  // ---------- Helpers ----------
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0)); return t * t * (3 - 2 * t); };
+  const easeOut = (x) => 1 - Math.pow(1 - clamp(x), 3);
+  const window01 = (t, a, b, c, d) => smooth(a, b, t) * (1 - smooth(c, d, t));
+
+  function roundRect(c, x, y, w, h, r) {
+    c.beginPath();
+    c.roundRect(x, y, w, h, r);
+  }
+
+  // Film grain tile: breaks up 8-bit banding in the soft gradients once encoded.
+  const grain = (() => {
+    const g = new OffscreenCanvas(256, 256);
+    const gc = g.getContext('2d');
+    const img = gc.createImageData(256, 256);
+    let seed = 1337;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = 128 + (rnd() - 0.5) * 255;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+      img.data[i + 3] = 10;
+    }
+    gc.putImageData(img, 0, 0);
+    return g;
+  })();
+
+  // ---------- Timeline ----------
+  // 0–1.1 idle · 1.1 speak · 1.6–5.4 text crystallises · 6.2 settle
+  // 8.0–9.0 clear · 9.0–10 idle (== frame 0)
+  const TYPE_START = 1.6;
+  const TYPE_END = 5.4;
+  const CLEAR_START = 8.0;
+  const CLEAR_END = 8.9;
+
+  function speechLevel(t) {
+    const on = window01(t, 0.9, 1.6, 5.2, 6.3);
+    // Syllable-like flutter; integer frequencies keep it periodic over DURATION.
+    const flutter = 0.62
+      + 0.22 * Math.sin(TAU * 13 * t / DURATION)
+      + 0.12 * Math.sin(TAU * 29 * t / DURATION + 1.3)
+      + 0.06 * Math.sin(TAU * 47 * t / DURATION + 0.4);
+    return 0.10 + 0.90 * on * flutter;
+  }
+
+  // ---------- Background ----------
+  function drawBackground(c, t) {
+    const base = c.createLinearGradient(0, 0, 0, H);
+    base.addColorStop(0, '#FAF9F6');
+    base.addColorStop(1, '#F1F4EE');
+    c.fillStyle = base;
+    c.fillRect(0, 0, W, H);
+
+    // Slow aurora blobs. Each drifts on a whole-number cycle per loop.
+    const blobs = [
+      { x: 0.20, y: 0.18, r: 0.36, col: [168, 226, 186], a: 0.60, k: 1, ph: 0.0 },
+      { x: 0.82, y: 0.22, r: 0.34, col: [176, 230, 220], a: 0.55, k: 1, ph: 2.1 },
+      { x: 0.62, y: 0.95, r: 0.40, col: [200, 236, 186], a: 0.50, k: 1, ph: 4.0 },
+      { x: 0.06, y: 0.86, r: 0.26, col: [250, 236, 210], a: 0.55, k: 2, ph: 1.0 },
+      { x: 0.97, y: 0.84, r: 0.26, col: [250, 240, 222], a: 0.55, k: 1, ph: 3.2 },
+    ];
+    const R = Math.max(W, H);
+    for (const b of blobs) {
+      const a = TAU * b.k * t / DURATION + b.ph;
+      const x = (b.x + 0.035 * Math.cos(a)) * W;
+      const y = (b.y + 0.05 * Math.sin(a)) * H;
+      const g = c.createRadialGradient(x, y, 0, x, y, b.r * R);
+      const [r, gg, bb] = b.col;
+      g.addColorStop(0, `rgba(${r},${gg},${bb},${b.a})`);
+      g.addColorStop(0.55, `rgba(${r},${gg},${bb},${b.a * 0.35})`);
+      g.addColorStop(1, `rgba(${r},${gg},${bb},0)`);
+      c.fillStyle = g;
+      c.fillRect(0, 0, W, H);
+    }
+
+    // Soft white halo behind the copy keeps the headline crisp on any blob.
+    const hy = (markY + fieldY + fieldH) / 2;
+    const halo = c.createRadialGradient(cx, hy, 0, cx, hy, SW * 0.75);
+    halo.addColorStop(0, 'rgba(255,255,255,0.85)');
+    halo.addColorStop(0.6, 'rgba(255,255,255,0.35)');
+    halo.addColorStop(1, 'rgba(255,255,255,0)');
+    c.save();
+    c.translate(cx, hy);
+    c.scale(1, SH / SW * 1.25);
+    c.translate(-cx, -hy);
+    c.fillStyle = halo;
+    c.fillRect(-W, -H * 10, W * 3, H * 20);
+    c.restore();
+
+    // Fine dot grid, strongest away from the copy so the centre stays calm.
+    const step = 46 * S;
+    const dot = 2.2 * S;
+    c.save();
+    for (let y = step / 2; y < H; y += step) {
+      for (let x = step / 2; x < W; x += step) {
+        const dx = (x - cx) / (W * 0.5);
+        const dy = (y - waveY) / (H * 0.6);
+        const d = Math.sqrt(dx * dx + dy * dy);
+        const a = 0.075 * smooth(0.28, 0.85, d);
+        if (a < 0.004) continue;
+        c.fillStyle = `rgba(17,17,24,${a})`;
+        c.fillRect(x - dot / 2, y - dot / 2, dot, dot);
+      }
+    }
+    c.restore();
+  }
+
+  // ---------- Voice wave ----------
+  const STRANDS = [
+    { f: 3.0, k: 4, ph: 0.0, a: 1.00, w: 6.5, col: [58, 160, 90] },
+    { f: 4.2, k: 5, ph: 1.7, a: 0.70, w: 4.5, col: [43, 175, 164] },
+    { f: 2.2, k: 3, ph: 3.1, a: 0.82, w: 4.0, col: [110, 200, 120] },
+    { f: 5.4, k: 6, ph: 0.6, a: 0.45, w: 2.6, col: [58, 160, 90] },
+  ];
+
+  // Energy peaks just outside the field and travels inward from both sides,
+  // so the voice visibly pours into the line being written.
+  const fieldHalfU = fieldW / W;
+  function strandY(s, x, t, level) {
+    const u = (x - cx) / (W * 0.5);
+    const au = Math.abs(u);
+    const env = 0.18 * Math.exp(-Math.pow(u / 0.3, 2))
+      + Math.exp(-Math.pow((au - (fieldHalfU + 0.13)) / 0.2, 2)) * smooth(1.0, 0.7, au);
+    const amp = 210 * S * level * s.a * env;
+    return waveY + amp * Math.sin(TAU * s.f * au + TAU * s.k * t / DURATION + s.ph)
+      * (0.78 + 0.22 * Math.sin(TAU * 0.7 * au - TAU * s.k * t / DURATION));
+  }
+
+  function strandGradient(c, col, alpha) {
+    const g = c.createLinearGradient(0, 0, W, 0);
+    const [r, gg, b] = col;
+    g.addColorStop(0.00, `rgba(${r},${gg},${b},0)`);
+    g.addColorStop(0.22, `rgba(${r},${gg},${b},${alpha * 0.35})`);
+    g.addColorStop(0.50, `rgba(${r},${gg},${b},${alpha})`);
+    g.addColorStop(0.78, `rgba(${r},${gg},${b},${alpha * 0.35})`);
+    g.addColorStop(1.00, `rgba(${r},${gg},${b},0)`);
+    return g;
+  }
+
+  function drawWave(c, t, glowPass) {
+    const level = speechLevel(t);
+    const stepX = 6;
+    // Translucent lens fills (Siri-like body) behind the strands.
+    for (let i = 0; i < 2; i++) {
+      const s = STRANDS[i];
+      c.beginPath();
+      for (let x = 0; x <= W; x += stepX) {
+        const y = strandY(s, x, t, level);
+        x === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
+      }
+      for (let x = W; x >= 0; x -= stepX) {
+        c.lineTo(x, 2 * waveY - strandY(s, x, t, level));
+      }
+      c.closePath();
+      c.fillStyle = strandGradient(c, s.col, glowPass ? 0.22 : 0.10);
+      c.fill();
+    }
+    for (const s of STRANDS) {
+      c.beginPath();
+      for (let x = 0; x <= W; x += stepX) {
+        const y = strandY(s, x, t, level);
+        x === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
+      }
+      c.lineWidth = s.w * S * (glowPass ? 3.2 : 1);
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+      c.strokeStyle = strandGradient(c, s.col, glowPass ? 0.45 : 0.9);
+      c.stroke();
+    }
+  }
+
+  // ---------- Brand mark (OSGLogo.svg paths, 1024 viewBox) ----------
+  const MARK = [
+    'M627.511 512.419C627.511 448.783 576.127 397.197 512.741 397.197C449.355 397.197 397.971 448.783 397.971 512.419C397.971 576.054 449.355 627.641 512.741 627.641V637.837C443.746 637.837 387.814 581.686 387.814 512.419C387.814 443.152 443.746 387 512.741 387C581.736 387 637.668 443.152 637.668 512.419C637.668 581.686 581.736 637.837 512.741 637.837V627.641C576.127 627.641 627.511 576.054 627.511 512.419Z',
+    'M56.2632 512.419C56.2632 581.686 112.195 637.837 181.19 637.837C250.185 637.837 306.117 581.686 306.117 512.419C306.117 443.152 250.185 387 181.19 387C112.195 387 56.2632 443.152 56.2632 512.419Z',
+    'M399.618 562.094L399.618 552.257L512.74 552.257L512.74 562.094L399.618 562.094Z',
+    'M512.741 483.398V473.561H625.864V483.398H512.741Z',
+    'M843.308 387.981C910.987 387.981 966.093 441.8 968.171 508.975H843.308V518.812H968.096C965.014 585.066 910.324 637.836 843.308 637.836C774.313 637.836 718.381 581.904 718.381 512.909C718.381 443.914 774.312 387.981 843.308 387.981ZM968.234 518.812H968.096C968.187 516.855 968.234 514.888 968.234 512.909C968.234 511.593 968.211 510.281 968.171 508.975H968.234V518.812Z',
+  ].map((d) => new Path2D(d));
+
+  function drawMark(c, t) {
+    const scale = markH / 251;
+    const w = 912 * scale;
+    c.save();
+    c.translate(cx - w / 2 - 56 * scale, markY - 387 * scale);
+    c.scale(scale, scale);
+    c.fillStyle = C.green;
+    for (const p of MARK) c.fill(p);
+    c.restore();
+  }
+
+  // ---------- Headline ----------
+  function drawHeadline(c) {
+    c.save();
+    c.font = `600 ${headlineSize}px ${FONT}`;
+    c.textBaseline = 'alphabetic';
+    const tracking = LANG === 'en' ? -0.02 : 0.02;
+    c.letterSpacing = `${tracking * headlineSize}px`;
+    const wLead = c.measureText(COPY.lead).width;
+    const wAcc = c.measureText(COPY.accent).width;
+    const x0 = cx - (wLead + wAcc) / 2;
+    c.fillStyle = C.ink;
+    c.fillText(COPY.lead, x0, headlineBaseline);
+    const g = c.createLinearGradient(x0 + wLead, 0, x0 + wLead + wAcc, 0);
+    g.addColorStop(0, '#2F9A50');
+    g.addColorStop(1, '#3FBF8A');
+    c.fillStyle = g;
+    c.fillText(COPY.accent, x0 + wLead, headlineBaseline);
+    c.restore();
+  }
+
+  // ---------- Glass dictation field ----------
+  const textSize = 58 * S;
+  const micR = 50 * S;
+  const pad = 24 * S;
+  const micCX = fieldX + pad + micR;
+  const textX = micCX + micR + 34 * S;
+
+  function drawMic(c, x, y, r, level, t) {
+    // Pulse rings while listening.
+    const live = clamp((level - 0.12) / 0.6);
+    for (let i = 0; i < 2; i++) {
+      const p = ((t * 1.0 + i * 0.5) % 1);
+      const rr = r * (1 + 0.55 * p);
+      c.beginPath();
+      c.arc(x, y, rr, 0, TAU);
+      c.fillStyle = `rgba(58,160,90,${0.22 * (1 - p) * live})`;
+      c.fill();
+    }
+    const g = c.createLinearGradient(x, y - r, x, y + r);
+    g.addColorStop(0, '#4CBB6E');
+    g.addColorStop(1, '#2F9450');
+    c.beginPath();
+    c.arc(x, y, r * (1 + 0.04 * live * Math.sin(TAU * 7 * t / DURATION)), 0, TAU);
+    c.fillStyle = g;
+    c.shadowColor = 'rgba(47,148,80,0.35)';
+    c.shadowBlur = 24 * S;
+    c.shadowOffsetY = 8 * S;
+    c.fill();
+    c.shadowColor = 'transparent';
+    // Mic glyph.
+    const u = r / 50;
+    c.fillStyle = '#fff';
+    c.strokeStyle = '#fff';
+    roundRect(c, x - 9 * u, y - 25 * u, 18 * u, 32 * u, 9 * u);
+    c.fill();
+    c.lineWidth = 4.2 * u;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.arc(x, y - 4 * u, 16 * u, 0.15 * Math.PI, 0.85 * Math.PI);
+    c.stroke();
+    c.beginPath();
+    c.moveTo(x, y + 12 * u);
+    c.lineTo(x, y + 21 * u);
+    c.stroke();
+  }
+
+  // Per-character x offsets, measured once with the final font.
+  const chars = Array.from(COPY.typed);
+  ctx.font = `500 ${textSize}px ${FONT}`;
+  const offsets = chars.map((_, i) => ctx.measureText(chars.slice(0, i).join('')).width);
+  const typedWidth = ctx.measureText(COPY.typed).width;
+
+  function charAppear(i) {
+    const n = chars.length;
+    return TYPE_START + (TYPE_END - TYPE_START) * (i / Math.max(1, n - 1));
+  }
+
+  function drawField(c, t) {
+    const r = fieldH / 2;
+    // Shadow.
+    c.save();
+    roundRect(c, fieldX, fieldY, fieldW, fieldH, r);
+    c.shadowColor = 'rgba(28,70,44,0.16)';
+    c.shadowBlur = 90 * S;
+    c.shadowOffsetY = 30 * S;
+    c.fillStyle = 'rgba(255,255,255,0.5)';
+    c.fill();
+    c.restore();
+
+    // Frosted glass: blurred copy of what is behind, washed with white.
+    c.save();
+    roundRect(c, fieldX, fieldY, fieldW, fieldH, r);
+    c.clip();
+    c.filter = `blur(${60 * S}px) saturate(1.3)`;
+    c.drawImage(scene, 0, 0);
+    c.filter = 'none';
+    const wash = c.createLinearGradient(0, fieldY, 0, fieldY + fieldH);
+    wash.addColorStop(0, 'rgba(255,255,255,0.86)');
+    wash.addColorStop(1, 'rgba(255,255,255,0.70)');
+    c.fillStyle = wash;
+    c.fillRect(fieldX, fieldY, fieldW, fieldH);
+    c.restore();
+
+    // Specular rim.
+    c.save();
+    roundRect(c, fieldX + 1, fieldY + 1, fieldW - 2, fieldH - 2, r);
+    const rim = c.createLinearGradient(0, fieldY, 0, fieldY + fieldH);
+    rim.addColorStop(0, 'rgba(255,255,255,0.95)');
+    rim.addColorStop(1, 'rgba(255,255,255,0.35)');
+    c.lineWidth = 2.5 * S;
+    c.strokeStyle = rim;
+    c.stroke();
+    c.restore();
+
+    const level = speechLevel(HERO ? HERO_WAVE_T : t);
+    drawMic(c, micCX, fieldY + fieldH / 2, micR, level, t);
+
+    // Typed text: each glyph rises, sharpens and cools from green to ink.
+    const clearK = smooth(CLEAR_START, CLEAR_END, t);
+    const baseY = fieldY + fieldH / 2 + textSize * 0.36;
+    c.save();
+    c.font = `500 ${textSize}px ${FONT}`;
+    c.textBaseline = 'alphabetic';
+    let caretX = textX;
+    for (let i = 0; i < chars.length; i++) {
+      const k = (t - charAppear(i)) / 0.42;
+      if (k <= 0) continue;
+      const e = easeOut(k);
+      const alpha = e * (1 - clearK);
+      if (alpha <= 0.002) continue;
+      const x = textX + offsets[i];
+      const y = baseY + (1 - e) * 22 * S - clearK * 10 * S;
+      const blur = (1 - e) * 10 * S + clearK * 8 * S;
+      const cool = smooth(0.2, 1.6, k);
+      const rr = Math.round(58 + (17 - 58) * cool);
+      const gg = Math.round(160 + (17 - 160) * cool);
+      const bb = Math.round(90 + (24 - 90) * cool);
+      c.filter = blur > 0.3 ? `blur(${blur}px)` : 'none';
+      c.fillStyle = `rgba(${rr},${gg},${bb},${alpha})`;
+      c.fillText(chars[i], x, y);
+      caretX = textX + offsets[i] + c.measureText(chars[i]).width * e;
+    }
+    c.filter = 'none';
+
+    // Polished sheen sweeping the finished line.
+    const sweep = smooth(5.9, 7.1, t);
+    if (sweep > 0 && sweep < 1 && clearK < 1) {
+      const sx = textX - 200 * S + (typedWidth + 400 * S) * sweep;
+      const g = c.createLinearGradient(sx - 160 * S, 0, sx + 160 * S, 0);
+      g.addColorStop(0, 'rgba(255,255,255,0)');
+      g.addColorStop(0.5, 'rgba(255,255,255,0.75)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      c.globalCompositeOperation = 'source-atop';
+      c.fillStyle = g;
+      c.fillRect(textX, fieldY, typedWidth + 20 * S, fieldH);
+      c.globalCompositeOperation = 'source-over';
+    }
+    c.restore();
+
+    // Caret: steady while text lands, blinking (1 Hz, loop-safe) at rest.
+    const typing = t > TYPE_START - 0.2 && t < TYPE_END + 0.6;
+    const hasText = t >= TYPE_START && t < CLEAR_END;
+    const cx0 = hasText ? caretX + 6 * S : textX;
+    const blink = typing ? 1 : (Math.cos(TAU * t) > -0.2 ? 1 : 0);
+    const caretAlpha = blink * (1 - 0.0);
+    if (caretAlpha > 0) {
+      c.fillStyle = `rgba(58,160,90,${caretAlpha})`;
+      roundRect(c, cx0, fieldY + fieldH / 2 - textSize * 0.55, 5 * S, textSize * 1.1, 2.5 * S);
+      c.fill();
+    }
+
+    // Done badge at the far end once the line is in.
+    const done = window01(t, 5.9, 6.4, CLEAR_START, CLEAR_END - 0.3);
+    if (done > 0) {
+      const bx = fieldX + fieldW - pad - 34 * S;
+      const by = fieldY + fieldH / 2;
+      const br = 30 * S * (0.7 + 0.3 * easeOut(done));
+      c.save();
+      c.globalAlpha = done;
+      c.beginPath();
+      c.arc(bx, by, br, 0, TAU);
+      c.fillStyle = 'rgba(58,160,90,0.14)';
+      c.fill();
+      c.lineWidth = 5 * S;
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+      c.strokeStyle = C.green;
+      c.beginPath();
+      c.moveTo(bx - 12 * S, by + 1 * S);
+      c.lineTo(bx - 3 * S, by + 10 * S);
+      c.lineTo(bx + 13 * S, by - 9 * S);
+      c.stroke();
+      c.restore();
+    }
+  }
+
+  // ---------- Frame ----------
+  window.render = (t) => {
+    t = ((t % DURATION) + DURATION) % DURATION;
+    const waveT = HERO ? HERO_WAVE_T : t;
+    const textT = HERO ? HERO_TEXT_T : t;
+    drawBackground(sctx, t);
+    gctx.clearRect(0, 0, W, H);
+    drawWave(gctx, waveT, true);
+    sctx.save();
+    sctx.filter = `blur(${26 * S}px)`;
+    sctx.drawImage(glow, 0, 0);
+    sctx.filter = 'none';
+    sctx.restore();
+    drawWave(sctx, waveT, false);
+
+    ctx.drawImage(scene, 0, 0);
+    drawMark(ctx, t);
+    drawHeadline(ctx);
+    drawField(ctx, textT);
+
+    ctx.fillStyle = ctx.createPattern(grain, 'repeat');
+    ctx.fillRect(0, 0, W, H);
+    return true;
+  };
+
+  window.SAFE_DEBUG = () => {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,0,80,0.9)';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([24, 16]);
+    ctx.strokeRect(SX, SY, SW, SH);
+    ctx.restore();
+  };
+  window.DURATION = DURATION;
+  window.READY = document.fonts.ready.then(() => true);
+})();
+</script>
+</body>
+</html>

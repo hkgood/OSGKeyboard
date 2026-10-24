@@ -5,3 +5,4 @@
 "NSContactsUsageDescription" = "仅当你为复制的电话号码选择“新建联系人”时，OSGKeyboard 才会使用通讯录。";
 "NSRemindersFullAccessUsageDescription" = "仅当你为复制的文本选择“提取待办”时，OSGKeyboard 才会添加提醒事项。";
 "NSCalendarsWriteOnlyAccessUsageDescription" = "仅当你为复制的文本选择“提取日程”时，OSGKeyboard 才会添加日历事件，不会读取你已有的日程。";
+"NSPhotoLibraryAddUsageDescription" = "仅当你选择“保存图片”时，OSGKeyboard 才会把邀请海报存入相册。";

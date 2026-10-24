@@ -108,6 +108,8 @@
 	<string>OSGKeyboard uses Contacts only when you choose Create Contact for a copied phone number.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>OSGKeyboard uses the microphone for voice dictation, including active Flow sessions while you type in other apps.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>OSGKeyboard saves your invitation poster to Photos only when you choose Save Image.</string>
 	<key>NSRemindersFullAccessUsageDescription</key>
 	<string>OSGKeyboard adds reminders only when you choose Extract To-dos for copied text.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

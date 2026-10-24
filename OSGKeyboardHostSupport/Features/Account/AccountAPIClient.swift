@@ -13,7 +13,7 @@ public protocol AccountHTTPTransport: Sendable {
     func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse)
 }
 
-public final class URLSessionAccountHTTPTransport: AccountHTTPTransport, @unchecked Sendable {
+public final class URLSessionAccountHTTPTransport: AccountHTTPTransport, Sendable {
     private let session: URLSession
 
     public init(session: URLSession = .shared) {

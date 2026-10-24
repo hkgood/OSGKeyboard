@@ -18,6 +18,8 @@
 #
 # Usage:
 #   Scripts/record_feature_previews.sh <UDID> [slug ...]
+#   PREVIEW_LANG=en Scripts/record_feature_previews.sh <UDID> [slug ...]
+#     -> English demo copy, footage in `.tmp/feature-previews/raw-en`
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -27,17 +29,23 @@ UDID="${1:?usage: record_feature_previews.sh <UDID> [slug ...]}"
 shift || true
 
 BUNDLE="com.osgkeyboard.ios"
-RAW_DIR="$ROOT/.tmp/feature-previews/raw"
+PREVIEW_LANG="${PREVIEW_LANG:-zh}"
+if [[ "$PREVIEW_LANG" == "zh" ]]; then
+  RAW_DIR="$ROOT/.tmp/feature-previews/raw"
+else
+  RAW_DIR="$ROOT/.tmp/feature-previews/raw-$PREVIEW_LANG"
+fi
 mkdir -p "$RAW_DIR"
+LANG_ARG="--whats-new-lang=$PREVIEW_LANG"
 
 # slug | seconds | launch args
 CLIPS=(
-  "voice-polish|23|--edit-demo --preview-fullscreen"
+  "voice-polish|23|--edit-demo --preview-fullscreen $LANG_ARG"
   # Static page — the motion is a post-production push-in, so this only needs
   # to be long enough to fill the App Store 15s minimum after trimming.
   "personal-style|22|--polish-styles-screenshot"
-  "clipboard-agent|46|--clipboard-demo --preview-fullscreen"
-  "ask-ai|36|--ai-demo --preview-fullscreen --whats-new-lang=zh"
+  "clipboard-agent|46|--clipboard-demo --preview-fullscreen $LANG_ARG"
+  "ask-ai|36|--ai-demo --preview-fullscreen $LANG_ARG"
 )
 
 want() {

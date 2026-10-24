@@ -81,10 +81,13 @@ struct PolishStylesScreenshotHarness: View {
                 )
             } else if simulatesGeneration {
                 PersonalReplyStyleHost(
-                    generator: { _, _, language in
+                    generator: { _, _, language, _ in
                         try await Task.sleep(for: .seconds(1.8))
-                        return ReleaseNotesScreenshotFixture.generatedStyle(
-                            language: language
+                        return PolishStyleLearningResult(
+                            pack: ReleaseNotesScreenshotFixture.generatedStyle(
+                                language: language
+                            ),
+                            prior: nil
                         )
                     }
                 )
@@ -115,7 +118,7 @@ private struct PolishStylesServiceUITestHarness: View {
         ZStack(alignment: .topTrailing) {
             if showsStyles {
                 PersonalReplyStyleHost(
-                    generator: { corpus, replyExamples, language in
+                    generator: { corpus, replyExamples, language, prior in
                         let client = PolishStylesUITestScriptedLLMClient(
                             responses: ReleaseNotesScreenshotFixture.serviceResponses(
                                 language: language,
@@ -129,7 +132,7 @@ private struct PolishStylesServiceUITestHarness: View {
                             store: AppGroupStore(),
                             client: client
                         )
-                        .generateStyle(
+                        .learnStyle(
                             from: corpus,
                             replyExamples: replyExamples,
                             outputLanguage: language,
@@ -138,7 +141,8 @@ private struct PolishStylesServiceUITestHarness: View {
                                     ? PolishStyleLearningCorpusBuilder
                                         .testBuildEffectiveCharacterCount
                                     : PolishStyleLearningCorpusBuilder
-                                        .requiredEffectiveCharacterCount
+                                        .requiredEffectiveCharacterCount,
+                            prior: prior
                         )
                     }
                 )
@@ -456,6 +460,7 @@ private enum ReleaseNotesScreenshotFixture {
         store.setPolishStyleCatalog(PolishStyleCatalog())
         store.setActivePolishStyleId(PolishStylePackCatalog.defaultID)
         store.setPersonalReplyStyleId("")
+        PersonalStyleLearningStateStore.shared.clear()
     }
 
     /// Seeds varied per-day dictation totals across the current month so the

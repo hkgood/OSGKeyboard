@@ -6,7 +6,7 @@
 
 import Foundation
 
-public final class URLSessionAnalyticsNetwork: AnalyticsNetworking, @unchecked Sendable {
+public final class URLSessionAnalyticsNetwork: AnalyticsNetworking, Sendable {
     private let session: URLSession
 
     public init(session: URLSession = .shared) {

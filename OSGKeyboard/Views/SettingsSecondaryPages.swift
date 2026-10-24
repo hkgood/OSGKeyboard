@@ -91,6 +91,7 @@ struct SettingsVersionRow: View {
 
 // MARK: - Config entry summaries (shown on Settings home)
 
+@MainActor
 enum SettingsConfigSummary {
     static func speechRecognition(config: ProviderConfig) -> String {
         if config.engineMode == "local" {

@@ -7,6 +7,7 @@
 
 import AVFoundation
 import Foundation
+import os
 #if canImport(OSGKeyboardShared)
 import OSGKeyboardShared
 #endif
@@ -67,8 +68,24 @@ public final class FlowAudioSessionCoordinator: @unchecked Sendable {
     )
     private var mode: Mode = .inactive
     private var active = false
+    private let mediaServicesResetCounter = OSAllocatedUnfairLock(initialState: UInt64(0))
 
-    private init() {}
+    /// Increments every time the system media server finishes a reset, so a
+    /// caller backing off between activation attempts can retry immediately.
+    public var mediaServicesResetCount: UInt64 {
+        mediaServicesResetCounter.withLock { $0 }
+    }
+
+    private init() {
+        // Process-lifetime singleton, so the observer is never removed.
+        NotificationCenter.default.addObserver(
+            forName: AVAudioSession.mediaServicesWereResetNotification,
+            object: nil,
+            queue: nil
+        ) { [mediaServicesResetCounter] _ in
+            mediaServicesResetCounter.withLock { $0 &+= 1 }
+        }
+    }
 
     public func activateCapture() async throws -> FlowAudioSessionSnapshot {
         let activation: CaptureActivation = try await perform {
@@ -127,20 +144,22 @@ public final class FlowAudioSessionCoordinator: @unchecked Sendable {
                 // tap are stopped separately, so the microphone is released,
                 // while avoiding a category flip that eventually yields !pri
                 // after repeated PiP/capture cycles.
-                if self.active, self.mode == .capture {
+                // A media server reset drops the category and activation
+                // without telling this cache, so confirm against the live
+                // session. Re-activating an active session is a no-op.
+                if self.active, self.mode == .capture,
+                   self.session.category == .playAndRecord {
                     return self.makeSnapshot()
                 }
-                if self.mode != .playback {
+                if self.mode != .playback || self.session.category != .playback {
                     try self.session.setCategory(
                         .playback,
                         mode: .moviePlayback,
                         options: [.mixWithOthers]
                     )
                 }
-                if !self.active {
-                    try self.session.setActive(true)
-                    self.active = true
-                }
+                try self.session.setActive(true)
+                self.active = true
                 self.mode = .playback
                 return self.makeSnapshot()
             }

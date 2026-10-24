@@ -29,7 +29,8 @@ struct AccountCenterUITestHarness: View {
                 "--account-snapshot-failure"
             ),
             startsSignedOut: startsSignIn || staysSignedOut,
-            signInDelay: startsSignIn ? .seconds(5) : .zero
+            signInDelay: startsSignIn ? .seconds(5) : .zero,
+            isInsideReferralWindow: arguments.contains("--account-referral-window")
         )
         self.startsSignIn = startsSignIn
         let store = AccountCenterUITestCreditStore(accountID: service.account.accountID)
@@ -122,15 +123,18 @@ private actor AccountCenterUITestService:
     private let shouldFailSnapshot: Bool
     private let startsSignedOut: Bool
     private let signInDelay: Duration
+    private let isInsideReferralWindow: Bool
 
     init(
         shouldFailSnapshot: Bool = false,
         startsSignedOut: Bool = false,
-        signInDelay: Duration = .zero
+        signInDelay: Duration = .zero,
+        isInsideReferralWindow: Bool = false
     ) {
         self.shouldFailSnapshot = shouldFailSnapshot
         self.startsSignedOut = startsSignedOut
         self.signInDelay = signInDelay
+        self.isInsideReferralWindow = isInsideReferralWindow
     }
 
     func restoreSession() async throws -> AccountSession? {
@@ -180,9 +184,12 @@ private actor AccountCenterUITestService:
                 code: "UITestInvite_123456789",
                 inviteURL: URL(string: "https://osglab.com/i/UITestInvite_123456789")!,
                 campaignID: nil,
-                createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+                createdAt: Date(timeIntervalSince1970: 1_700_000_000),
+                shortCode: "K7M2Q9XA"
             ),
-            binding: nil
+            binding: nil,
+            // The fixed account is years old; a server deadline reopens the window.
+            bindingDeadline: isInsideReferralWindow ? Date().addingTimeInterval(3 * 86_400) : nil
         )
     }
 

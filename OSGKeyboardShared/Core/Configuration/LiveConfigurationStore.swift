@@ -97,6 +97,7 @@ public struct LiveConfigurationSnapshot: @unchecked Sendable {
     }
 
     /// Build from live `ProviderConfig` plus persisted App Group extras.
+    @MainActor
     public init(config: ProviderConfig, fallback: AppGroupStore) {
         self.init(
             providerId: config.providerId,
@@ -136,6 +137,7 @@ public struct LiveConfigurationStore: ConfigurationStore, @unchecked Sendable {
         self.init(snapshot: LiveConfigurationSnapshot(store: store))
     }
 
+    @MainActor
     public init(config: ProviderConfig, fallback: AppGroupStore) {
         self.init(snapshot: LiveConfigurationSnapshot(config: config, fallback: fallback))
     }

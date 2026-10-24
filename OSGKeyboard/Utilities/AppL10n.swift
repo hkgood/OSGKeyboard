@@ -30,9 +30,16 @@ enum AppL10n {
     /// screen that exists so a provisioning mistake does *not* become a crash
     /// loop. `.auto` follows the system language, which is the right answer
     /// when no stored preference is reachable anyway.
+    ///
+    /// Reads the persisted key directly rather than `ProviderConfig.shared`
+    /// (main-actor isolated) because localized strings are also resolved off
+    /// the main actor. `ProviderConfig` writes this key synchronously in its
+    /// `uiLanguage` didSet, so both paths observe the same value.
     private static var resolvedUILanguage: AppUILanguage {
-        guard AppGroup.isAvailable else { return .auto }
-        return ProviderConfig.shared.uiLanguage
+        guard let defaults = AppGroup.defaultsIfAvailable else { return .auto }
+        return AppUILanguage.fromStored(
+            defaults.string(forKey: AppGroupConfiguration.Keys.uiLanguage)
+        )
     }
 
     static func format(

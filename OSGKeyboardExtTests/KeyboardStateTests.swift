@@ -13,7 +13,7 @@
 // *don't* attempt that here — the State class is what we care about
 // for correctness.
 
-import Combine
+import Observation
 @testable import OSGKeyboardShared
 import XCTest
 
@@ -189,19 +189,17 @@ final class KeyboardStateTests: XCTestCase {
         )
         state.enabledClipboardSkills = [first]
         let published = expectation(description: "resolved skill snapshot published")
-        var cancellable: AnyCancellable?
-        cancellable = state.$enabledClipboardSkills
-            .dropFirst()
-            .sink { skills in
-                XCTAssertEqual(skills.first?.customPrompt, "Second prompt")
-                published.fulfill()
-            }
+        withObservationTracking {
+            _ = state.enabledClipboardSkills
+        } onChange: {
+            published.fulfill()
+        }
 
         state.enabledClipboardSkills = [second]
 
         wait(for: [published], timeout: 1)
+        XCTAssertEqual(state.enabledClipboardSkills.first?.customPrompt, "Second prompt")
         XCTAssertEqual(state.enabledClipboardSkillIDs, ["official.rewrite"])
-        withExtendedLifetime(cancellable) {}
     }
 
     func testReturnKeyRoleActionFillAndTitles() {

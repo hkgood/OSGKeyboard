@@ -288,7 +288,7 @@ final class PolishStyleLearningServiceTests: XCTestCase {
         XCTAssertTrue(client.requests.allSatisfy { $0.options?.maxTokens == 4_096 })
 
         let metadata = try XCTUnwrap(generated.learningMetadata)
-        XCTAssertEqual(metadata.schemaVersion, 3)
+        XCTAssertEqual(metadata.schemaVersion, 4)
         XCTAssertEqual(metadata.evidenceStatus, "sufficient")
         XCTAssertEqual(metadata.confidence, 0.86)
         XCTAssertEqual(metadata.asrExampleCount, 1)
@@ -340,6 +340,191 @@ final class PolishStyleLearningServiceTests: XCTestCase {
         XCTAssertTrue(client.requests[0].text.contains("newest-marker"))
         XCTAssertFalse(client.requests[1].text.contains("middle-marker"))
         XCTAssertFalse(client.requests[1].text.contains("newest-marker"))
+    }
+
+    // MARK: - Incremental learning
+
+    func testFullLearningReturnsPriorThroughNewestLearnedExample() async throws {
+        let newest = Date(timeIntervalSince1970: 3_000)
+        let corpus = PolishStyleLearningCorpus(
+            examples: [
+                PolishStyleLearningExample(
+                    prePolishText: String(repeating: "测试语料", count: 625),
+                    finalText: "完整语料",
+                    polishStyleID: nil,
+                    createdAt: newest
+                )
+            ],
+            effectiveCharacterCount: 2_500
+        )
+        let client = StyleLearningCapturingClient(
+            responses: [Self.sufficientEvidenceResponse, Self.generatedStyleResponse]
+        )
+        let service = PolishStyleLearningService(store: store, client: client)
+
+        let result = try await service.learnStyle(from: corpus, outputLanguage: .chinese)
+
+        XCTAssertFalse(client.requests[0].text.contains(#""prior":"#))
+        let prior = try XCTUnwrap(result.prior)
+        XCTAssertEqual(prior.learnedThrough, newest)
+        XCTAssertEqual(prior.asr.traits.map(\.name), ["简短直接"])
+        XCTAssertEqual(prior.reply.traits.map(\.name), ["轻松回复"])
+        XCTAssertEqual(prior.cumulativeASREffectiveCharacterCount, 2_500)
+    }
+
+    func testIncrementalLearningSendsOnlyNewExamplesWithDecayedPrior() async throws {
+        let learnedThrough = Date(timeIntervalSince1970: 2_000)
+        let newest = Date(timeIntervalSince1970: 3_000)
+        let corpus = PolishStyleLearningCorpus(
+            examples: [
+                PolishStyleLearningExample(
+                    prePolishText: String(repeating: "旧", count: 3_000),
+                    finalText: "old-marker",
+                    polishStyleID: nil,
+                    createdAt: Date(timeIntervalSince1970: 1_000)
+                ),
+                PolishStyleLearningExample(
+                    prePolishText: String(repeating: "新", count: 600),
+                    finalText: "new-marker",
+                    polishStyleID: nil,
+                    createdAt: newest
+                )
+            ],
+            effectiveCharacterCount: 3_600
+        )
+        let replyExamples = [
+            PolishStyleReplyLearningExample(
+                receivedMessage: "old-reply-marker",
+                ordinaryCandidate: "普通候选",
+                selection: .ordinary,
+                createdAt: Date(timeIntervalSince1970: 1_500)
+            ),
+            PolishStyleReplyLearningExample(
+                receivedMessage: "new-reply-marker",
+                ordinaryCandidate: "普通候选",
+                selection: .ordinary,
+                finalEdit: "用户改稿",
+                createdAt: Date(timeIntervalSince1970: 2_500)
+            )
+        ]
+        let client = StyleLearningCapturingClient(
+            responses: [Self.incrementalEvidenceResponse, Self.generatedStyleResponse]
+        )
+        let service = PolishStyleLearningService(store: store, client: client)
+
+        let result = try await service.learnStyle(
+            from: corpus,
+            replyExamples: replyExamples,
+            outputLanguage: .chinese,
+            prior: Self.prior(learnedThrough: learnedThrough)
+        )
+
+        let extractor = client.requests[0]
+        XCTAssertTrue(extractor.prompt.contains("INCREMENTAL MERGE"))
+        XCTAssertTrue(extractor.text.contains(#""prior":"#))
+        XCTAssertTrue(extractor.text.contains("new-marker"))
+        XCTAssertFalse(extractor.text.contains("old-marker"))
+        XCTAssertTrue(extractor.text.contains("new-reply-marker"))
+        XCTAssertFalse(extractor.text.contains("old-reply-marker"))
+        // 0.5 decays to 0.4; the 0.15 trait falls below the floor and is dropped.
+        XCTAssertTrue(extractor.text.contains(#""confidence":0.4"#))
+        XCTAssertTrue(extractor.text.contains("早期简短直接"))
+        XCTAssertFalse(extractor.text.contains("即将淘汰"))
+
+        let metadata = try XCTUnwrap(result.pack.learningMetadata)
+        XCTAssertEqual(metadata.asrEffectiveCharacterCount, 2_500 + 600)
+        XCTAssertEqual(metadata.asrExampleCount, 10 + 1)
+        XCTAssertEqual(metadata.replyExampleCount, 4 + 1)
+        XCTAssertEqual(metadata.replyFinalEditCount, 2 + 1)
+        let nextPrior = try XCTUnwrap(result.prior)
+        XCTAssertEqual(nextPrior.learnedThrough, newest)
+        XCTAssertEqual(nextPrior.cumulativeASREffectiveCharacterCount, 3_100)
+    }
+
+    func testIncrementalLearningRequiresFiveHundredNewCharacters() async {
+        let corpus = PolishStyleLearningCorpus(
+            examples: [
+                PolishStyleLearningExample(
+                    prePolishText: String(repeating: "旧", count: 3_000),
+                    finalText: "旧",
+                    polishStyleID: nil,
+                    createdAt: Date(timeIntervalSince1970: 1_000)
+                ),
+                PolishStyleLearningExample(
+                    prePolishText: String(repeating: "新", count: 100),
+                    finalText: "新",
+                    polishStyleID: nil,
+                    createdAt: Date(timeIntervalSince1970: 3_000)
+                )
+            ],
+            effectiveCharacterCount: 3_100
+        )
+        let client = StyleLearningCapturingClient(response: "{}")
+        let service = PolishStyleLearningService(store: store, client: client)
+
+        do {
+            _ = try await service.learnStyle(
+                from: corpus,
+                outputLanguage: .chinese,
+                prior: Self.prior(learnedThrough: Date(timeIntervalSince1970: 2_000))
+            )
+            XCTFail("Expected the incremental gate to count only new characters")
+        } catch let error as PolishStyleLearningError {
+            XCTAssertEqual(error, .insufficientCorpus(required: 500, actual: 100))
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+        XCTAssertTrue(client.requests.isEmpty)
+    }
+
+    func testIncrementalEvidenceAcceptsPriorProfileSource() throws {
+        let evidence = try PolishStyleLearningService.parseEvidence(
+            Self.incrementalEvidenceResponse
+        )
+
+        XCTAssertEqual(evidence.asr.evidence.first?.source, .priorProfile)
+        XCTAssertEqual(evidence.reply.evidence.first?.source, .priorProfile)
+    }
+
+    func testCompactPriorKeepsStrongestTraitsWithinBudget() {
+        let traits = (0..<12).map { index in
+            PolishStyleLearningEvidence.Trait(
+                name: "trait-\(index)",
+                // 500 characters each, so eight traits overflow the budget.
+                description: String(repeating: "描述", count: 250),
+                confidence: 0.2 + Double(index) * 0.05,
+                supportCount: index + 1
+            )
+        }
+        let evidence = PolishStyleLearningEvidence(
+            status: .sufficient,
+            confidence: 0.8,
+            asr: .init(traits: traits, evidence: [], contradictions: []),
+            reply: .init(traits: [], evidence: [], contradictions: [])
+        )
+
+        let prior = PolishStyleLearningService.compactPrior(
+            from: evidence,
+            learnedThrough: Date(),
+            cumulativeASRExampleCount: 1,
+            cumulativeASREffectiveCharacterCount: 1,
+            cumulativeReplyExampleCount: 0,
+            cumulativeReplyFinalEditCount: 0
+        )
+
+        XCTAssertLessThan(
+            prior.asr.traits.count,
+            PolishStyleLearningService.maximumPriorTraitsPerDomain
+        )
+        XCTAssertLessThanOrEqual(
+            PolishStyleLearningService.priorCharacterCount(prior),
+            PolishStyleLearningService.maximumPriorCharacters
+        )
+        XCTAssertEqual(prior.asr.traits.first?.name, "trait-11")
+        XCTAssertEqual(
+            prior.asr.traits.map(\.confidence),
+            prior.asr.traits.map(\.confidence).sorted(by: >)
+        )
     }
 
     func testServiceRecomputesReadinessInsteadOfTrustingCallerCount() async {
@@ -760,6 +945,60 @@ final class PolishStyleLearningServiceTests: XCTestCase {
       }
     }
     """##
+
+    private static let incrementalEvidenceResponse = ##"""
+    {
+      "status":"sufficient",
+      "confidence":0.8,
+      "asr":{
+        "traits":[
+          {"name":"早期简短直接","description":"早期画像与新样本都显示简短直接","confidence":0.6,"supportCount":5}
+        ],
+        "evidence":[
+          {"source":"priorProfile","summary":"早期画像保留简短直接","supportCount":4},
+          {"source":"asrObservedBefore","summary":"新样本继续使用短句","supportCount":1}
+        ],
+        "contradictions":[]
+      },
+      "reply":{
+        "traits":[
+          {"name":"轻松回复","description":"早期画像中的轻松回复偏好","confidence":0.5,"supportCount":2}
+        ],
+        "evidence":[
+          {"source":"priorProfile","summary":"早期画像保留轻松回复","supportCount":2}
+        ],
+        "contradictions":[]
+      }
+    }
+    """##
+
+    private static func prior(learnedThrough: Date) -> PolishStyleLearningPriorEvidence {
+        PolishStyleLearningPriorEvidence(
+            asr: .init(
+                traits: [
+                    .init(
+                        name: "早期简短直接",
+                        description: "早期语料反复出现短句",
+                        confidence: 0.5,
+                        supportCount: 4
+                    ),
+                    .init(
+                        name: "即将淘汰",
+                        description: "多轮没有新支持的旧特征",
+                        confidence: 0.15,
+                        supportCount: 1
+                    )
+                ],
+                contradictions: []
+            ),
+            reply: .init(traits: [], contradictions: []),
+            learnedThrough: learnedThrough,
+            cumulativeASRExampleCount: 10,
+            cumulativeASREffectiveCharacterCount: 2_500,
+            cumulativeReplyExampleCount: 4,
+            cumulativeReplyFinalEditCount: 2
+        )
+    }
 
     private static let insufficientEvidenceResponse = ##"""
     {

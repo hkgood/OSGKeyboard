@@ -38,7 +38,7 @@ enum TypingLayoutMetrics {
 
 struct TypingRootView: View {
     @Environment(\.colorScheme) private var colorScheme
-    @ObservedObject var state: KeyboardState
+    var state: KeyboardState
     @ObservedObject var typing: TypingSessionController
 
     var onInsert: (String) -> Void

@@ -12,7 +12,7 @@ import SwiftUI
 
 struct AIClipboardSkillLayoutDemoView: View {
     @StateObject private var config = ProviderConfig.shared
-    @StateObject private var state = KeyboardState()
+    @State private var state = KeyboardState()
     @StateObject private var typing = TypingSessionController()
     @State private var count: Int = Self.initialCount
 

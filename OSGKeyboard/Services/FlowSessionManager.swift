@@ -99,7 +99,7 @@ struct FlowPiPLossReportGate: Equatable, Sendable {
 }
 
 enum FlowPiPRecoveryPolicy {
-    static let maxAttempts = 3
+    static let maxAttempts = 4
     static let totalBudget: TimeInterval = 5
 
     static func reconciliationDecision(
@@ -125,11 +125,16 @@ enum FlowPiPRecoveryPolicy {
             && !taskIsCancelled
     }
 
-    static func retryDelay(beforeAttempt attempt: Int) -> TimeInterval {
+    /// Earliest start of each attempt, measured from the start of recovery.
+    /// Audio activation failures return almost instantly, so gaps measured
+    /// after each failure would spend every attempt within ~1 s, while a reset
+    /// media server needs ~3 s before activation succeeds again.
+    static func attemptOffset(beforeAttempt attempt: Int) -> TimeInterval {
         switch attempt {
         case 1: return 0
-        case 2: return 0.25
-        default: return 0.6
+        case 2: return 0.5
+        case 3: return 1.5
+        default: return 3
         }
     }
 
@@ -1167,6 +1172,20 @@ final class FlowSessionManager: ObservableObject {
         }
     }
 
+    /// Sleeps until the next scheduled PiP attempt, waking early once the
+    /// system media server finishes a reset so the retry lands right away.
+    private func waitForNextPiPAttempt(seconds: TimeInterval) async {
+        let wakeAt = Date().addingTimeInterval(seconds)
+        let resetCount = FlowAudioSessionCoordinator.shared.mediaServicesResetCount
+        while Date() < wakeAt, !Task.isCancelled {
+            if FlowAudioSessionCoordinator.shared.mediaServicesResetCount != resetCount {
+                traceState("pipRecovery.wokeOnMediaServicesReset")
+                return
+            }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+    }
+
     private func startSessionAsync(
         duration: TimeInterval?,
         trigger: FlowPiPActivationTrigger,
@@ -1207,7 +1226,8 @@ final class FlowSessionManager: ObservableObject {
             return
         }
 
-        let deadline = Date().addingTimeInterval(FlowPiPRecoveryPolicy.totalBudget)
+        let attemptsStartedAt = Date()
+        let deadline = attemptsStartedAt.addingTimeInterval(FlowPiPRecoveryPolicy.totalBudget)
         var lastFailure: FlowPiPStartFailure = .timedOut
         var attemptsPerformed = 0
 
@@ -1234,11 +1254,10 @@ final class FlowSessionManager: ObservableObject {
                 return
             }
 
-            let delay = FlowPiPRecoveryPolicy.retryDelay(beforeAttempt: attempt)
-            if delay > 0 {
-                try? await Task.sleep(
-                    nanoseconds: UInt64(delay * 1_000_000_000)
-                )
+            let wait = FlowPiPRecoveryPolicy.attemptOffset(beforeAttempt: attempt)
+                - Date().timeIntervalSince(attemptsStartedAt)
+            if wait > 0 {
+                await waitForNextPiPAttempt(seconds: wait)
             }
             guard FlowPiPRecoveryPolicy.canContinue(
                 operation: operation,
@@ -2109,6 +2128,13 @@ final class FlowSessionManager: ObservableObject {
               !hasUnacknowledgedTerminalResult() else {
             return
         }
+        bindSessionASRIfNeeded()
+        if let cloudASR = sessionASR as? CloudASRService {
+            // Same locale source as `beginUtterance`, so the prime is adoptable.
+            cloudASR.primeUtteranceStreaming(
+                locale: SpeechLocaleResolver.resolve(store.localeId)
+            )
+        }
         startAudioPrime(id: command.utteranceId, origin: "micTouch")
     }
 
@@ -2171,6 +2197,7 @@ final class FlowSessionManager: ObservableObject {
               !isUtteranceProcessing else {
             return
         }
+        (sessionASR as? CloudASRService)?.cancelPrimedUtteranceStreaming()
         audioPrimeCancellationRequested = true
         // `capture.start()` is not cancellation-safe. Never stop it mid-start;
         // the completion waiter performs cleanup unless a real utterance adopts
@@ -2613,11 +2640,14 @@ final class FlowSessionManager: ObservableObject {
                     ]
                         .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                         .first(where: { !$0.isEmpty })
+                    // Without a partial, keep recording: capture is independent
+                    // of ASR, and finalize retries the full PCM through batch
+                    // ASR (`recognitionFailed`) before reporting the error.
                     if let recovery {
                         manager.lastFinal = recovery
                         manager.debug("asr error recovered via partial len=\(recovery.count)")
                     } else if manager.isUtteranceRecording {
-                        manager.failUtterance(message: message, kind: .asrFailed)
+                        manager.debug("asr error while recording — deferring to batch fallback")
                     }
                 case .cancelled:
                     // A provider-side cancellation while the mic is still open
@@ -2935,8 +2965,16 @@ final class FlowSessionManager: ObservableObject {
             try? await Task.sleep(nanoseconds: 100_000_000)
         }
 
+        // The recognizer never reported back within the wait: treat it as a
+        // failure so batch ASR can still recover the captured audio.
+        let asrStalled = lastFinal.isEmpty
+            && asrCompletedGeneration != finalizeGeneration
+            && !Task.isCancelled
         if lastFinal.isEmpty {
-            FlowDiagnostics.log("ASR wait elapsed — cancelling ASR task and using best available transcript")
+            FlowDiagnostics.log(
+                "ASR wait elapsed — cancelling ASR task and using best available transcript "
+                    + "stalled=\(asrStalled ? 1 : 0)"
+            )
             asrTask?.cancel()
             Task { await chunkedPipeline?.cancel() }
         }
@@ -2973,11 +3011,13 @@ final class FlowSessionManager: ObservableObject {
         let wantsBatchFallback = UtteranceBatchFallbackPolicy.shouldRunBatchFallback(
             stitchedFinal: lastFinal,
             partialSnapshot: bestPartialSnapshot,
-            recognitionFailed: asrFailureMessage != nil
+            recognitionFailed: asrFailureMessage != nil,
+            recognitionStalled: asrStalled
         )
         FlowTrace.pipeline(
             "batchFallback.decision",
-            "wanted=\(wantsBatchFallback ? 1 : 0) pcmSamples=\(utterancePCMSamples.count) "
+            "wanted=\(wantsBatchFallback ? 1 : 0) stalled=\(asrStalled ? 1 : 0) "
+                + "pcmSamples=\(utterancePCMSamples.count) "
                 + "pcmRms=\(FlowTrace.rms(utterancePCMSamples)) "
                 + "stitchedLen=\(lastFinal.count) partialLen=\(bestPartialSnapshot.count) "
                 + "resolvedLen=\(text.count)"

@@ -32,7 +32,9 @@
         "OSGKeyboardTests/AccountSignInCoordinatorTests",
         "OSGKeyboardTests/AccountSnapshotLoaderTests",
         "OSGKeyboardTests/DeviceIntegrityTests",
-        "OSGKeyboardTests/ReferralProfileTests"
+        "OSGKeyboardTests/ReferralProfileTests",
+        "OSGKeyboardTests/InvitePosterTests",
+        "OSGKeyboardTests/ScreenBrightnessBoostTests"
       ]
     },
     "managed_gateway": {
@@ -79,9 +81,10 @@
         "OSGKeyboardTests/PolishPromptComposerQuestionTests",
         "OSGKeyboardTests/PolishOutputValidatorTests",
         "OSGKeyboardTests/PolishStylePackTests",
-        "OSGKeyboardTests/PolishStylesL10nTests",
         "OSGKeyboardTests/PolishStyleCorpusExportStoreTests",
         "OSGKeyboardTests/PolishStyleLearningServiceTests",
+        "OSGKeyboardTests/PersonalStyleLearningStateStoreTests",
+        "OSGKeyboardTests/PolishStylesL10nTests",
         "OSGKeyboardTests/LLMClientTests",
         "OSGKeyboardTests/TranscriptLanguageDetectorTests",
         "OSGKeyboardTests/AIModeLLMClientTests",
@@ -174,6 +177,7 @@
         "OSGKeyboardExtTests/CandidatePanelExpandTests",
         "OSGKeyboardExtTests/ClipboardSuggestionLifecycleTests",
         "OSGKeyboardExtTests/KeyboardStateTests",
+        "OSGKeyboardExtTests/DictationProgressTests",
         "OSGKeyboardExtTests/KeyboardUsageTypingTests",
         "OSGKeyboardExtTests/KeyboardSurfaceStateTests",
         "OSGKeyboardExtTests/KeyHitTestingTests",

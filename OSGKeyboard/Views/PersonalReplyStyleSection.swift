@@ -28,16 +28,24 @@ struct PersonalReplyStyleSection: View {
     @State private var generationTask: Task<Void, Never>?
     @State private var generationID: UUID?
     @State private var editingPack: PolishStylePack?
+    /// Evidence from the generation under review; persisted only on save.
+    @State private var pendingLearning: PendingLearning?
     @State private var errorAlert: PersonalReplyStyleErrorAlert?
 
+    private struct PendingLearning {
+        let packID: String
+        let prior: PolishStyleLearningPriorEvidence
+    }
+
     private let store = AppGroupStore()
+    private let learningState = PersonalStyleLearningStateStore.shared
     private let generator: LearnedStyleGenerator
 
     init(
         initialEditingPack: PolishStylePack? = nil,
-        generator: @escaping LearnedStyleGenerator = { corpus, replyExamples, language in
+        generator: @escaping LearnedStyleGenerator = { corpus, replyExamples, language, prior in
             try await PolishStyleLearningService(store: AppGroupStore())
-                .generateStyle(
+                .learnStyle(
                     from: corpus,
                     replyExamples: replyExamples,
                     outputLanguage: language,
@@ -46,7 +54,8 @@ struct PersonalReplyStyleSection: View {
                             ? PolishStyleLearningCorpusBuilder
                                 .testBuildEffectiveCharacterCount
                             : PolishStyleLearningCorpusBuilder
-                                .requiredEffectiveCharacterCount
+                                .requiredEffectiveCharacterCount,
+                    prior: prior
                 )
         }
     ) {
@@ -64,7 +73,7 @@ struct PersonalReplyStyleSection: View {
                 }
             }
         }
-        .sheet(item: $editingPack) { pack in
+        .sheet(item: $editingPack, onDismiss: { pendingLearning = nil }) { pack in
             PolishStyleEditorSheet(
                 pack: pack,
                 isNew: !catalog.entries.contains(where: { $0.id == pack.id })
@@ -107,8 +116,17 @@ struct PersonalReplyStyleSection: View {
             : PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount
     }
 
-    private func isEligible(_ corpus: PolishStyleLearningCorpus) -> Bool {
-        corpus.effectiveCharacterCount >= minimumCharacterCount
+    /// Without a prior the full corpus gate applies; with one, only the
+    /// characters dictated since the last saved generation count.
+    private func isEligible(
+        _ corpus: PolishStyleLearningCorpus,
+        prior: PolishStyleLearningPriorEvidence? = nil
+    ) -> Bool {
+        guard let prior else {
+            return corpus.effectiveCharacterCount >= minimumCharacterCount
+        }
+        return corpus.examples(after: prior.learnedThrough).effectiveCharacterCount
+            >= PolishStyleLearningCorpusBuilder.incrementalEffectiveCharacterCount
     }
 
     private var learnedPack: PolishStylePack? {
@@ -121,7 +139,8 @@ struct PersonalReplyStyleSection: View {
         _ pack: PolishStylePack,
         corpus: PolishStyleLearningCorpus
     ) -> some View {
-        let canRegenerate = isEligible(corpus) && !isGenerating
+        let prior = learningState.prior(for: pack)
+        let canRegenerate = isEligible(corpus, prior: prior) && !isGenerating
         let actionShape = RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
 
         return VStack(alignment: .leading, spacing: Spacing.md) {
@@ -181,6 +200,22 @@ struct PersonalReplyStyleSection: View {
                             Self.confidencePercentage(metadata.confidence)
                         )
                     )
+                    if let prior {
+                        Text(
+                            AppL10n.format(
+                                "personalReplyStyle.newSinceLast",
+                                Int64(
+                                    corpus.examples(after: prior.learnedThrough)
+                                        .effectiveCharacterCount
+                                ),
+                                Int64(
+                                    PolishStyleLearningCorpusBuilder
+                                        .incrementalEffectiveCharacterCount
+                                )
+                            )
+                        )
+                        .accessibilityIdentifier("personalReplyStyle.newSinceLast")
+                    }
                 }
                 .font(TypeStyle.caption2)
                 .foregroundStyle(palette.textTertiary)
@@ -328,24 +363,31 @@ struct PersonalReplyStyleSection: View {
         from corpus: PolishStyleLearningCorpus,
         replacing existingPack: PolishStylePack? = nil
     ) {
-        guard isEligible(corpus), !isGenerating, generationTask == nil else { return }
+        let prior = existingPack.flatMap(learningState.prior(for:))
+        guard isEligible(corpus, prior: prior),
+              !isGenerating,
+              generationTask == nil else { return }
         let id = UUID()
         generationID = id
         isGenerating = true
         generationTask = Task { @MainActor in
             defer { finishGeneration(id: id) }
             do {
-                let generated = try await generator(
+                let result = try await generator(
                     corpus,
                     ClipboardReplyFeedbackStore.shared.learningExamples(),
-                    config.uiLanguage
+                    config.uiLanguage,
+                    prior
                 )
                 try Task.checkCancellation()
                 guard generationID == id, editingPack == nil else { return }
+                let generated = result.pack
                 // Always let the user inspect and edit the learned prompt before
-                // it is saved, synced, or enabled.
+                // it is saved, synced, or enabled. Saving overwrites the existing
+                // style, including any manual edits to it.
+                let reviewPack: PolishStylePack
                 if let existingPack {
-                    editingPack = PolishStylePack(
+                    reviewPack = PolishStylePack(
                         id: existingPack.id,
                         name: generated.name,
                         prompt: generated.prompt,
@@ -356,8 +398,12 @@ struct PersonalReplyStyleSection: View {
                         updatedAt: Date()
                     )
                 } else {
-                    editingPack = generated
+                    reviewPack = generated
                 }
+                pendingLearning = result.prior.map {
+                    PendingLearning(packID: reviewPack.id, prior: $0)
+                }
+                editingPack = reviewPack
             } catch {
                 guard generationID == id,
                       !Task.isCancelled,
@@ -395,6 +441,10 @@ struct PersonalReplyStyleSection: View {
             store.setPolishStyleCatalog(catalog)
             store.setPersonalReplyStyleId(pack.id)
             enabledStyleID = store.personalReplyStyleId
+            if let pendingLearning, pendingLearning.packID == pack.id {
+                learningState.save(pendingLearning.prior, for: pack)
+                self.pendingLearning = nil
+            }
             pushSync()
             return true
         } catch {

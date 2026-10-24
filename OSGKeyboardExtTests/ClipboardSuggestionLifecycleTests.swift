@@ -4,7 +4,7 @@
 // Verifies that the transient suggestion belongs to one pasteboard generation
 // and one keyboard presentation; clipboard history remains independently usable.
 
-import Combine
+import Observation
 @testable import OSGKeyboardShared
 import XCTest
 
@@ -136,17 +136,19 @@ final class ClipboardSuggestionLifecycleTests: XCTestCase {
     func testUnchangedPollingDoesNotRepublishSuggestion() {
         copy("stable clipboard")
         coordinator.captureIfNeeded()
-        var publications = 0
-        let cancellable = state.$clipboardSuggestionText
-            .dropFirst()
-            .sink { _ in publications += 1 }
-        defer { cancellable.cancel() }
+        let republished = expectation(description: "suggestion republished")
+        republished.isInverted = true
+        withObservationTracking {
+            _ = state.clipboardSuggestionText
+        } onChange: {
+            republished.fulfill()
+        }
 
         coordinator.captureIfNeeded()
         coordinator.captureIfNeeded()
         coordinator.captureIfNeeded()
 
-        XCTAssertEqual(publications, 0)
+        wait(for: [republished], timeout: 0.1)
         XCTAssertEqual(pasteboard.stringReadCount, 1)
     }
 

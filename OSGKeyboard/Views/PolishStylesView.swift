@@ -7,11 +7,14 @@
 import OSGKeyboardShared
 import SwiftUI
 
+/// The prior is nil for a first or full relearn; with one, the generator
+/// learns incrementally from examples after `learnedThrough`.
 typealias LearnedStyleGenerator = @MainActor @Sendable (
     PolishStyleLearningCorpus,
     [PolishStyleReplyLearningExample],
-    AppUILanguage
-) async throws -> PolishStylePack
+    AppUILanguage,
+    PolishStyleLearningPriorEvidence?
+) async throws -> PolishStyleLearningResult
 
 private struct PolishStyleErrorAlert {
     let title: String

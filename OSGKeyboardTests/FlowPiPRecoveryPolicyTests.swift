@@ -54,15 +54,15 @@ final class FlowPiPRecoveryPolicyTests: XCTestCase {
 
     // MARK: - Bounded retry
 
-    func testRetryPolicyUsesThreeIncreasingBoundedAttempts() {
-        XCTAssertEqual(FlowPiPRecoveryPolicy.maxAttempts, 3)
-        XCTAssertEqual(
-            (1...FlowPiPRecoveryPolicy.maxAttempts).map {
-                FlowPiPRecoveryPolicy.retryDelay(beforeAttempt: $0)
-            },
-            [0, 0.25, 0.6]
-        )
+    func testRetryPolicySpreadsFourAttemptsAcrossTheBudget() {
+        XCTAssertEqual(FlowPiPRecoveryPolicy.maxAttempts, 4)
+        let offsets = (1...FlowPiPRecoveryPolicy.maxAttempts).map {
+            FlowPiPRecoveryPolicy.attemptOffset(beforeAttempt: $0)
+        }
+        XCTAssertEqual(offsets, [0, 0.5, 1.5, 3])
         XCTAssertEqual(FlowPiPRecoveryPolicy.totalBudget, 5)
+        // The last attempt must still leave time for PiP to become active.
+        XCTAssertLessThan(offsets.last ?? 0, FlowPiPRecoveryPolicy.totalBudget - 1)
     }
 
     func testRetryTimeoutsNeverExceedRemainingBudget() {

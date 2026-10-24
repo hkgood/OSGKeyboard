@@ -4,25 +4,41 @@
 // What's New "Edit last input" recording host. Uses the **real**
 // `LastInputEditView` (compiled into the app target) driven by a scripted
 // `KeyboardState` — no ASR / LLM. Opening beat shows the voice mic + hint.
-// Launch with `--edit-demo`. Not shipped in Release.
+// Launch with `--edit-demo` and optional `--whats-new-lang=zh|en`.
+// Not shipped in Release.
 
 #if DEBUG
 import OSGKeyboardShared
 import SwiftUI
 
 struct EditDemoView: View {
-    private static let originalText = "明天下午三点开会讨论方案"
-    private static let editedText = "各位好，明天下午三点在 A 会议室召开方案讨论会，请准时参加。"
+    private static let language = FeaturePreviewFlags.language
+
+    private static var originalText: String {
+        language == .en
+            ? "meeting tomorrow at 3 to discuss the plan"
+            : "明天下午三点开会讨论方案"
+    }
+
+    private static var editedText: String {
+        language == .en
+            ? "Hi all, we'll review the proposal tomorrow at 3 PM in Room A. Please be on time."
+            : "各位好，明天下午三点在 A 会议室召开方案讨论会，请准时参加。"
+    }
 
     private enum Scene: Equatable {
         case hint
         case editing
     }
 
-    @StateObject private var state = KeyboardState()
+    @State private var state = KeyboardState()
     @State private var scene: Scene = .hint
     /// Mirrors the host document for `--preview-fullscreen` recordings.
     @State private var hostText: String = EditDemoView.originalText
+
+    init() {
+        FeaturePreviewFlags.applyRecordingLanguage()
+    }
 
     private var source: EditSessionSource {
         let reference = EditableInputReference(
@@ -45,13 +61,10 @@ struct EditDemoView: View {
             }
             VStack(spacing: 0) {
                 if FeaturePreviewFlags.isFullscreen {
-                    // Chinese-only recording: the sample text below has no
-                    // English variant, so the host chrome is pinned to match
-                    // (see the `zh-Hans` locale pin on this view's body).
                     FeaturePreviewHostDocument(
                         kind: .notes,
-                        title: "备忘录",
-                        language: .zh,
+                        title: Self.language == .en ? "Notes" : "备忘录",
+                        language: Self.language,
                         text: hostText
                     )
                 } else {
@@ -74,7 +87,7 @@ struct EditDemoView: View {
             }
         }
         .environment(\.themePalette, palette)
-        .environment(\.locale, Locale(identifier: "zh-Hans"))
+        .environment(\.locale, Locale(identifier: Self.language == .en ? "en" : "zh-Hans"))
         .preferredColorScheme(.light)
         .task { await runTimeline() }
     }

@@ -43,6 +43,25 @@ final class UtteranceBatchFallbackPolicyTests: XCTestCase {
         )
     }
 
+    func testShouldRunWhenRecognitionStalledWithoutAnyText() {
+        XCTAssertTrue(
+            UtteranceBatchFallbackPolicy.shouldRunBatchFallback(
+                stitchedFinal: "",
+                partialSnapshot: "",
+                recognitionStalled: true
+            )
+        )
+    }
+
+    func testShouldNotRunForCompletedSilence() {
+        XCTAssertFalse(
+            UtteranceBatchFallbackPolicy.shouldRunBatchFallback(
+                stitchedFinal: "",
+                partialSnapshot: ""
+            )
+        )
+    }
+
     func testPreferredTranscriptPicksLongestCandidate() {
         let resolved = UtteranceBatchFallbackPolicy.preferredTranscript(
             batch: "今天很好，我们一起去公园吧",

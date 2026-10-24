@@ -20,7 +20,7 @@ struct AssistantKeyboardUITestHarness: View {
         case yesNoReply
     }
 
-    @StateObject private var state = KeyboardState()
+    @State private var state = KeyboardState()
     @StateObject private var typing = TypingSessionController()
     @State private var configured = false
     @Environment(\.colorScheme) private var colorScheme

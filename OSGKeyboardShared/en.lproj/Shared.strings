@@ -498,6 +498,16 @@
 "mac.account.invite.rewarded" = "Rewarded invites";
 "mac.account.invite.pending" = "Pending invites";
 "mac.account.invite.footnote" = "Both of you get credits once an invited friend qualifies.";
+"mac.account.invite.qr" = "QR Code";
+"mac.account.invite.qrHint" = "Scan with a phone, or save the poster and send it to a friend.";
+"mac.account.invite.savePoster" = "Save Poster…";
+"mac.account.invite.saveFailed" = "Couldn’t save the poster.";
+"invite.poster.slogan" = "Your AI voice double";
+"invite.poster.hint" = "Scan to try it and earn credits";
+"invite.poster.defaultInviter" = "OSG User";
+"invite.poster.inviter" = "%@ invites you to try\nOSG AI Keyboard";
+"invite.poster.scan" = "Scan to download and enter the code to earn credits";
+"invite.poster.code" = "Invitation code: %@";
 "mac.account.delete.title" = "Delete Account";
 "mac.account.delete.body" = "Deleting removes your account and any remaining credits. This cannot be undone.";
 "mac.account.delete.action" = "Delete Account…";
@@ -523,6 +533,11 @@
 "account.referral.error.notFound" = "Your invitation link isn’t available yet.";
 "account.referral.error.session" = "Sign in again to load your invitation link.";
 "account.referral.error.unavailable" = "The invitation service is temporarily unavailable.";
+"account.referral.redeem.error.invalid" = "This invitation link is invalid, or the campaign has ended.";
+"account.referral.redeem.error.expired" = "The time to add an invitation to this account has passed.";
+"account.referral.redeem.error.self" = "You can’t use your own invitation.";
+"account.referral.redeem.error.alreadyBound" = "This account has already accepted another invitation.";
+"account.referral.redeem.error.ineligible" = "This account can’t accept this invitation.";
 
 /* Rime / typing engine errors */
 "error.rime.appGroupUnavailable" = "App Group unavailable.";

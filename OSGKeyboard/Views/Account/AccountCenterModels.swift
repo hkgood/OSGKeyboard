@@ -80,19 +80,34 @@ struct ReferralCode: Codable, Equatable, Sendable {
     let inviteURL: URL
     let campaignID: String?
     let createdAt: Date
+    /// 8-character alias friends can type; nil until the server assigns one.
+    let shortCode: String?
 
     private enum CodingKeys: String, CodingKey {
         case code
         case inviteURL = "inviteUrl"
         case campaignID = "campaignId"
         case createdAt
+        case shortCode
     }
 
-    init(code: String, inviteURL: URL, campaignID: String?, createdAt: Date) {
+    init(
+        code: String,
+        inviteURL: URL,
+        campaignID: String?,
+        createdAt: Date,
+        shortCode: String? = nil
+    ) {
         self.code = code
         self.inviteURL = inviteURL
         self.campaignID = campaignID
         self.createdAt = createdAt
+        self.shortCode = shortCode.flatMap(ReferralShortCode.normalize)
+    }
+
+    /// `XXXX-XXXX` form for posters and share sheets.
+    var displayShortCode: String? {
+        shortCode.map(ReferralShortCode.display)
     }
 
     init(from decoder: Decoder) throws {
@@ -115,6 +130,10 @@ struct ReferralCode: Codable, Equatable, Sendable {
         self.inviteURL = inviteURL
         campaignID = try container.decodeIfPresent(String.self, forKey: .campaignID)
         self.createdAt = createdAt
+        // A malformed alias only hides the short code; the link still works.
+        shortCode = (try? container.decodeIfPresent(String.self, forKey: .shortCode))
+            .flatMap { $0 }
+            .flatMap(ReferralShortCode.normalize)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -123,9 +142,10 @@ struct ReferralCode: Codable, Equatable, Sendable {
         try container.encode(inviteURL, forKey: .inviteURL)
         try container.encodeIfPresent(campaignID, forKey: .campaignID)
         try container.encode(Self.string(from: createdAt), forKey: .createdAt)
+        try container.encodeIfPresent(shortCode, forKey: .shortCode)
     }
 
-    private static func date(from value: String) -> Date? {
+    static func date(from value: String) -> Date? {
         let fractional = ISO8601DateFormatter()
         fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let standard = ISO8601DateFormatter()
@@ -133,7 +153,7 @@ struct ReferralCode: Codable, Equatable, Sendable {
         return fractional.date(from: value) ?? standard.date(from: value)
     }
 
-    private static func string(from date: Date) -> String {
+    static func string(from date: Date) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.string(from: date)
@@ -214,6 +234,40 @@ enum ReferralJSONValue: Codable, Equatable, Sendable {
 struct ReferralProfile: Codable, Equatable, Sendable {
     let code: ReferralCode
     let binding: ReferralBinding?
+    /// Last moment this account may still bind an inviter. The server omits it
+    /// once bound or when no campaign is active; older servers never send it.
+    let bindingDeadline: Date?
+
+    private enum CodingKeys: String, CodingKey {
+        case code
+        case binding
+        case bindingDeadline
+    }
+
+    init(code: ReferralCode, binding: ReferralBinding?, bindingDeadline: Date? = nil) {
+        self.code = code
+        self.binding = binding
+        self.bindingDeadline = bindingDeadline
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        code = try container.decode(ReferralCode.self, forKey: .code)
+        binding = try container.decodeIfPresent(ReferralBinding.self, forKey: .binding)
+        bindingDeadline = (try? container.decodeIfPresent(String.self, forKey: .bindingDeadline))
+            .flatMap { $0 }
+            .flatMap(ReferralCode.date(from:))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(code, forKey: .code)
+        try container.encodeIfPresent(binding, forKey: .binding)
+        try container.encodeIfPresent(
+            bindingDeadline.map(ReferralCode.string(from:)),
+            forKey: .bindingDeadline
+        )
+    }
 }
 
 struct AccountCenterSnapshot: Equatable, Sendable {
@@ -448,6 +502,38 @@ enum ReferralUniversalLink {
         return code
     }
 
+    /// Extracts a code from typed or pasted text: a short code, a bare long
+    /// code, an invitation link, or a chat message that contains one of them.
+    /// Links are matched with the same host and path rules as Universal Links,
+    /// so arbitrary URLs never qualify. Short codes are returned normalized
+    /// (uppercase, no hyphen); the server resolves them to the long code.
+    static func code(fromUserInput text: String) -> String? {
+        let separators = CharacterSet.whitespacesAndNewlines
+            .union(CharacterSet(charactersIn: "，。；：、！？「」『』“”‘’<>()（）【】《》"))
+        let tokens = text
+            .components(separatedBy: separators)
+            .filter { !$0.isEmpty }
+        for token in tokens {
+            if isValid(code: token) {
+                return token
+            }
+            // Chat apps often glue the link to the preceding sentence.
+            let link = token.range(of: "https://", options: .caseInsensitive)
+                .map { String(token[$0.lowerBound...]) } ?? token
+            if let url = URL(string: link), let code = code(from: url) {
+                return code
+            }
+        }
+        // Short codes go last: an 8-letter word in a pasted message must not
+        // shadow the link that message carries.
+        return ReferralShortCode.firstMatch(in: text)
+    }
+
+    /// Anything the bind endpoint accepts: a long code or a normalized short code.
+    static func isRedeemable(code: String) -> Bool {
+        isValid(code: code) || ReferralShortCode.isCanonical(code)
+    }
+
     static func isValid(code: String) -> Bool {
         guard code.utf8.count == codeLength else { return false }
         return code.utf8.allSatisfy { byte in
@@ -459,6 +545,73 @@ enum ReferralUniversalLink {
         }
     }
 
+}
+
+/// 8-character typeable alias of a referral code. Mirrors the server's
+/// `ReferralShortCode`: the alphabet drops 0/O and 1/I/L so a code read aloud
+/// or copied from a poster cannot be mistyped into another valid code.
+enum ReferralShortCode {
+    static let length = 8
+    static let alphabet: Set<Character> = Set("23456789ABCDEFGHJKMNPQRSTUVWXYZ")
+
+    static func isCanonical(_ value: String) -> Bool {
+        value.count == length && value.allSatisfy(alphabet.contains)
+    }
+
+    /// Accepts `K7M2Q9XA` or `k7m2-q9xa`; returns the stored uppercase form.
+    static func normalize(_ raw: String) -> String? {
+        var value = raw.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if value.count == length + 1, value[value.index(value.startIndex, offsetBy: 4)] == "-" {
+            value.remove(at: value.index(value.startIndex, offsetBy: 4))
+        }
+        return isCanonical(value) ? value : nil
+    }
+
+    static func display(_ value: String) -> String {
+        guard isCanonical(value) else { return value }
+        return "\(value.prefix(4))-\(value.suffix(4))"
+    }
+
+    /// Finds a short code inside free text such as "邀请码 K7M2-Q9XA" or a
+    /// Chinese sentence glued to the code, which whitespace splitting misses.
+    static func firstMatch(in text: String) -> String? {
+        // Runs of code-like ASCII; anything else (spaces, CJK, punctuation)
+        // separates them, so a run is exactly one candidate. "_" stays inside
+        // a run so a fragment of a long code never reads as a short code.
+        let runs = text.split { character in
+            !(character.isASCII
+                && (character.isLetter || character.isNumber || character == "-" || character == "_"))
+        }
+        return runs.lazy.compactMap { normalize(String($0)) }.first
+    }
+}
+
+/// When a signed-in account may still bind an inviter. Prefers the server's
+/// `bindingDeadline`, which reflects the active campaign; without it, falls
+/// back to the default `REFERRAL_BINDING_DAYS`. The server stays
+/// authoritative, so a mismatch still surfaces as a redemption error.
+enum ReferralBindingWindow {
+    static let duration: TimeInterval = 7 * 24 * 60 * 60
+
+    static func isOpen(for account: AccountSession, now: Date = Date()) -> Bool {
+        // Zero means the account record has not loaded yet.
+        guard account.createdAtEpochSeconds > 0 else { return false }
+        let registeredAt = Date(timeIntervalSince1970: TimeInterval(account.createdAtEpochSeconds))
+        return now.timeIntervalSince(registeredAt) < duration
+    }
+
+    /// Open only while unbound and before the deadline the server reported.
+    static func isOpen(
+        for account: AccountSession,
+        profile: ReferralProfile,
+        now: Date = Date()
+    ) -> Bool {
+        guard profile.binding == nil else { return false }
+        if let deadline = profile.bindingDeadline {
+            return now <= deadline
+        }
+        return isOpen(for: account, now: now)
+    }
 }
 
 @MainActor
@@ -480,7 +633,7 @@ final class UserDefaultsPendingReferralCodeStore: PendingReferralCodeStoring {
 
     var code: String? {
         guard let value = defaults.string(forKey: Self.storageKey),
-              ReferralUniversalLink.isValid(code: value)
+              ReferralUniversalLink.isRedeemable(code: value)
         else {
             return nil
         }
@@ -488,7 +641,7 @@ final class UserDefaultsPendingReferralCodeStore: PendingReferralCodeStoring {
     }
 
     func save(_ code: String) {
-        guard ReferralUniversalLink.isValid(code: code) else { return }
+        guard ReferralUniversalLink.isRedeemable(code: code) else { return }
         defaults.set(code, forKey: Self.storageKey)
     }
 

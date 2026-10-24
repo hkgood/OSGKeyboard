@@ -7,13 +7,16 @@
 // (`KeyboardViewController`) re-exports the same type as a typealias so
 // existing call sites (`KeyboardViewController.State`) keep compiling.
 
-import Combine
 import Foundation
+import Observation
 import SwiftUI
 import UIKit
 
+/// `@Observable` so each view re-renders only for the properties it reads —
+/// the 200 ms mic `level` tick no longer invalidates the whole keyboard.
 @MainActor
-public final class KeyboardState: ObservableObject {
+@Observable
+public final class KeyboardState {
     public init() {}
 
     /// Full-height clipboard UI layered over the active keyboard surface.
@@ -89,47 +92,57 @@ public final class KeyboardState: ObservableObject {
         public var id: String { rawValue }
     }
 
-    @Published public var phase: Phase = .idle
+    public var phase: Phase = .idle {
+        didSet {
+            // A timeline only describes the current processing wait.
+            if phase != .processing, dictationProgress != nil {
+                dictationProgress = nil
+            }
+        }
+    }
+    /// Dictation wait shown as the microphone capsule's progress fill.
+    /// Nil outside dictation processing (AI, edit, and cancellation waits).
+    public var dictationProgress: DictationProgressTimeline?
     /// Active chrome. Forced to `.voice` while recording / processing.
-    @Published public var surface: Surface = .voice
+    public var surface: Surface = .voice
     /// Surface the user was on when auto mode switched them to `.voice` to show
     /// an auto-reply. Restored when the reply is closed; nil when not auto-routed.
-    public var autoReplyReturnSurface: Surface?
-    @Published public var level: Double = 0
-    @Published public var mode: InputMode = .polish
-    @Published public var localeId: String = "auto"
-    @Published public var lastTranscript: String = ""
+    @ObservationIgnored public var autoReplyReturnSurface: Surface?
+    public var level: Double = 0
+    public var mode: InputMode = .polish
+    public var localeId: String = "auto"
+    public var lastTranscript: String = ""
     /// `true` if the active ASR session is running on-device for the
     /// current locale. With iOS 26's `SpeechAnalyzer` this is always
     /// `true` — kept on the state object because the UI's status
     /// badge still wants a single source of truth to read from.
-    @Published public var onDeviceSupported: Bool = false
+    public var onDeviceSupported: Bool = false
     /// Seconds remaining in the current utterance (Flow tap-to-talk).
-    @Published public var utteranceRemainingSeconds: Int = Int(FlowSessionKeys.maxUtteranceDuration)
+    public var utteranceRemainingSeconds: Int = Int(FlowSessionKeys.maxUtteranceDuration)
     /// Whether the host app's Flow voice session is live and reachable (fresh
     /// heartbeat). Do not use the App Group session flag alone for UI gating.
     /// Prefer `micVoiceAvailability` for mic color and tap behavior.
-    @Published public var flowSessionActive: Bool = false
+    public var flowSessionActive: Bool = false
     /// Unified mic color / tap / hint source for the keyboard extension.
-    @Published public var micVoiceAvailability: MicVoiceAvailability = .unavailable(.hostNotReady)
+    public var micVoiceAvailability: MicVoiceAvailability = .unavailable(.hostNotReady)
     /// Short-lived host-owned practice mode. It unlocks real dictation before
     /// onboarding completion, but only while the onboarding text field is live.
-    @Published public var isOnboardingPracticeActive: Bool = false
+    public var isOnboardingPracticeActive: Bool = false
     /// Current strict OOBE contract used to render feature-specific extension
     /// state and bind completion to the host-owned session ID.
-    @Published public var oobePracticeSession: OOBEPracticeSession?
+    public var oobePracticeSession: OOBEPracticeSession?
     /// When true, the mic is intentionally disabled (e.g. cloud engine
     /// selected but the provider-specific API key is missing).
-    @Published public var micDisabled: Bool = false
+    public var micDisabled: Bool = false
     /// AI mode always needs an LLM even when local ASR keeps voice dictation usable.
-    @Published public var aiServiceAvailable: Bool = true
+    public var aiServiceAvailable: Bool = true
     /// One-line helper shown above the mic while `micDisabled == true`.
-    @Published public var micDisabledHint: String = ""
+    public var micDisabledHint: String = ""
     /// "local" → on-device ASR only. "cloud" → cloud ASR + LLM polish.
     /// Boot value must match the privacy-safe app default (`local`) so the
     /// keyboard never assumes the audio-uploading engine before the App
     /// Group config has been read.
-    @Published public var engineMode: String = "local"
+    public var engineMode: String = "local"
     /// Derived: translation is on iff a target
     /// locale has been selected (mirrors `ProviderConfig.translationEnabled`
     /// so the chip / pipeline read the same source of truth).
@@ -140,122 +153,122 @@ public final class KeyboardState: ObservableObject {
     /// produce (e.g. `"en"`, `"ja"`). Mirrored from `ProviderConfig`.
     /// Defaults to `offLocaleId` so the keyboard boots in the "off"
     /// state on first install.
-    @Published public var translationTargetLocaleId: String = TranslationLanguageCatalog.offLocaleId
+    public var translationTargetLocaleId: String = TranslationLanguageCatalog.offLocaleId
     /// Mirrored from App Group — swaps delete / space on the bottom row.
-    @Published public var handednessPreference: HandednessPreference = .left
+    public var handednessPreference: HandednessPreference = .left
     /// Mirrors the host field's return-key intent. The action stays a newline
     /// insert; host apps decide whether that submits or creates a line break.
-    @Published public var returnKeyRole: ReturnKeyRole = .newline
+    public var returnKeyRole: ReturnKeyRole = .newline
     /// Opt-in clipboard history capture (mirrored from App Group).
-    @Published public var clipboardHistoryEnabled: Bool = false
+    public var clipboardHistoryEnabled: Bool = false
     /// Current extension permission state. Clipboard history remains readable
     /// without Full Access, but new system pasteboard entries cannot be captured.
-    @Published public var hasFullAccess: Bool = false
+    public var hasFullAccess: Bool = false
     public var needsClipboardFullAccessHint: Bool {
         clipboardHistoryEnabled && !hasFullAccess
     }
     /// Opt-in clipboard suggestion strip (requires history enabled).
-    @Published public var clipboardCandidateBarEnabled: Bool = false
+    public var clipboardCandidateBarEnabled: Bool = false
     /// Opt-in auto mode: a freshly copied replyable message is auto-routed into
     /// the Reply flow when the keyboard opens (requires history enabled).
-    @Published public var clipboardAutoModeEnabled: Bool = false
+    public var clipboardAutoModeEnabled: Bool = false
     /// Opt-in: auto-translate a freshly copied non-system-language paste on open.
-    @Published public var clipboardAutoTranslateEnabled: Bool = false
+    public var clipboardAutoTranslateEnabled: Bool = false
     /// Opt-in: auto-draft a reply when a freshly copied paste is an email.
-    @Published public var clipboardAutoEmailReplyEnabled: Bool = false
+    public var clipboardAutoEmailReplyEnabled: Bool = false
     /// When true, the current AI result is a *staged* auto result (auto-translate
     /// or auto-email-reply): shown on the keyboard and inserted only when the
     /// user taps the glass Insert button — never dropped straight into the field.
-    @Published public var autoResultReadOnly: Bool = false
+    public var autoResultReadOnly: Bool = false
     /// Localization key for the staged auto result's glass Insert button, so the
     /// label matches the action (e.g. "Insert translation" vs "Insert reply").
-    @Published public var autoResultInsertLabelKey: String = "keyboard.assistant.insertTranslation"
+    public var autoResultInsertLabelKey: String = "keyboard.assistant.insertTranslation"
     /// Clipboard skill that produced the currently shown result (reply / translate
     /// / …). The result panel's top bar offers the *other* applicable skills, so
     /// this one is excluded from that row. Nil when no clipboard result is active.
-    @Published public var activeClipboardSkillID: String?
+    public var activeClipboardSkillID: String?
     /// Skills-tab order for clipboard chips. Empty → hint carousel.
-    @Published public var enabledClipboardSkillIDs: [String] = AIAgentSkillLayout.defaultEnabledIDs
+    public var enabledClipboardSkillIDs: [String] = AIAgentSkillLayout.defaultEnabledIDs
     /// Fully resolved enabled skills. Mirroring value-semantic content here
     /// ensures Darwin updates publish prompt/name changes even when IDs stay unchanged.
-    @Published public var enabledClipboardSkills: [AIClipboardSkill] =
+    public var enabledClipboardSkills: [AIClipboardSkill] =
         AIClipboardSkillCatalog.visible()
     /// Complete resolved catalog used for semantic recommendations. Keyboard
     /// visibility is independent from the Skills page installation state.
-    @Published public var clipboardSkillCatalog: [AIClipboardSkill] =
+    public var clipboardSkillCatalog: [AIClipboardSkill] =
         AIClipboardSkillCatalog.catalog
     /// User-owned speaking style injected only into conversational reply skills.
     /// Built-in polish personalities intentionally leave this nil.
-    @Published public var clipboardReplyStyle: AIClipboardReplyStyleContext?
+    public var clipboardReplyStyle: AIClipboardReplyStyleContext?
     /// App Group setting: one Reply request should return three selectable tones.
-    @Published public var multipleReplyVariantsEnabled: Bool = false
+    public var multipleReplyVariantsEnabled: Bool = false
     /// Export skills whose companion Shortcut setup the user confirmed.
-    @Published public var confirmedClipboardShortcutIDs: [String] = []
+    public var confirmedClipboardShortcutIDs: [String] = []
     /// App language captured with the same App Group snapshot as skill copy.
-    @Published public var uiLanguage: AppUILanguage = .auto
+    public var uiLanguage: AppUILanguage = .auto
     /// Export skill currently waiting on the LLM. Nil for transform skills.
-    @Published public var pendingClipboardSkillID: String?
+    public var pendingClipboardSkillID: String?
     /// Clipboard captured when that export skill was tapped, so the body
     /// still exists after the 30-second hint window closes.
-    public var pendingClipboardSkillSource: String?
+    @ObservationIgnored public var pendingClipboardSkillSource: String?
     /// In-keyboard toast (e.g. no todos). Does not leave the host app.
-    @Published public var skillTipText: String?
+    public var skillTipText: String?
     /// Host field is a password / secure entry — never read pasteboard.
-    @Published public var isSecureTextEntry: Bool = false
+    public var isSecureTextEntry: Bool = false
     /// Secure fields hide every clipboard-history entry point.
     public var canShowClipboardEntry: Bool {
         !isSecureTextEntry
     }
     /// Full-keyboard clipboard overlay (enable guide or history list).
-    @Published public var clipboardOverlay: ClipboardKeyboardOverlay = .none
+    public var clipboardOverlay: ClipboardKeyboardOverlay = .none
     /// Suggestion strip above keys (newest clipboard item).
-    @Published public var clipboardSuggestionText: String?
+    public var clipboardSuggestionText: String?
     /// Pasteboard changeCount associated with the current suggestion (for dismiss).
-    @Published public var clipboardSuggestionChangeCount: Int?
+    public var clipboardSuggestionChangeCount: Int?
     /// Newest clipboard entry the user dismissed from the AI skill top bar.
     /// Shared (not view-local) so the dismissal survives surface switches —
     /// otherwise recreating `AIKeyboardView` would resurrect the skill bar
     /// while the paste suggestion stays suppressed. Reset when a new entry
     /// arrives so a fresh copy re-shows the skills.
-    @Published public var dismissedClipboardSkillEntryID: UUID?
+    public var dismissedClipboardSkillEntryID: UUID?
     /// Typing-grid haptic strength (off / light / strong).
-    @Published public var keyboardHapticIntensity: KeyboardHapticIntensity = .default
+    public var keyboardHapticIntensity: KeyboardHapticIntensity = .default
     /// Single source of truth for selecting iPad-scale keyboard metrics.
     /// The view controller resolves this from device idiom + horizontal size
     /// class so SwiftUI and the UIKit height constraint cannot disagree.
-    @Published public var usesIPadLayoutMetrics: Bool = false
+    public var usesIPadLayoutMetrics: Bool = false
     /// The custom system-keyboard switch is iPad-only. iPhone relies on the
     /// system-provided switch below the keyboard instead of showing a duplicate.
-    @Published public var showsSystemGlobeKey: Bool = false
+    public var showsSystemGlobeKey: Bool = false
     /// Width the controller sized the keyboard to. Both the UIKit height
     /// constraint and the SwiftUI key grid pick their metrics from this one
     /// value so they can never disagree and clip the bottom row.
-    @Published public var layoutWidth: CGFloat = 0
+    public var layoutWidth: CGFloat = 0
     /// `true` when the last voice insertion is still at the caret and can
     /// be undone (suffix-checked against `documentContextBeforeInput`).
-    @Published public var undoAvailable: Bool = false
+    public var undoAvailable: Bool = false
     /// A verified OSG-generated insertion can be edited by voice.
-    @Published public var editAvailable: Bool = false
+    public var editAvailable: Bool = false
     /// `true` while an undone voice insertion can be re-applied (redo buffer).
-    @Published public var redoAvailable: Bool = false
+    public var redoAvailable: Bool = false
     /// `true` when the host field has a non-empty selection (copy enabled).
-    @Published public var copyAvailable: Bool = false
+    public var copyAvailable: Bool = false
     /// `true` when the host field has a non-empty selection (cut enabled).
-    @Published public var cutAvailable: Bool = false
+    public var cutAvailable: Bool = false
     /// Closed state machine for long-press editing of the last insertion.
-    @Published public var editSession: EditSessionState = .inactive
+    public var editSession: EditSessionState = .inactive
     /// AI conversation UI state for the keyboard surface. The host owns the actual messages.
-    @Published public var aiSession: AISessionState = .inactive
+    public var aiSession: AISessionState = .inactive
     /// Whether the assistant's field action can invoke the host Return key.
     /// Derived from the focused field's role and `UITextDocumentProxy.hasText`.
-    @Published public var assistantActionAvailable: Bool = false
+    public var assistantActionAvailable: Bool = false
     /// Brief success pulse rendered on the unified assistant microphone.
-    @Published public var assistantInsertionSucceeded: Bool = false
-    @Published public var editCanReplaceOriginal: Bool = false
+    public var assistantInsertionSucceeded: Bool = false
+    public var editCanReplaceOriginal: Bool = false
     /// Short idle feedback (availability, expiry, missing LLM).
-    @Published public var editHint: String?
+    public var editHint: String?
     /// Availability hints use the green accent; failures keep warning styling.
-    @Published public var editHintIsPositive: Bool = false
+    public var editHintIsPositive: Bool = false
     /// Whether translate-and-polish is armed for the current engine.
     public var isTranslationEffective: Bool {
         translationEnabled
@@ -278,7 +291,7 @@ public final class KeyboardState: ObservableObject {
     /// Mirrored from App Group / Keychain. Setup UI lives only in the host
     /// app; the keyboard uses this flag to gate voice (mic / Flow cold-start)
     /// and prompt a jump back to the app when incomplete.
-    @Published public var hasCompletedOnboarding: Bool = false
+    public var hasCompletedOnboarding: Bool = false
 
     public enum ReturnKeyRole: Equatable {
         case newline
@@ -369,76 +382,76 @@ public final class KeyboardState: ObservableObject {
     }
 
     // Action hooks — injected by the view controller at install time.
-    public var beginRecording: () -> Void = {}
-    public var endRecording: () -> Void = {}
-    public var tapMic: () -> Void = {}
+    @ObservationIgnored public var beginRecording: () -> Void = {}
+    @ObservationIgnored public var endRecording: () -> Void = {}
+    @ObservationIgnored public var tapMic: () -> Void = {}
     /// Starts/cancels a bounded host-audio prime from the user's mic touch.
-    public var setMicTouchActive: (Bool) -> Void = { _ in }
+    @ObservationIgnored public var setMicTouchActive: (Bool) -> Void = { _ in }
     /// Discards the complete normal-dictation round, including late ASR/LLM output.
-    public var cancelVoiceInput: () -> Void = {}
-    public var beginEditLastInput: () -> Void = {}
-    public var stopEditListening: () -> Void = {}
-    public var confirmEditResult: () -> Void = {}
-    public var closeEditMode: () -> Void = {}
-    public var tapAIMic: () -> Void = {}
-    public var cancelAIInput: () -> Void = {}
+    @ObservationIgnored public var cancelVoiceInput: () -> Void = {}
+    @ObservationIgnored public var beginEditLastInput: () -> Void = {}
+    @ObservationIgnored public var stopEditListening: () -> Void = {}
+    @ObservationIgnored public var confirmEditResult: () -> Void = {}
+    @ObservationIgnored public var closeEditMode: () -> Void = {}
+    @ObservationIgnored public var tapAIMic: () -> Void = {}
+    @ObservationIgnored public var cancelAIInput: () -> Void = {}
     /// Explicitly inserts a retained AI result after target validation failed.
-    public var confirmPendingAIAnswer: () -> Void = {}
+    @ObservationIgnored public var confirmPendingAIAnswer: () -> Void = {}
     /// Inserts the complete tapped reply card. The UUID remains available on
     /// `aiSession.selectedReplyVariant` for a future feedback store.
-    public var selectAIReplyVariant: (UUID) -> Void = { _ in }
-    public var discardPendingAIAnswer: () -> Void = {}
+    @ObservationIgnored public var selectAIReplyVariant: (UUID) -> Void = { _ in }
+    @ObservationIgnored public var discardPendingAIAnswer: () -> Void = {}
     /// Performs the focused field's semantic Return action.
-    public var performAssistantFieldAction: () -> Void = {}
+    @ObservationIgnored public var performAssistantFieldAction: () -> Void = {}
     /// Sends a tapped idle hint card as the AI question (skip microphone).
-    public var submitAIHint: (AIHintCard) -> Void = { _ in }
+    @ObservationIgnored public var submitAIHint: (AIHintCard) -> Void = { _ in }
     /// Sends a clipboard skill plus any source-bound Reply scene modifier.
-    public var submitAIClipboardSkill: (AIClipboardSkill, AIClipboardReplyScene?) -> Void = { _, _ in }
+    @ObservationIgnored public var submitAIClipboardSkill: (AIClipboardSkill, AIClipboardReplyScene?) -> Void = { _, _ in }
     /// Writes extract-todos titles and opens the host to run the Shortcut.
-    public var runClipboardExportSkill: (String, [String]) -> Void = { _, _ in }
-    public var openSettings: () -> Void = {}
+    @ObservationIgnored public var runClipboardExportSkill: (String, [String]) -> Void = { _, _ in }
+    @ObservationIgnored public var openSettings: () -> Void = {}
     /// Opens the host app straight to input-resource deployment. Used by the
     /// typing surface when Rime resources have not been deployed yet.
-    public var openInputMethodSetup: () -> Void = {}
+    @ObservationIgnored public var openInputMethodSetup: () -> Void = {}
     /// Opens the host app Settings → Clipboard page (enable history toggle).
-    public var openClipboardSettings: () -> Void = {}
+    @ObservationIgnored public var openClipboardSettings: () -> Void = {}
     /// Confirms the full-keyboard "try AI auto-reply" guide: turns auto mode on
     /// (persisted), dismisses the layer, and drafts a reply for the current copy.
-    public var tryAutoReplyFromGuide: () -> Void = {}
+    @ObservationIgnored public var tryAutoReplyFromGuide: () -> Void = {}
     /// Top-bar clipboard button: guide when history off, else history panel.
-    public var openClipboardPanel: () -> Void = {}
-    public var dismissClipboardOverlay: () -> Void = {}
-    public var insertClipboardText: (String) -> Void = { _ in }
-    public var dismissClipboardSuggestion: () -> Void = {}
-    public var clearClipboardHistory: () -> Void = {}
-    public var deleteClipboardHistoryEntry: (UUID) -> Void = { _ in }
+    @ObservationIgnored public var openClipboardPanel: () -> Void = {}
+    @ObservationIgnored public var dismissClipboardOverlay: () -> Void = {}
+    @ObservationIgnored public var insertClipboardText: (String) -> Void = { _ in }
+    @ObservationIgnored public var dismissClipboardSuggestion: () -> Void = {}
+    @ObservationIgnored public var clearClipboardHistory: () -> Void = {}
+    @ObservationIgnored public var deleteClipboardHistoryEntry: (UUID) -> Void = { _ in }
     /// Notify that the user inserted text (hides suggestion strip).
-    public var noteUserDidInputText: () -> Void = {}
+    @ObservationIgnored public var noteUserDidInputText: () -> Void = {}
     /// System globe (🌐) key target. Kept weak to avoid a state → controller
     /// ownership cycle; UIKit's standard all-touch-events action provides both
     /// tap-to-advance and long-press input-mode selection.
-    public weak var inputModeController: UIInputViewController?
-    public var startFlowSession: () -> Void = {}
-    public var setMode: (InputMode) -> Void = { _ in }
-    public var setLocale: (String) -> Void = { _ in }
-    public var setEngineMode: (String) -> Void = { _ in }
+    @ObservationIgnored public weak var inputModeController: UIInputViewController?
+    @ObservationIgnored public var startFlowSession: () -> Void = {}
+    @ObservationIgnored public var setMode: (InputMode) -> Void = { _ in }
+    @ObservationIgnored public var setLocale: (String) -> Void = { _ in }
+    @ObservationIgnored public var setEngineMode: (String) -> Void = { _ in }
     /// Only the locale picker remains; `enabled`
     /// is derived from the locale id, so there's no separate toggle to
     /// persist. Wired in `KeyboardViewController.installStateActions`.
-    public var setTranslationTargetLocaleId: (String) -> Void = { _ in }
-    public var insertNewline: () -> Void = {}
-    public var insertSpace: () -> Void = {}
-    public var deleteBackward: () -> Void = {}
+    @ObservationIgnored public var setTranslationTargetLocaleId: (String) -> Void = { _ in }
+    @ObservationIgnored public var insertNewline: () -> Void = {}
+    @ObservationIgnored public var insertSpace: () -> Void = {}
+    @ObservationIgnored public var deleteBackward: () -> Void = {}
     /// Undo the last voice insertion when `undoAvailable` is true.
-    public var undoLastInsertion: () -> Void = {}
+    @ObservationIgnored public var undoLastInsertion: () -> Void = {}
     /// Redo the last undone voice insertion when `redoAvailable` is true.
-    public var redoLastInsertion: () -> Void = {}
+    @ObservationIgnored public var redoLastInsertion: () -> Void = {}
     /// Copy the current text selection to the pasteboard.
-    public var copySelection: () -> Void = {}
+    @ObservationIgnored public var copySelection: () -> Void = {}
     /// Cut the current text selection (copy + delete).
-    public var cutSelection: () -> Void = {}
+    @ObservationIgnored public var cutSelection: () -> Void = {}
     /// Switch voice ↔ typing. No-ops when voice pipeline is active.
-    public var setSurface: (Surface) -> Void = { _ in }
+    @ObservationIgnored public var setSurface: (Surface) -> Void = { _ in }
 
     /// Recording / processing must stay on the voice surface.
     public var locksTypingSurface: Bool {

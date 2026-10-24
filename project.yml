@@ -48,8 +48,8 @@ settings:
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
-    MARKETING_VERSION: "2.1.0"
-    CURRENT_PROJECT_VERSION: "110"
+    MARKETING_VERSION: "2.1.5"
+    CURRENT_PROJECT_VERSION: "125"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -191,6 +191,7 @@ targets:
         NSContactsUsageDescription: "OSGKeyboard uses Contacts only when you choose Create Contact for a copied phone number."
         NSRemindersFullAccessUsageDescription: "OSGKeyboard adds reminders only when you choose Extract To-dos for copied text."
         NSCalendarsFullAccessUsageDescription: "OSGKeyboard adds calendar events only when you choose Extract Events for copied text."
+        NSPhotoLibraryAddUsageDescription: "OSGKeyboard saves your invitation poster to Photos only when you choose Save Image."
         UIBackgroundModes:
           - audio
         BGTaskSchedulerPermittedIdentifiers:
@@ -355,6 +356,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.keyboard
+        SWIFT_OBJC_BRIDGING_HEADER: OSGKeyboardExt/OSGKeyboardExt-Bridging-Header.h
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
@@ -400,6 +402,9 @@ targets:
           - "include/**"
     info:
       path: OSGKeyboardShared/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.shared
@@ -434,6 +439,9 @@ targets:
       - path: OSGKeyboardHostSupport
     info:
       path: OSGKeyboardHostSupport/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.hostsupport
@@ -466,6 +474,9 @@ targets:
       - path: Tests/ProviderToolRequestCoordinatorTests.swift
     info:
       path: OSGKeyboardTests/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
     dependencies:
       - target: OSGKeyboard
       - target: OSGKeyboardHostSupport
@@ -491,6 +502,9 @@ targets:
         buildPhase: resources
     info:
       path: OSGKeyboardExtTests/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
     dependencies:
       - target: OSGKeyboardShared
     settings:
@@ -510,6 +524,9 @@ targets:
       - path: OSGKeyboardUITests
     info:
       path: OSGKeyboardUITests/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
     dependencies:
       - target: OSGKeyboard
     settings:
@@ -534,6 +551,9 @@ targets:
       - path: Tests/ProviderToolRequestCoordinatorTests.swift
     info:
       path: OSGKeyboardMacTests/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
     dependencies:
       - target: OSGKeyboardMac
     settings:
@@ -584,6 +604,8 @@ targets:
       - path: OSGKeyboard/Views/Account/AccountCreditPurchaseManager.swift
       - path: OSGKeyboard/Views/Account/LiveAccountServices.swift
       - path: OSGKeyboard/Views/Account/ReferralProfileViewModel.swift
+      # Invitation QR poster: pure SwiftUI + Core Image, shared with iOS.
+      - path: OSGKeyboard/Views/Account/InvitePoster.swift
       - path: OSGKeyboard/Views/Account/AccountAppleAuthorizationFactories.swift
       - path: OSGKeyboard/Services/AccountAnalyticsBearerBridge.swift
       - path: OSGKeyboardHostSupport

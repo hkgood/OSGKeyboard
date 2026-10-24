@@ -18,6 +18,7 @@
 // is server-authoritative either way.
 
 import SwiftUI
+import UniformTypeIdentifiers
 #if os(macOS)
 import AppKit
 #endif
@@ -46,7 +47,11 @@ struct MacAccountSettingsSection: View {
                 case let .signedIn(session):
                     identityRow(session)
                     creditRows
-                    MacInviteLinkRow(profile: coordinator.referralProfile, language: lang)
+                    MacInviteLinkRow(
+                        profile: coordinator.referralProfile,
+                        inviterName: session.displayName,
+                        language: lang
+                    )
                     referralCountRows
                     accountActionsRow
                     deleteRows
@@ -58,9 +63,7 @@ struct MacAccountSettingsSection: View {
             MacL10n.string("mac.account.error.title", language: lang),
             isPresented: operationErrorBinding
         ) {
-            Button(MacL10n.string("mac.account.error.dismiss", language: lang)) {
-                coordinator.dismissOperationError()
-            }
+            Button(MacL10n.string("mac.account.error.dismiss", language: lang)) {}
         } message: {
             if let key = coordinator.operationErrorKey {
                 // The code is appended verbatim: on Mac there is no TestFlight
@@ -268,7 +271,12 @@ struct MacAccountSettingsSection: View {
         Binding(
             get: { coordinator.operationErrorKey != nil },
             set: { isPresented in
-                if !isPresented { coordinator.dismissOperationError() }
+                guard !isPresented else { return }
+                // SwiftUI writes this binding while updating the alert.
+                // Defer ObservableObject mutations until that update ends.
+                Task { @MainActor in
+                    coordinator.dismissOperationError()
+                }
             }
         )
     }
@@ -283,10 +291,12 @@ private struct MacInviteLinkRow: View {
     @ObservedObject var profile: ReferralProfileViewModel
     @Environment(\.themePalette) private var palette
 
+    let inviterName: String?
     let language: AppUILanguage
 
     @State private var didCopy = false
     @State private var copyResetTask: Task<Void, Never>?
+    @State private var isShowingPoster = false
 
     var body: some View {
         content
@@ -312,23 +322,46 @@ private struct MacInviteLinkRow: View {
                 title: MacL10n.string("mac.account.invite.link", language: language),
                 subtitle: loaded.code.inviteURL.absoluteString
             ) {
-                Button {
-                    copy(loaded.code.inviteURL)
-                } label: {
-                    Label(
-                        MacL10n.string(
-                            didCopy
-                                ? "mac.account.invite.copied"
-                                : "mac.account.invite.copy",
+                HStack(spacing: Spacing.md) {
+                    Button {
+                        isShowingPoster = true
+                    } label: {
+                        Label(
+                            MacL10n.string("mac.account.invite.qr", language: language),
+                            systemImage: "qrcode"
+                        )
+                        .font(MacSettingsType.rowLabel)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(palette.accent)
+                    .accessibilityIdentifier("mac.account.invite.qr")
+                    .popover(isPresented: $isShowingPoster, arrowEdge: .bottom) {
+                        MacInvitePosterPopover(
+                            inviteURL: loaded.code.inviteURL,
+                            shortCode: loaded.code.displayShortCode,
+                            inviterName: inviterName,
                             language: language
-                        ),
-                        systemImage: didCopy ? "checkmark" : "doc.on.doc"
-                    )
-                    .font(MacSettingsType.rowLabel)
+                        )
+                    }
+
+                    Button {
+                        copy(loaded.code.inviteURL)
+                    } label: {
+                        Label(
+                            MacL10n.string(
+                                didCopy
+                                    ? "mac.account.invite.copied"
+                                    : "mac.account.invite.copy",
+                                language: language
+                            ),
+                            systemImage: didCopy ? "checkmark" : "doc.on.doc"
+                        )
+                        .font(MacSettingsType.rowLabel)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(palette.accent)
+                    .accessibilityIdentifier("mac.account.invite.copy")
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(palette.accent)
-                .accessibilityIdentifier("mac.account.invite.copy")
             }
 
         case let .failed(messageKey):
@@ -359,5 +392,97 @@ private struct MacInviteLinkRow: View {
             guard !Task.isCancelled else { return }
             didCopy = false
         }
+    }
+}
+
+/// The same poster as iOS. On a Mac it is mostly scanned straight off the
+/// screen with a phone, or saved as a PNG to send from a chat app.
+private struct MacInvitePosterPopover: View {
+    @Environment(\.themePalette) private var palette
+    @Environment(\.colorScheme) private var colorScheme
+
+    let inviteURL: URL
+    let shortCode: String?
+    let inviterName: String?
+    let language: AppUILanguage
+
+    @State private var poster: CGImage?
+    @State private var saveFailed = false
+
+    var body: some View {
+        VStack(spacing: Spacing.md) {
+            Group {
+                if let poster {
+                    Image(decorative: poster, scale: InvitePosterRenderer.exportScale)
+                        .resizable()
+                        .scaledToFit()
+                } else {
+                    ProgressView().controlSize(.small)
+                }
+            }
+            .frame(width: 270, height: 360)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+
+            // Selectable so it can be copied into a chat on the Mac.
+            if let shortCode {
+                Text(SharedL10n.format("invite.poster.code", language: language, shortCode))
+                    .font(.system(.body, design: .monospaced, weight: .semibold))
+                    .foregroundStyle(palette.textPrimary)
+                    .textSelection(.enabled)
+                    .accessibilityIdentifier("mac.account.invite.shortCode")
+            }
+
+            Text(MacL10n.string("mac.account.invite.qrHint", language: language))
+                .font(MacSettingsType.hint)
+                .foregroundStyle(palette.textSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button(MacL10n.string("mac.account.invite.savePoster", language: language)) {
+                savePoster()
+            }
+            .disabled(poster == nil)
+            .accessibilityIdentifier("mac.account.invite.savePoster")
+
+            if saveFailed {
+                Text(MacL10n.string("mac.account.invite.saveFailed", language: language))
+                    .font(MacSettingsType.hint)
+                    .foregroundStyle(palette.danger)
+            }
+        }
+        .padding(Spacing.lg)
+        .frame(width: 310)
+        .task(id: colorScheme) {
+            poster = InvitePosterRenderer.render(
+                inviteURL: inviteURL,
+                shortCode: shortCode,
+                inviterName: inviterName,
+                language: language,
+                colorScheme: colorScheme
+            )
+        }
+    }
+
+    private func savePoster() {
+        #if os(macOS)
+        guard let poster else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.png]
+        panel.canCreateDirectories = true
+        panel.nameFieldStringValue = "OSGKeyboard-Invite.png"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        let bitmap = NSBitmapImageRep(cgImage: poster)
+        guard let data = bitmap.representation(using: .png, properties: [:]) else {
+            saveFailed = true
+            return
+        }
+        do {
+            try data.write(to: url, options: .atomic)
+            saveFailed = false
+        } catch {
+            saveFailed = true
+        }
+        #endif
     }
 }

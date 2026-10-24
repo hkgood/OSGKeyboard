@@ -10,9 +10,20 @@ import Foundation
 #if canImport(OSGKeyboardShared)
 import OSGKeyboardShared
 #endif
+#if canImport(OSGKeyboardHostSupport)
+import OSGKeyboardHostSupport
+#endif
 
 @MainActor
 final class AccountSessionCoordinator: ObservableObject {
+    /// Result of an invitation the user typed or pasted instead of opening a link.
+    enum ReferralInputOutcome: Equatable {
+        case invalidInput
+        case savedForSignIn
+        case redeemed
+        case failed(messageKey: String)
+    }
+
     enum SessionPhase: Equatable {
         case restoring
         case signedOut
@@ -208,11 +219,8 @@ final class AccountSessionCoordinator: ObservableObject {
     func handleIncomingURL(_ url: URL) -> Bool {
         guard let code = ReferralUniversalLink.code(from: url) else { return false }
 
-        pendingReferralStore.save(code)
-        pendingReferralCode = code
+        stagePendingReferral(code)
         shouldPresentAccountCenter = true
-        operationErrorKey = nil
-        operationErrorDetail = nil
         analyticsClient.recordInviteOpened()
 
         if isSignedIn {
@@ -222,6 +230,26 @@ final class AccountSessionCoordinator: ObservableObject {
             }
         }
         return true
+    }
+
+    /// Manual path for invitations that never reached the app as a Universal
+    /// Link — typically a friend who scanned a poster, installed from the App
+    /// Store, and typed the short code (or pasted the link). The outcome is
+    /// returned to the caller instead of `operationErrorKey` so the code-entry
+    /// sheet can explain it inline rather than through the global alert.
+    func submitReferralInput(_ text: String) async -> ReferralInputOutcome {
+        guard let code = ReferralUniversalLink.code(fromUserInput: text) else {
+            return .invalidInput
+        }
+        stagePendingReferral(code)
+        guard isSignedIn else { return .savedForSignIn }
+
+        if let messageKey = await redeemPendingReferral() {
+            return .failed(messageKey: messageKey)
+        }
+        await referralProfile.refresh()
+        await refreshAccountData(force: true)
+        return .redeemed
     }
 
     func consumeAccountCenterPresentation() -> Bool {
@@ -544,22 +572,84 @@ final class AccountSessionCoordinator: ObservableObject {
         sessionRevision &+= 1
     }
 
+    private func stagePendingReferral(_ code: String) {
+        pendingReferralStore.save(code)
+        pendingReferralCode = code
+        operationErrorKey = nil
+        operationErrorDetail = nil
+    }
+
     private func redeemPendingReferralIfNeeded() async {
-        guard isSignedIn, let code = pendingReferralStore.code else { return }
+        if let messageKey = await redeemPendingReferral() {
+            operationErrorKey = messageKey
+        }
+    }
+
+    /// Returns nil on success (or when nothing is pending), otherwise the
+    /// message key. Rejections the server will repeat forever drop the stored
+    /// code; transient failures keep it for the next sign-in or launch.
+    private func redeemPendingReferral() async -> String? {
+        guard isSignedIn, let code = pendingReferralStore.code else { return nil }
 
         operation = .redeemingReferral
+        defer { operation = nil }
         do {
             try await centerService.redeemReferral(code: code)
             pendingReferralStore.clear()
             pendingReferralCode = nil
+            return nil
         } catch {
-            pendingReferralCode = code
-            operationErrorKey = errorMessageKey(
-                for: error,
-                fallback: "account.error.redeemReferral"
-            )
+            let failure = Self.referralRedemptionFailure(for: error)
+            if failure.isPermanent {
+                pendingReferralStore.clear()
+                pendingReferralCode = nil
+            } else {
+                pendingReferralCode = code
+            }
+            return failure.messageKey
         }
-        operation = nil
+    }
+
+    private static func referralRedemptionFailure(
+        for error: Error
+    ) -> (messageKey: String, isPermanent: Bool) {
+        if error as? AccountIntegrationError == .unavailable {
+            return ("account.error.unavailable", false)
+        }
+        guard let apiError = error as? AccountAPIError else {
+            return ("account.error.redeemReferral", false)
+        }
+        // Referral routes answer with a bare `{"error": message}` body, so most
+        // rejections arrive as `.server` and are told apart by status code.
+        switch apiError {
+        case .invalidRequest:
+            return ("account.referral.redeem.error.invalid", true)
+        case .conflict(let message):
+            return (conflictMessageKey(for: message), true)
+        case let .server(statusCode, _, message):
+            switch statusCode {
+            case 400, 404:
+                return ("account.referral.redeem.error.invalid", true)
+            case 409:
+                return (conflictMessageKey(for: message), true)
+            case 422:
+                return ("account.referral.redeem.error.expired", true)
+            default:
+                return ("account.error.redeemReferral", false)
+            }
+        default:
+            return ("account.error.redeemReferral", false)
+        }
+    }
+
+    private static func conflictMessageKey(for message: String) -> String {
+        if message.localizedCaseInsensitiveContains("self-referral") {
+            return "account.referral.redeem.error.self"
+        }
+        if message.localizedCaseInsensitiveContains("already bound") {
+            return "account.referral.redeem.error.alreadyBound"
+        }
+        return "account.referral.redeem.error.ineligible"
     }
 
     private func errorMessageKey(for error: Error, fallback: String) -> String {

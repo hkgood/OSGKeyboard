@@ -45,6 +45,7 @@ final class LLMClientTests: XCTestCase {
 
     // MARK: - ProviderConfig persistence
 
+    @MainActor
     func testProviderConfigPersistsAcrossInstances() {
         let suiteName = "group.com.osgkeyboard.shared.tests.persist.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -64,6 +65,7 @@ final class LLMClientTests: XCTestCase {
     }
 
     /// Local ASR needs no cloud ASR key, but polish still requires a user API key.
+    @MainActor
     func testLocalEngineWithoutAPIKeyIsNotPolishConfigured() {
         let suiteName = "group.com.osgkeyboard.shared.tests.isconfigured.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -299,6 +301,7 @@ final class LLMClientTests: XCTestCase {
 
     /// Cross-process App Group contract: what `ProviderConfig` writes must
     /// be readable through `AppGroupStore` on the same suite.
+    @MainActor
     func testAppGroupCrossProcessLegacyOffModeMigratesToPolish() async {
         let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -377,6 +380,7 @@ final class LLMClientTests: XCTestCase {
         )
     }
 
+    @MainActor
     func testLiveConfigurationStoreSnapshotsAnyConfigurationStore() throws {
         let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -561,6 +565,7 @@ final class LLMClientTests: XCTestCase {
         XCTAssertNil(body["thinking_config"])
     }
 
+    @MainActor
     func testLLMThinkingDefaultIsOffInFreshConfiguration() {
         let suiteName = "group.com.osgkeyboard.shared.tests.thinking.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
