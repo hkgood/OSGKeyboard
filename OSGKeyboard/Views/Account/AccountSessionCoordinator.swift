@@ -164,6 +164,10 @@ final class AccountSessionCoordinator: ObservableObject {
         operationErrorKey = nil
         operationErrorDetail = nil
 
+        #if DEBUG && os(iOS) && targetEnvironment(simulator)
+        await adoptPendingDebugSessionHandoff()
+        #endif
+
         do {
             guard let session = try await sessionService.restoreSession() else {
                 await sessionService.clearManagedGateway()
@@ -544,7 +548,7 @@ final class AccountSessionCoordinator: ObservableObject {
     }
 
     private func expireSession(
-        errorKey: String,
+        errorKey: String?,
         signsOutService: Bool
     ) async {
         guard isSignedIn else { return }
@@ -571,6 +575,48 @@ final class AccountSessionCoordinator: ObservableObject {
     private func advanceSessionRevision() {
         sessionRevision &+= 1
     }
+
+    #if DEBUG
+    /// Signs this app out without a server logout and writes the session to
+    /// `directory`: the AirDrop file on a device, or the Simulator's own
+    /// import location to park it (`debugResumeParkedSession()` brings it back).
+    func debugRelinquishSession(writingTo directory: URL) async throws -> URL {
+        guard isSignedIn, operation == nil else {
+            throw AccountAPIError.sessionUnavailable
+        }
+        guard let handoff = sessionService as? any DebugAccountSessionHandingOff else {
+            throw DebugAccountSessionHandoff.HandoffError.unsupportedService
+        }
+        let session = try await handoff.debugRelinquishSession()
+        await expireSession(errorKey: nil, signsOutService: false)
+        return try DebugAccountSessionHandoff.writeExportFile(session, directory: directory)
+    }
+
+    #if os(iOS) && targetEnvironment(simulator)
+    /// Re-runs restore, which adopts the parked handoff file first.
+    func debugResumeParkedSession() async {
+        guard !isSignedIn, operation == nil else { return }
+        didAttemptRestore = false
+        await restoreIfNeeded()
+    }
+    #endif
+
+    private func adoptPendingDebugSessionHandoff() async {
+        guard let handoff = sessionService as? any DebugAccountSessionHandingOff,
+              let session = DebugAccountSessionHandoff.consumePendingImport() else {
+            return
+        }
+        do {
+            try await handoff.debugAdoptSession(session)
+            OSGDiag.log("debug session handoff adopted", category: "account")
+        } catch {
+            OSGDiag.log(
+                "debug session handoff failed error=\(AccountDiagnostic.code(for: error))",
+                category: "account"
+            )
+        }
+    }
+    #endif
 
     private func stagePendingReferral(_ code: String) {
         pendingReferralStore.save(code)

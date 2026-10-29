@@ -418,6 +418,12 @@ private actor LiveAccountService:
     }
 
     func appleCredentialState() async -> AccountAppleCredentialState {
+        #if DEBUG && targetEnvironment(simulator)
+        if let session = try? await apiClient.currentSession(),
+           DebugAccountSessionHandoff.isImported(accountID: session.accountId) {
+            return .unknown
+        }
+        #endif
         let userIdentifier: String?
         do {
             userIdentifier = try await appleUserIdentifiers.loadAppleUserIdentifier()
@@ -619,6 +625,26 @@ private actor LiveAccountService:
     }
 
 }
+
+#if DEBUG
+extension LiveAccountService: DebugAccountSessionHandingOff {
+    func debugRelinquishSession() async throws -> AccountTokenSession {
+        // Revoke while the session still exists; the grant is per device.
+        await revokeManagedGrantIfPossible()
+        let session = try await apiClient.debugRelinquishSession()
+        await invalidateManagedGatewaySession()
+        try? await appleUserIdentifiers.clearAppleUserIdentifier()
+        return session
+    }
+
+    func debugAdoptSession(_ session: AccountTokenSession) async throws {
+        // Drop any grant cached for a previous account on this Simulator.
+        await invalidateManagedGatewaySession()
+        try await apiClient.debugAdoptSession(session)
+        DebugAccountSessionHandoff.markImported(accountID: session.accountId)
+    }
+}
+#endif
 
 /// Stable, non-identifying failure codes for account traffic. Logged on both
 /// platforms and — on macOS, where sign-in has no App Store receipt trail to

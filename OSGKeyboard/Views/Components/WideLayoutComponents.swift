@@ -20,6 +20,24 @@ enum WideLayoutMetrics {
     static let sidebarContentInset: CGFloat = sidebarInset + Spacing.sm
     static let pageHorizontalInset: CGFloat = 40
     static let dictationCanvasMinHeight: CGFloat = 120
+
+    /// Wide pages keep at least this much room between the window's top edge
+    /// and their content, so the first row clears the rounded display corner.
+    static let minimumTopClearance: CGFloat = Spacing.md
+
+    /// Extra top padding for wide pages. A status bar above the content
+    /// (iPad, the portrait iPhone Duo inner display) already provides the
+    /// room; the landscape inner display moves the status bar to the side and
+    /// leaves a zero top safe area, so the content needs its own clearance.
+    static func topCornerClearance(topSafeAreaInset: CGFloat) -> CGFloat {
+        max(0, minimumTopClearance - topSafeAreaInset)
+    }
+}
+
+extension EnvironmentValues {
+    /// `WideLayoutMetrics.topCornerClearance` for the current window,
+    /// published by `MainTabView`.
+    @Entry var wideTopCornerClearance: CGFloat = 0
 }
 
 // MARK: - Card container

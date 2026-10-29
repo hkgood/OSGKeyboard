@@ -27,12 +27,32 @@ enum TypingLayoutMetrics {
 
     // MARK: - iPad (regular size class) metrics
 
-    static func metrics(isIPad: Bool, width: CGFloat) -> TypingKeyLayoutBuilder.Metrics {
-        TypingSurfaceMetrics.metrics(isIPad: isIPad, width: width)
+    static func metrics(
+        isIPad: Bool,
+        width: CGFloat,
+        isExpandedPhone: Bool = false,
+        isCompactHeightPhone: Bool = false
+    ) -> TypingKeyLayoutBuilder.Metrics {
+        TypingSurfaceMetrics.metrics(
+            isIPad: isIPad,
+            width: width,
+            isExpandedPhone: isExpandedPhone,
+            isCompactHeightPhone: isCompactHeightPhone
+        )
     }
 
-    static func contentHeight(isIPad: Bool, width: CGFloat) -> CGFloat {
-        TypingSurfaceMetrics.contentHeight(isIPad: isIPad, width: width)
+    static func contentHeight(
+        isIPad: Bool,
+        width: CGFloat,
+        isExpandedPhone: Bool = false,
+        isCompactHeightPhone: Bool = false
+    ) -> CGFloat {
+        TypingSurfaceMetrics.contentHeight(
+            isIPad: isIPad,
+            width: width,
+            isExpandedPhone: isExpandedPhone,
+            isCompactHeightPhone: isCompactHeightPhone
+        )
     }
 }
 
@@ -50,8 +70,18 @@ struct TypingRootView: View {
     /// Keys currently under a finger (grid-level touch pad, multi-touch).
     @State private var highlightedKeyIDs: Set<String> = []
 
-    static func totalHeight(isIPad: Bool = false, width: CGFloat = 0) -> CGFloat {
-        TypingLayoutMetrics.contentHeight(isIPad: isIPad, width: width)
+    static func totalHeight(
+        isIPad: Bool = false,
+        width: CGFloat = 0,
+        isExpandedPhone: Bool = false,
+        isCompactHeightPhone: Bool = false
+    ) -> CGFloat {
+        TypingLayoutMetrics.contentHeight(
+            isIPad: isIPad,
+            width: width,
+            isExpandedPhone: isExpandedPhone,
+            isCompactHeightPhone: isCompactHeightPhone
+        )
     }
 
     private var palette: ThemePalette {
@@ -95,7 +125,9 @@ struct TypingRootView: View {
         .frame(
             height: Self.totalHeight(
                 isIPad: state.usesIPadLayoutMetrics,
-                width: state.layoutWidth
+                width: state.layoutWidth,
+                isExpandedPhone: state.usesExpandedPhoneLayoutMetrics,
+                isCompactHeightPhone: state.usesCompactHeightPhoneLayoutMetrics
             )
         )
         .background(Color.clear)
@@ -569,7 +601,12 @@ struct TypingRootView: View {
         // keyboard. Using `size` here would compare the grid's own width to
         // its height (always landscape) and could pick a different bucket than
         // the height constraint, clipping the bottom row.
-        let metrics = TypingLayoutMetrics.metrics(isIPad: isIPad, width: state.layoutWidth)
+        let metrics = TypingLayoutMetrics.metrics(
+            isIPad: isIPad,
+            width: state.layoutWidth,
+            isExpandedPhone: state.usesExpandedPhoneLayoutMetrics,
+            isCompactHeightPhone: state.usesCompactHeightPhoneLayoutMetrics
+        )
         let pageLabel = typing.page == .letters ? "123" : "ABC"
         let spaceLabel = typing.language == .chinese ? "空格" : "space"
         let returnLabel: String = {

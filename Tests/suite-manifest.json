@@ -26,6 +26,7 @@
       "platform": "ios",
       "tests": [
         "OSGKeyboardTests/AccountAPIClientTests",
+        "OSGKeyboardTests/DebugAccountSessionHandoffTests",
         "OSGKeyboardTests/AccountCenterViewModelTests",
         "OSGKeyboardTests/AccountCreditPurchaseManagerTests",
         "OSGKeyboardTests/AccountSecurityPrimitiveTests",
@@ -152,6 +153,7 @@
         "OSGKeyboardTests/FlowPiPLossReportGateTests",
         "OSGKeyboardTests/FlowSessionWarningReportGateTests",
         "OSGKeyboardTests/FlowHomePiPStatusPolicyTests",
+        "OSGKeyboardTests/HomeAccountSurfacePolicyTests",
         "OSGKeyboardTests/FlowPiPRecoveryPolicyTests",
         "OSGKeyboardTests/FlowAdaptiveDownsamplerTests",
         "OSGKeyboardTests/FlowSessionBridgeTests",

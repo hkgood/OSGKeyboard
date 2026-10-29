@@ -47,19 +47,11 @@ struct EnginePickerSection<ConfigurationRows: View>: View {
             }
             .surfaceCard()
         }
-        .alert(
-            AppL10n.string("settings.aiService.credits.consent.title"),
-            isPresented: $showsManagedCloudConsent
-        ) {
-            Button(AppL10n.string("common.cancel"), role: .cancel) {}
-            Button(AppL10n.string("settings.aiService.credits.consent.accept")) {
-                config.hasAcknowledgedCloudSharing = true
-                activateManagedService()
-            }
-            .accessibilityIdentifier("settings.aiService.credits.consent.accept")
-        } message: {
-            Text(AppL10n.string("settings.aiService.credits.consent.message"))
-        }
+        .managedCloudConsentAlert(
+            isPresented: $showsManagedCloudConsent,
+            config: config,
+            onAccept: activateManagedService
+        )
     }
 
     private func serviceOptionRow(
@@ -118,13 +110,10 @@ struct EnginePickerSection<ConfigurationRows: View>: View {
 
     private func activateManagedService() {
         Task {
-            if await accountSession.prepareManagedGateway() {
-                withAnimation(Motion.quick) {
-                    config.engineMode = "cloud"
-                    config.modeId = "polish"
-                    config.credentialSource = .managed
-                }
-            }
+            await ManagedServiceActivation.activate(
+                config: config,
+                accountSession: accountSession
+            )
         }
     }
 }

@@ -40,7 +40,8 @@ public enum ClipboardSkillSemanticRanker {
         sourceText: String,
         analysis: ClipboardSemanticAnalysis,
         uiLanguage _: AppUILanguage,
-        preferredLanguages: [String] = Locale.preferredLanguages
+        preferredLanguages: [String] = Locale.preferredLanguages,
+        translationTargetLocaleId: String = TranslationLanguageCatalog.offLocaleId
     ) -> [AIClipboardSkill] {
         guard skills.count > 1 else { return skills }
         return sorted(
@@ -48,7 +49,8 @@ public enum ClipboardSkillSemanticRanker {
             scores: relevanceScores(
                 sourceText: sourceText,
                 analysis: analysis,
-                preferredLanguages: preferredLanguages
+                preferredLanguages: preferredLanguages,
+                translationTargetLocaleId: translationTargetLocaleId
             )
         )
     }
@@ -61,13 +63,15 @@ public enum ClipboardSkillSemanticRanker {
         analysis: ClipboardSemanticAnalysis,
         uiLanguage _: AppUILanguage,
         limit: Int,
-        preferredLanguages: [String] = Locale.preferredLanguages
+        preferredLanguages: [String] = Locale.preferredLanguages,
+        translationTargetLocaleId: String = TranslationLanguageCatalog.offLocaleId
     ) -> [AIClipboardSkill] {
         guard limit > 0 else { return [] }
         var scores = relevanceScores(
             sourceText: sourceText,
             analysis: analysis,
-            preferredLanguages: preferredLanguages
+            preferredLanguages: preferredLanguages,
+            translationTargetLocaleId: translationTargetLocaleId
         )
         let genericReply = suppressesInterpersonalRouting(analysis, sourceText: sourceText)
             ? nil
@@ -114,7 +118,8 @@ public enum ClipboardSkillSemanticRanker {
     private static func relevanceScores(
         sourceText: String,
         analysis: ClipboardSemanticAnalysis,
-        preferredLanguages: [String]
+        preferredLanguages: [String],
+        translationTargetLocaleId: String
     ) -> [String: Int] {
         var scores: [String: Int] = [:]
         func boost(_ id: String, _ value: Int) {
@@ -149,7 +154,20 @@ public enum ClipboardSkillSemanticRanker {
             analysis.language,
             preferredLanguages: preferredLanguages
         ) {
+            // Foreign text: translate it into the device language (auto-translate
+            // uses the same path) and offer to polish it in its own language.
+            // Polish is a secondary option, so it ranks below a real Reply.
             boost(AIClipboardSkillCatalog.translateID, 230)
+            boost(AIClipboardSkillCatalog.polishOriginalID, 100)
+        } else if isDeviceLanguage(
+            analysis.language,
+            preferredLanguages: preferredLanguages
+        ), canTranslateToTarget(
+            from: analysis.language,
+            translationTargetLocaleId: translationTargetLocaleId
+        ) {
+            // Device-language text: offer the user's configured target language.
+            boost(AIClipboardSkillCatalog.translateToTargetID, 225)
         }
 
         if analysis.hasAddress {
@@ -387,6 +405,39 @@ public enum ClipboardSkillSemanticRanker {
             targetIdentifier: SystemLanguageResolver.primaryIdentifier(
                 preferredLanguages: preferredLanguages
             )
+        )
+    }
+
+    /// Confidently the device's primary language — the counterpart of
+    /// `isLanguageMismatch`. An unknown / low-confidence label is neither.
+    private static func isDeviceLanguage(
+        _ language: ClipboardLanguageLabel?,
+        preferredLanguages: [String]
+    ) -> Bool {
+        guard let language, language.confidence >= languageConfidenceThreshold else {
+            return false
+        }
+        return SystemLanguageResolver.isSameLanguage(
+            sourceIdentifier: language.identifier,
+            targetIdentifier: SystemLanguageResolver.primaryIdentifier(
+                preferredLanguages: preferredLanguages
+            )
+        )
+    }
+
+    /// "Translate to <target>" needs a real target that differs from the
+    /// copy's own language; translating into the same language is a no-op.
+    private static func canTranslateToTarget(
+        from language: ClipboardLanguageLabel?,
+        translationTargetLocaleId: String
+    ) -> Bool {
+        guard let language,
+              !TranslationLanguageCatalog.isOff(translationTargetLocaleId) else {
+            return false
+        }
+        return !SystemLanguageResolver.isSameLanguage(
+            sourceIdentifier: language.identifier,
+            targetIdentifier: translationTargetLocaleId
         )
     }
 

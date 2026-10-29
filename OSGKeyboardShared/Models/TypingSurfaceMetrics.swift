@@ -29,6 +29,27 @@ public enum TypingSurfaceMetrics {
     public static let keyHorizontalSpacing: CGFloat = 6
     public static let secondRowInset: CGFloat = 18
 
+    // MARK: - Expanded phone (unfolded iPhone Duo inner display)
+
+    /// The system keyboard on the inner display keeps the iPhone key layout at
+    /// ~38.5 pt rows inside a 263 pt panel, and the system adds ~23 pt of
+    /// chrome around a custom input view. These rows give a 260 pt shell —
+    /// still roomy for the voice surface's live transcript — so the panel
+    /// stays ~20 pt above the system one instead of ~40 pt.
+    public static let expandedPhoneKeyRowHeight: CGFloat = 41
+    public static let expandedPhoneKeyRowSpacing: CGFloat = 12
+    public static let expandedPhoneKeyHorizontalSpacing: CGFloat = 10
+
+    // MARK: - Compact-height phone (any iPhone in landscape, incl. Duo outer)
+
+    /// A landscape iPhone is only ~400–470 pt tall, so the 281 pt portrait
+    /// panel would take 60–70% of it. These rows give a 244 pt shell — enough
+    /// for the voice surface to centre its mic and still fit the 3-line live
+    /// transcript above it — instead of following the system keyboard down
+    /// to ~200 pt.
+    public static let compactHeightPhoneKeyRowHeight: CGFloat = 40
+    public static let compactHeightPhoneKeyRowSpacing: CGFloat = 8
+
     // MARK: - iPad (narrow: portrait, or a compact-ish regular window)
 
     public static let iPadKeyRowHeight: CGFloat = 54
@@ -47,8 +68,43 @@ public enum TypingSurfaceMetrics {
     /// Key metrics for a device class and available width. Width — not device
     /// orientation — picks the wide bucket, so a resized Stage Manager window
     /// lands on the right metrics without consulting orientation at all.
-    public static func metrics(isIPad: Bool, width: CGFloat) -> TypingKeyLayoutBuilder.Metrics {
+    /// `isExpandedPhone` / `isCompactHeightPhone` are only meaningful when
+    /// `isIPad` is false, and never true together (regular vs compact height).
+    public static func metrics(
+        isIPad: Bool,
+        width: CGFloat,
+        isExpandedPhone: Bool = false,
+        isCompactHeightPhone: Bool = false
+    ) -> TypingKeyLayoutBuilder.Metrics {
         guard isIPad else {
+            if isCompactHeightPhone {
+                return TypingKeyLayoutBuilder.Metrics(
+                    keyRowHeight: compactHeightPhoneKeyRowHeight,
+                    keyRowSpacing: compactHeightPhoneKeyRowSpacing,
+                    keyHorizontalSpacing: keyHorizontalSpacing,
+                    // Ignored: landscape keys are ~70 pt wide and need the
+                    // system's half-key indent, not the portrait 18 pt.
+                    secondRowInset: 0,
+                    bottomRowHeight: compactHeightPhoneKeyRowHeight,
+                    bottomActionSpacing: KeyboardChromeLayout.actionKeySpacing,
+                    gridToBottomSpacing: compactHeightPhoneKeyRowSpacing,
+                    derivesSecondRowInsetFromKeyWidth: true
+                )
+            }
+            if isExpandedPhone {
+                return TypingKeyLayoutBuilder.Metrics(
+                    keyRowHeight: expandedPhoneKeyRowHeight,
+                    keyRowSpacing: expandedPhoneKeyRowSpacing,
+                    keyHorizontalSpacing: expandedPhoneKeyHorizontalSpacing,
+                    // Ignored: wide keys need the system's half-key indent.
+                    secondRowInset: 0,
+                    bottomRowHeight: expandedPhoneKeyRowHeight,
+                    // Bottom-row widths are pre-split with this spacing.
+                    bottomActionSpacing: KeyboardChromeLayout.actionKeySpacing,
+                    gridToBottomSpacing: expandedPhoneKeyRowSpacing,
+                    derivesSecondRowInsetFromKeyWidth: true
+                )
+            }
             return TypingKeyLayoutBuilder.Metrics(
                 keyRowHeight: keyRowHeight,
                 keyRowSpacing: keyRowSpacing,
@@ -77,9 +133,19 @@ public enum TypingSurfaceMetrics {
 
     /// Content-driven keyboard height. iPad grows its rows, so the shell has to
     /// grow with them or the bottom row is clipped.
-    public static func contentHeight(isIPad: Bool, width: CGFloat) -> CGFloat {
-        guard isIPad else { return KeyboardChromeLayout.totalHeight }
-        let m = metrics(isIPad: true, width: width)
+    public static func contentHeight(
+        isIPad: Bool,
+        width: CGFloat,
+        isExpandedPhone: Bool = false,
+        isCompactHeightPhone: Bool = false
+    ) -> CGFloat {
+        guard isIPad || isExpandedPhone || isCompactHeightPhone else { return KeyboardChromeLayout.totalHeight }
+        let m = metrics(
+            isIPad: isIPad,
+            width: width,
+            isExpandedPhone: isExpandedPhone,
+            isCompactHeightPhone: isCompactHeightPhone
+        )
         let inner = topRegionHeight
             + verticalKeySpacing
             + (3 * m.keyRowHeight + 2 * m.keyRowSpacing)

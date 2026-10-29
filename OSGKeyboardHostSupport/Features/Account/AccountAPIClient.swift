@@ -716,6 +716,36 @@ public actor AccountAPIClient {
     }
 }
 
+#if DEBUG
+/// Debug-only device → Simulator session handoff. The Simulator cannot produce
+/// DeviceCheck / App Attest evidence, so it cannot sign in, but refresh and
+/// gateway grants only need the session itself.
+extension AccountAPIClient {
+    /// Returns the session and forgets it on this device within one call, so
+    /// this client can never rotate the refresh token the Simulator now owns
+    /// (the server would treat a second rotation as reuse and revoke both).
+    /// Throws while a refresh is in flight: the token may already be spent.
+    public func debugRelinquishSession() async throws -> AccountTokenSession {
+        guard refreshOperation == nil,
+              let session = try await reloadSessionFromVault() else {
+            throw AccountAPIError.sessionUnavailable
+        }
+        try await clearSession()
+        guard refreshOperation == nil else {
+            throw AccountAPIError.sessionUnavailable
+        }
+        return session
+    }
+
+    /// Installs a session relinquished by another device, replacing any
+    /// cached one so the next request uses it.
+    public func debugAdoptSession(_ session: AccountTokenSession) async throws {
+        try await replaceSession(with: session)
+        try? await sessionVault.clearRefreshTransaction()
+    }
+}
+#endif
+
 extension Data {
     func base64URLEncodedString() -> String {
         base64EncodedString()

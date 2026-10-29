@@ -73,6 +73,12 @@ struct FlowDiagnosticsSettingsView: View {
                     corpusExportSection
                 }
 
+                #if DEBUG && targetEnvironment(simulator)
+                DebugAccountParkingSection()
+                #elseif DEBUG
+                DebugAccountHandoffSection()
+                #endif
+
                 CardSection(title: AppL10n.string("settings.diagnostics.privacy.section")) {
                     Text(privacyBodyText)
                         .font(TypeStyle.caption2)

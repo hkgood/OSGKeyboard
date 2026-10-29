@@ -13,13 +13,15 @@ struct MainSplitView: View {
     @Binding var selection: AppTab
 
     @Environment(\.themePalette) private var palette
-
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @Environment(\.wideTopCornerClearance) private var topCornerClearance
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
+        // Sidebar is always visible: once collapsed, iPhone Duo offers no
+        // control to bring it back.
+        NavigationSplitView(columnVisibility: .constant(.all)) {
             sidebar
                 .navigationSplitViewColumnWidth(WideLayoutMetrics.sidebarWidth)
+                .toolbar(removing: .sidebarToggle)
         } detail: {
             detail
         }
@@ -46,55 +48,44 @@ struct MainSplitView: View {
             }
             .padding(.horizontal, WideLayoutMetrics.sidebarInset)
             Spacer()
-            devicesFooter
+            WideSidebarStatusBar()
+                .padding(.bottom, Spacing.xxs)
         }
         .background(palette.background)
     }
 
     private var brandHeader: some View {
         HStack {
-            // Match macOS sidebar: template wide mark tinted with accent so
-            // light / dark both stay readable (PNG `osglogo` can fail to
-            // show under NavigationSplitView chrome on some iPad sizes).
+            // Match macOS sidebar: template wide mark tinted with the primary
+            // text color so light / dark both stay readable (PNG `osglogo` can
+            // fail to show under NavigationSplitView chrome on some iPad sizes).
             Image("OSGLogoWide")
                 .renderingMode(.template)
                 .resizable()
                 .scaledToFit()
                 .frame(height: 28)
-                .foregroundStyle(palette.accent)
+                .foregroundStyle(palette.textPrimary)
                 .accessibilityLabel("OSGKeyboard")
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
         .padding(.leading, WideLayoutMetrics.sidebarContentInset)
         .padding(.trailing, WideLayoutMetrics.sidebarInset)
-        .padding(.top, Spacing.lg)
+        .padding(.top, Spacing.lg + topCornerClearance)
         // Roughly double the gap between the brand header and the first
         // sidebar row on iPad so the logo gets visual breathing room above
         // the menu list (was `Spacing.md`, now `Spacing.xxxl`).
         .padding(.bottom, Spacing.xxxl)
     }
 
-    private var devicesFooter: some View {
-        Label(AppL10n.string("home.wide.devices"), systemImage: "ipad.and.iphone")
-            .font(TypeStyle.caption2)
-            .foregroundStyle(palette.textTertiary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, WideLayoutMetrics.sidebarInset + Spacing.sm)
-            .padding(.vertical, Spacing.sm)
-    }
-
     // MARK: - Detail
 
     private var detail: some View {
-        VStack(spacing: 0) {
-            MainTabContent(tab: selection)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .id(selection)
-                .transition(.opacity)
-            WideStatusFooter()
-        }
-        .background(palette.background)
+        MainTabContent(tab: selection)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .id(selection)
+            .transition(.opacity)
+            .background(palette.background)
     }
 }
 
@@ -147,7 +138,7 @@ private struct WideSidebarRow: View {
 /// automatically; this hand-rolled `VStack` sidebar has to do it itself.
 private struct SidebarIconColumnLabelStyle: LabelStyle {
     /// Wider than the widest symbol in `AppTab.sidebarSystemImage(selected:)`.
-    private static let iconColumnWidth: CGFloat = 22
+    static let iconColumnWidth: CGFloat = 22
 
     func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: Spacing.xs) {
@@ -158,22 +149,31 @@ private struct SidebarIconColumnLabelStyle: LabelStyle {
     }
 }
 
-// MARK: - Status footer
+// MARK: - Sidebar status
 
-/// Quiet bottom strip: engine mode + translation target + Flow readiness.
-private struct WideStatusFooter: View {
+/// Sidebar bottom toolbar: Flow session toggle, engine, and translation as
+/// icon buttons, with the session state as a single trailing word.
+private struct WideSidebarStatusBar: View {
+    /// 36pt hit target per button; the icon glyph stays at sidebar size.
+    static let buttonSize: CGFloat = 36
+
     @Environment(\.themePalette) private var palette
     @ObservedObject private var config = ProviderConfig.shared
     @EnvironmentObject private var flowManager: FlowSessionManager
+    @EnvironmentObject private var accountSession: AccountSessionCoordinator
 
     @State private var micStatus = AppPermissions.micStatus
     @State private var speechStatus = AppPermissions.speechStatus
 
+    /// Same readiness rule as Home, so the footer and the Home account card
+    /// never disagree about whether dictation works.
     private var needsAPIKeySetup: Bool {
-        if config.isLocalEngine {
-            return !config.isPolishConfigured
-        }
-        return !config.isConfigured
+        !HomeAccountSurfacePolicy.readiness(
+            credentialSource: config.credentialSource,
+            account: accountSession.sessionPhase == .signedOut ? .signedOut : .signedIn,
+            isASRConfigured: config.isASRConfigured,
+            isPolishConfigured: config.isPolishConfigured
+        ).canDictate
     }
 
     private var needsPermissionSetup: Bool {
@@ -184,34 +184,42 @@ private struct WideStatusFooter: View {
         !flowManager.isActive && !flowManager.isStarting && !needsPermissionSetup
     }
 
+    private var isCloudEngine: Bool {
+        config.engineMode == "cloud"
+    }
+
+    private var isTranslating: Bool {
+        !TranslationLanguageCatalog.isOff(config.translationTargetLocaleId)
+    }
+
+    /// Centers the first button on the sidebar menu's icon column.
+    private var leadingInset: CGFloat {
+        WideLayoutMetrics.sidebarContentInset
+            + (SidebarIconColumnLabelStyle.iconColumnWidth - Self.buttonSize) / 2
+    }
+
     var body: some View {
-        HStack(spacing: Spacing.sm) {
-            Spacer()
-            Label(
-                config.engineMode == "cloud" ? "home.wide.mode.cloud" : "home.wide.mode.local",
-                systemImage: config.engineMode == "cloud" ? "cloud" : "cpu"
-            )
-            .contentTransition(.opacity)
+        VStack(spacing: Spacing.xs) {
+            Divider()
+                .overlay(palette.divider)
+                .padding(.horizontal, WideLayoutMetrics.sidebarInset)
 
-            Text("·")
-                .foregroundStyle(palette.textTertiary.opacity(0.5))
+            HStack(spacing: Spacing.xxs) {
+                sessionButton
+                engineButton
+                translationButton
 
-            Label(
-                translationLabel,
-                systemImage: "translate"
-            )
-            .contentTransition(.opacity)
+                Spacer(minLength: Spacing.xs)
 
-            Text("·")
-                .foregroundStyle(palette.textTertiary.opacity(0.5))
-
-            flowStatusControl
+                sessionStatusText
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(flowStatusColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .padding(.leading, leadingInset)
+            .padding(.trailing, WideLayoutMetrics.sidebarContentInset)
         }
-        .font(TypeStyle.caption2)
-        .foregroundStyle(palette.textTertiary)
-        .labelStyle(.titleAndIcon)
-        .padding(.horizontal, WideLayoutMetrics.pageHorizontalInset)
-        .padding(.vertical, Spacing.sm)
         .animation(Motion.quick, value: config.engineMode)
         .animation(Motion.quick, value: config.translationTargetLocaleId)
         .animation(Motion.soft, value: flowManager.isActive)
@@ -221,52 +229,166 @@ private struct WideStatusFooter: View {
         }
     }
 
-    @ViewBuilder
-    private var flowStatusControl: some View {
-        HStack(spacing: Spacing.xs) {
-            Circle()
-                .fill(flowStatusColor)
-                .frame(width: 6, height: 6)
+    // MARK: Session
 
-            if needsAPIKeySetup {
-                Text(AppL10n.string("home.flow.notReady"))
-                    .foregroundStyle(palette.warning)
-            } else if flowManager.isUtteranceRecording {
-                Text(AppL10n.string("home.flow.recording"))
-            } else if flowManager.isUtteranceProcessing {
-                Text(AppL10n.string("home.flow.processing"))
-            } else if flowManager.isActive,
-                      FlowSessionBridge.isHostReady(),
-                      let expires = flowManager.sessionExpiresAt {
-                Text(AppL10n.string("home.flow.label"))
-                Text(":")
-                Text(expires, style: .timer)
-                    .monospacedDigit()
-            } else {
-                Text(AppL10n.string(flowStatusLabel))
-            }
-
-            if flowManager.isActive {
-                Button {
-                    flowManager.endSession()
-                } label: {
-                    Text(AppL10n.string("home.flow.endShort"))
-                        .foregroundStyle(palette.accent)
+    /// Starts or ends the session; when the service isn't set up it opens
+    /// Settings instead, since starting would only fail.
+    private var sessionButton: some View {
+        Button(action: handleSessionTap) {
+            toolbarIcon(
+                flowManager.isActive ? "mic.fill" : "mic",
+                tint: sessionIconTint,
+                isHighlighted: flowManager.isActive
+            )
+            .overlay(alignment: .topTrailing) {
+                // An idle session needs no badge; the grey glyph says enough.
+                if showsStatusDot {
+                    Circle()
+                        .fill(flowStatusColor)
+                        .frame(width: 6, height: 6)
+                        .padding(Spacing.xs)
                 }
-                .buttonStyle(.plain)
-            } else if canManuallyStartSession && !needsAPIKeySetup {
-                Button {
-                    flowManager.activateOnForeground(
-                        reason: "MainSplitView.startButton",
-                        startCapture: true
-                    )
-                } label: {
-                    Text(AppL10n.string("home.flow.startShort"))
-                        .foregroundStyle(palette.accent)
-                }
-                .buttonStyle(.plain)
             }
         }
+        .buttonStyle(.plain)
+        .disabled(!canTapSession)
+        .help(AppL10n.string(sessionActionKey))
+        .accessibilityLabel(AppL10n.string(sessionActionKey))
+    }
+
+    private var sessionIconTint: Color {
+        if needsAPIKeySetup { return palette.warning }
+        return flowManager.isActive ? palette.accent : palette.textSecondary
+    }
+
+    private var showsStatusDot: Bool {
+        needsAPIKeySetup || flowManager.isActive || flowManager.isStarting
+    }
+
+    private var canTapSession: Bool {
+        flowManager.isActive || needsAPIKeySetup || canManuallyStartSession
+    }
+
+    private var sessionActionKey: String {
+        if flowManager.isActive { return "home.flow.end" }
+        if needsAPIKeySetup { return "home.wide.status.setUp" }
+        return "home.flow.start"
+    }
+
+    private func handleSessionTap() {
+        if flowManager.isActive {
+            flowManager.endSession()
+        } else if needsAPIKeySetup {
+            openSettings(.aiService)
+        } else if canManuallyStartSession {
+            flowManager.activateOnForeground(
+                reason: "MainSplitView.startButton",
+                startCapture: true
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var sessionStatusText: some View {
+        if needsAPIKeySetup {
+            Text(AppL10n.string("home.flow.notReady"))
+        } else if flowManager.isUtteranceRecording {
+            Text(AppL10n.string("home.flow.recording"))
+        } else if flowManager.isUtteranceProcessing {
+            Text(AppL10n.string("home.flow.processing"))
+        } else if flowManager.isActive,
+                  FlowSessionBridge.isHostReady(),
+                  let expires = flowManager.sessionExpiresAt {
+            HStack(spacing: Spacing.xxs) {
+                Text(AppL10n.string("home.flow.label"))
+                Text(expires, style: .timer)
+                    .monospacedDigit()
+            }
+        } else {
+            Text(AppL10n.string(flowStatusLabel))
+        }
+    }
+
+    // MARK: Engine and translation
+
+    /// Engine changes involve sign-in, credits, and cloud consent, so the
+    /// button opens Settings instead of switching in place.
+    private var engineButton: some View {
+        Button {
+            openSettings(.aiService)
+        } label: {
+            toolbarIcon(isCloudEngine ? "cloud" : "cpu", tint: palette.textSecondary)
+        }
+        .buttonStyle(.plain)
+        .help(toolbarHelp(titleKey: "home.wide.status.engine", value: engineLabel))
+        .accessibilityLabel(AppL10n.string("home.wide.status.engine"))
+        .accessibilityValue(engineLabel)
+    }
+
+    private var translationButton: some View {
+        Menu {
+            Picker("", selection: translationSelection) {
+                ForEach(TranslationLanguageCatalog.all) { language in
+                    Text(translationDisplayLabel(for: language))
+                        .tag(language.id)
+                }
+            }
+            .labelsHidden()
+        } label: {
+            toolbarIcon(
+                "globe",
+                tint: isTranslating ? palette.accent : palette.textSecondary,
+                isHighlighted: isTranslating
+            )
+        }
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
+        .help(toolbarHelp(titleKey: "home.wide.status.translation", value: translationLabel))
+        .accessibilityLabel(AppL10n.string("home.wide.status.translation"))
+        .accessibilityValue(translationLabel)
+    }
+
+    private var engineLabel: String {
+        AppL10n.string(isCloudEngine ? "home.wide.mode.cloud" : "home.wide.mode.local")
+    }
+
+    private func toolbarHelp(titleKey: String, value: String) -> String {
+        "\(AppL10n.string(titleKey)) · \(value)"
+    }
+
+    private func toolbarIcon(
+        _ systemImage: String,
+        tint: Color,
+        isHighlighted: Bool = false
+    ) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Radius.small, style: .continuous)
+        return Image(systemName: systemImage)
+            .font(.system(size: 15, weight: .regular))
+            .foregroundStyle(tint)
+            .frame(width: Self.buttonSize, height: Self.buttonSize)
+            .background(isHighlighted ? palette.accentMuted : .clear, in: shape)
+            .contentShape(shape)
+            .hoverEffect(.highlight)
+            .contentTransition(.symbolEffect(.replace))
+    }
+
+    private func openSettings(_ link: SettingsDeepLink) {
+        SettingsDeepLink.setPending(link)
+        NotificationCenter.default.post(name: .osgOpenSettingsDeepLink, object: nil)
+    }
+
+    /// Same single field as Settings ▸ Translation (`TranslationPickerRow`).
+    private var translationSelection: Binding<String> {
+        Binding(
+            get: { config.translationTargetLocaleId },
+            set: { config.translationTargetLocaleId = TranslationLanguageCatalog.resolve($0).id }
+        )
+    }
+
+    private func translationDisplayLabel(for language: TranslationLanguage) -> String {
+        TranslationLanguageCatalog.isOff(language.id)
+            ? AppL10n.string("settings.translation.off")
+            : language.nativeName
     }
 
     private func refreshPermissionStatuses() {
@@ -275,11 +397,7 @@ private struct WideStatusFooter: View {
     }
 
     private var translationLabel: String {
-        let resolved = TranslationLanguageCatalog.resolve(config.translationTargetLocaleId)
-        if TranslationLanguageCatalog.isOff(resolved.id) {
-            return AppL10n.string("keyboard.translation.offMenu", language: config.uiLanguage)
-        }
-        return resolved.nativeName
+        translationDisplayLabel(for: TranslationLanguageCatalog.resolve(config.translationTargetLocaleId))
     }
 
     private var flowStatusColor: Color {

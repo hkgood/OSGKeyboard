@@ -133,6 +133,60 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         XCTAssertLessThan(try XCTUnwrap(translateIndex), try XCTUnwrap(speakAsMeIndex))
     }
 
+    /// Device-language text + a configured target → "Translate to <target>",
+    /// and never the foreign-text actions (system translate / polish).
+    func testSystemLanguageTextOffersTranslateToTarget() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: Self.catalogWithoutOptInSkills,
+            sourceText: "明天下午三点开会，别迟到。",
+            analysis: analysis(language: "zh"),
+            uiLanguage: .chinese,
+            limit: 5,
+            preferredLanguages: ["zh-Hans-CN"],
+            translationTargetLocaleId: "en"
+        ).map(\.id)
+
+        XCTAssertTrue(recommendations.contains(AIClipboardSkillCatalog.translateToTargetID))
+        XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.translateID))
+        XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.polishOriginalID))
+    }
+
+    func testTranslateToTargetIsHiddenWhenTranslationIsOffOrTargetMatchesText() {
+        for target in [TranslationLanguageCatalog.offLocaleId, "zh-Hans"] {
+            let recommendations = ClipboardSkillSemanticRanker.recommended(
+                skills: Self.catalogWithoutOptInSkills,
+                sourceText: "明天下午三点开会，别迟到。",
+                analysis: analysis(language: "zh"),
+                uiLanguage: .chinese,
+                limit: 5,
+                preferredLanguages: ["zh-Hans-CN"],
+                translationTargetLocaleId: target
+            ).map(\.id)
+
+            XCTAssertFalse(
+                recommendations.contains(AIClipboardSkillCatalog.translateToTargetID),
+                "target \(target)"
+            )
+        }
+    }
+
+    /// Foreign text: system translate + polish, never translate-to-target.
+    func testForeignTextOffersPolishButNotTranslateToTarget() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: Self.catalogWithoutOptInSkills,
+            sourceText: "I has a meeting tomorrow, please dont be late.",
+            analysis: analysis(language: "en"),
+            uiLanguage: .chinese,
+            limit: 5,
+            preferredLanguages: ["zh-Hans-CN"],
+            translationTargetLocaleId: "ja"
+        ).map(\.id)
+
+        XCTAssertTrue(recommendations.contains(AIClipboardSkillCatalog.translateID))
+        XCTAssertTrue(recommendations.contains(AIClipboardSkillCatalog.polishOriginalID))
+        XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.translateToTargetID))
+    }
+
     func testTranslationIsNotRecommendedForSystemLanguage() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
             skills: Self.catalogWithoutOptInSkills,
@@ -161,6 +215,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             recommendations,
             [
                 AIClipboardSkillCatalog.translateID,
+                AIClipboardSkillCatalog.polishOriginalID,
                 AIClipboardSkillCatalog.replyID
             ]
         )
@@ -523,7 +578,8 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             recommendations.map(\.id),
             [
                 AIClipboardSkillCatalog.translateID,
-                AIClipboardSkillCatalog.replyID
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.polishOriginalID
             ]
         )
     }

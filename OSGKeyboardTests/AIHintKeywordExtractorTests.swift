@@ -182,6 +182,64 @@ final class AIClipboardSkillTests: XCTestCase {
         )
     }
 
+    func testTranslateToTargetUsesConfiguredTargetLanguage() {
+        let prompt = AIClipboardSkillCatalog.instruction(
+            skillID: AIClipboardSkillCatalog.translateToTargetID,
+            locale: "en",
+            translationTargetLocaleId: "ja",
+            preferredLanguages: ["zh-Hans"]
+        )
+        XCTAssertTrue(prompt.contains("Japanese"))
+        XCTAssertFalse(prompt.contains("Chinese"))
+    }
+
+    func testTranslateToTargetPromptFallsBackWhenTargetIsOff() {
+        let prompt = AIClipboardSkillCatalog.instruction(
+            skillID: AIClipboardSkillCatalog.translateToTargetID,
+            locale: "en",
+            translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId
+        )
+        XCTAssertTrue(prompt.contains("English"))
+    }
+
+    func testTranslateToTargetButtonTitleNamesTargetAndHidesWhenOff() {
+        XCTAssertEqual(
+            AIClipboardSkillCatalog.translateToTargetButtonTitle(
+                translationTargetLocaleId: "en",
+                uiLanguage: .chinese
+            ),
+            "翻译英语"
+        )
+        XCTAssertEqual(
+            AIClipboardSkillCatalog.translateToTargetButtonTitle(
+                translationTargetLocaleId: "ja",
+                uiLanguage: .english
+            ),
+            "To Japanese"
+        )
+        XCTAssertNil(
+            AIClipboardSkillCatalog.translateToTargetButtonTitle(
+                translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId,
+                uiLanguage: .english
+            )
+        )
+    }
+
+    func testPolishKeepsOriginalLanguageAndCarriesNeverAnswerBoundary() throws {
+        let skill = try XCTUnwrap(
+            AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.polishOriginalID)
+        )
+        let prompt = AIClipboardSkillCatalog.instruction(
+            for: skill,
+            locale: "en",
+            translationTargetLocaleId: "ja"
+        )
+        XCTAssertTrue(prompt.contains("without changing its language"))
+        XCTAssertTrue(prompt.contains("grammar"))
+        XCTAssertTrue(prompt.contains("Non-negotiable boundary"))
+        XCTAssertFalse(prompt.contains("Japanese"))
+    }
+
     func testSummarizeAsksForOverviewNotShortening() {
         let prompt = AIClipboardSkillCatalog.instruction(
             skillID: AIClipboardSkillCatalog.summarizeID,

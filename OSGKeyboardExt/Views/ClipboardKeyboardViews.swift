@@ -243,9 +243,7 @@ struct ClipboardHistoryPanelView: View {
                 }
 
                 if history.entries.isEmpty {
-                    ExtL10n.text("keyboard.clipboard.panel.empty")
-                        .font(.system(size: 14))
-                        .foregroundStyle(palette.textSecondary)
+                    emptyState
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ScrollView {
@@ -275,6 +273,26 @@ struct ClipboardHistoryPanelView: View {
         // Transparent — let the system keyboard chrome show through.
         .background(Color.clear)
         .animation(.easeOut(duration: 0.16), value: showClearConfirmation)
+    }
+
+    /// Icon + title + one-line hint, so an empty panel explains what fills it.
+    private var emptyState: some View {
+        VStack(spacing: 6) {
+            Image(systemName: "doc.on.clipboard")
+                .font(.system(size: 22, weight: .regular))
+                .foregroundStyle(palette.textTertiary)
+                .padding(.bottom, 4)
+                .accessibilityHidden(true)
+            ExtL10n.text("keyboard.clipboard.panel.empty")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(palette.textSecondary)
+            ExtL10n.text("keyboard.clipboard.panel.emptyHint")
+                .font(TypeStyle.caption.weight(.regular))
+                .foregroundStyle(palette.textTertiary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 24)
+        .accessibilityElement(children: .combine)
     }
 
     private var clearConfirmationOverlay: some View {

@@ -106,6 +106,25 @@ public final class KeyboardViewController: UIInputViewController {
         )
     }
 
+    /// Regular × regular on a phone host is the unfolded iPhone Duo; every
+    /// other iPhone posture has at least one compact axis.
+    private var isExpandedPhoneLayout: Bool {
+        KeyboardChromeLayout.usesExpandedPhoneMetrics(
+            isPad: UIDevice.current.userInterfaceIdiom == .pad,
+            hasRegularWidth: traitCollection.horizontalSizeClass == .regular,
+            hasRegularHeight: traitCollection.verticalSizeClass == .regular
+        )
+    }
+
+    /// Compact height on a phone host is a landscape iPhone (folded Duo
+    /// included). `.unspecified` before the first trait pass is not compact.
+    private var isCompactHeightPhoneLayout: Bool {
+        KeyboardChromeLayout.usesCompactHeightPhoneMetrics(
+            isPad: UIDevice.current.userInterfaceIdiom == .pad,
+            hasCompactHeight: traitCollection.verticalSizeClass == .compact
+        )
+    }
+
     /// Width the layout should be sized against. `view.bounds` is empty before
     /// the first layout pass, so fall back to the screen the keyboard is on.
     private var currentLayoutWidth: CGFloat {
@@ -120,7 +139,9 @@ public final class KeyboardViewController: UIInputViewController {
         KeyboardSurfaceRoot.height(
             for: state.surface,
             isIPad: state.usesIPadLayoutMetrics,
-            width: state.layoutWidth
+            width: state.layoutWidth,
+            isExpandedPhone: state.usesExpandedPhoneLayoutMetrics,
+            isCompactHeightPhone: state.usesCompactHeightPhoneLayoutMetrics
         )
     }
 
@@ -158,7 +179,6 @@ public final class KeyboardViewController: UIInputViewController {
         #if DEBUG
         HostBundleProbe.installLogging()
         #endif
-        state.showsSystemGlobeKey = UIDevice.current.userInterfaceIdiom == .pad
         // Voice-first keyboard — hide the misleading "English" subtitle in Settings.
         primaryLanguage = "mis"
         let preferred = TypingInputConfiguration.preferredSurfaceOnOpen()
@@ -359,7 +379,11 @@ public final class KeyboardViewController: UIInputViewController {
             self.flowCoordinator.ensurePiPReadyOnKeyboardOpen()
         }
         #if DEBUG
-        HostBundleProbe.recordPresentationAndPing()
+        HostBundleProbe.recordPresentation()
+        #endif
+        // Host identification feeds the cold-start auto-return; runs in every build.
+        HostAppIdentity.refreshOnPresentation()
+        #if DEBUG
         WhatsNewDemoDriver.resetForNewPresentation()
         WhatsNewDemoDriver.startIfNeeded(
             state: state,
@@ -404,7 +428,8 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
-        guard previousTraitCollection?.horizontalSizeClass != traitCollection.horizontalSizeClass else {
+        guard previousTraitCollection?.horizontalSizeClass != traitCollection.horizontalSizeClass
+            || previousTraitCollection?.verticalSizeClass != traitCollection.verticalSizeClass else {
             return
         }
         refreshLayoutMode()
@@ -949,22 +974,74 @@ public final class KeyboardViewController: UIInputViewController {
     }
 
     private func refreshLayoutMode() {
+        // Folding moves the keyboard between a display with a system switch
+        // below it and one without, so re-read this on every layout pass.
+        refreshInputModeSwitchKey()
         let usesIPadMetrics = isIPadLayout
+        let usesExpandedPhoneMetrics = isExpandedPhoneLayout
+        let usesCompactHeightPhoneMetrics = isCompactHeightPhoneLayout
         let width = currentLayoutWidth
         // `state.layoutWidth` tracks the width that last changed the layout
         // bucket, not every intermediate width: republishing on each frame of
         // a Stage Manager drag would rebuild the SwiftUI grid continuously.
-        let bucketChanged = KeyboardChromeLayout.usesWideIPadMetrics(
+        let bucketChanged = Self.layoutWidthBucket(
             isIPad: usesIPadMetrics,
+            isExpandedPhone: usesExpandedPhoneMetrics,
+            isCompactHeightPhone: usesCompactHeightPhoneMetrics,
             width: width
-        ) != KeyboardChromeLayout.usesWideIPadMetrics(
+        ) != Self.layoutWidthBucket(
             isIPad: state.usesIPadLayoutMetrics,
+            isExpandedPhone: state.usesExpandedPhoneLayoutMetrics,
+            isCompactHeightPhone: state.usesCompactHeightPhoneLayoutMetrics,
             width: state.layoutWidth
         )
-        guard state.usesIPadLayoutMetrics != usesIPadMetrics || bucketChanged else { return }
+        guard state.usesIPadLayoutMetrics != usesIPadMetrics
+            || state.usesExpandedPhoneLayoutMetrics != usesExpandedPhoneMetrics
+            || state.usesCompactHeightPhoneLayoutMetrics != usesCompactHeightPhoneMetrics
+            || bucketChanged else { return }
         state.usesIPadLayoutMetrics = usesIPadMetrics
+        state.usesExpandedPhoneLayoutMetrics = usesExpandedPhoneMetrics
+        state.usesCompactHeightPhoneLayoutMetrics = usesCompactHeightPhoneMetrics
         state.layoutWidth = width
         refreshKeyboardHeight()
+    }
+
+    /// Every width threshold the SwiftUI surfaces branch on. The first layout
+    /// pass can report a transient width (0, or the folded display's), so a
+    /// threshold missing here would keep that stale width for the session.
+    private static func layoutWidthBucket(
+        isIPad: Bool,
+        isExpandedPhone: Bool,
+        isCompactHeightPhone: Bool,
+        width: CGFloat
+    ) -> LayoutWidthBucket {
+        LayoutWidthBucket(
+            wideIPad: KeyboardChromeLayout.usesWideIPadMetrics(isIPad: isIPad, width: width),
+            voiceKeyRow: VoiceKeyRowLayout.isAvailable(
+                usesIPadMetrics: isIPad,
+                usesExpandedPhoneMetrics: isExpandedPhone,
+                usesCompactHeightPhoneMetrics: isCompactHeightPhone,
+                hostWidth: width
+            ),
+            compactVoice: KeyboardChromeLayout.usesCompactVoiceMetrics(width: width),
+            compactIPadVoice: KeyboardChromeLayout.usesCompactIPadVoiceMetrics(isIPad: isIPad, width: width)
+        )
+    }
+
+    private struct LayoutWidthBucket: Equatable {
+        let wideIPad: Bool
+        let voiceKeyRow: Bool
+        let compactVoice: Bool
+        let compactIPadVoice: Bool
+    }
+
+    private func refreshInputModeSwitchKey() {
+        let shows = KeyboardChromeLayout.showsInputModeSwitchKey(
+            isPad: UIDevice.current.userInterfaceIdiom == .pad,
+            systemRequiresSwitchKey: needsInputModeSwitchKey
+        )
+        guard state.showsSystemGlobeKey != shows else { return }
+        state.showsSystemGlobeKey = shows
     }
 
     private var heightPhaseLog: String {
@@ -1209,7 +1286,11 @@ public final class KeyboardViewController: UIInputViewController {
             + "view=\(Int(view.bounds.height)) "
             + "host=\(Int(hosting?.view.bounds.height ?? -1)) "
             + "constraint=\(Int(keyboardHeightConstraint?.constant ?? -1)) "
-            + "target=\(Int(targetKeyboardHeight))"
+            + "target=\(Int(targetKeyboardHeight)) "
+            + "width=\(Int(view.bounds.width)) "
+            + "sizeClass=\(traitCollection.horizontalSizeClass.rawValue)x"
+            + "\(traitCollection.verticalSizeClass.rawValue) "
+            + "needsGlobe=\(needsInputModeSwitchKey ? 1 : 0)"
         guard snapshot != lastLoggedLayoutSnapshot else { return }
         lastLoggedLayoutSnapshot = snapshot
         OSGDiag.log("KVC.layout \(snapshot)", category: "boot")

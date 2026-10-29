@@ -268,6 +268,7 @@ private final class PolishStylesUITestScriptedLLMClient: LLMClient, @unchecked S
 @MainActor
 struct HomeDictionaryScreenshotHarness: View {
     @StateObject private var flowManager = FlowSessionManager()
+    @StateObject private var accountSession = AccountSessionCoordinator(dependencies: .unavailable)
     private let language: AppUILanguage
 
     init() {
@@ -281,6 +282,7 @@ struct HomeDictionaryScreenshotHarness: View {
         ThemedRoot {
             HomeView()
                 .environmentObject(flowManager)
+                .environmentObject(accountSession)
         }
         .environment(\.locale, language.swiftUILocale)
         .preferredColorScheme(.light)

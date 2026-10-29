@@ -131,10 +131,10 @@ final class AssistantKeyboardUITests: XCTestCase {
         XCTAssertTrue(element("assistant.edit", in: app).exists)
     }
 
-    func testClipboardSkillsPageHorizontallyAndDismissTogether() {
+    func testClipboardSkillsAreTopBarCapsulesAndDismissTogether() {
         let app = launch(scenario: "skills")
-        let pager = requiredElement("assistant.skills.pager", in: app)
-        let navigate = element("assistant.skill.navigate", in: app)
+        let reply = requiredElement("assistant.otherSkill.reply", in: app)
+        let navigate = element("assistant.otherSkill.navigate", in: app)
         let sideActions = [
             requiredElement("assistant.delete", in: app),
             requiredElement("assistant.space", in: app),
@@ -145,8 +145,11 @@ final class AssistantKeyboardUITests: XCTestCase {
         for action in sideActions {
             XCTAssertTrue(action.isHittable)
         }
+        // Skills live in the top bar, above the mic; no circular chips remain.
+        XCTAssertLessThan(reply.frame.maxY, requiredElement("assistant.mic.idle", in: app).frame.minY)
+        XCTAssertFalse(element("assistant.skills.pager", in: app).exists)
 
-        pager.swipeLeft()
+        reply.swipeLeft()
 
         XCTAssertTrue(navigate.waitForExistence(timeout: 3))
         XCTAssertTrue(navigate.isHittable)
@@ -157,7 +160,7 @@ final class AssistantKeyboardUITests: XCTestCase {
             element("assistant.mic.idle", in: app)
                 .waitForExistence(timeout: 3)
         )
-        XCTAssertFalse(element("assistant.skills.pager", in: app).exists)
+        XCTAssertFalse(element("assistant.otherSkill.navigate", in: app).exists)
     }
 
     func testReliableSemanticResultShowsCompactBadge() {

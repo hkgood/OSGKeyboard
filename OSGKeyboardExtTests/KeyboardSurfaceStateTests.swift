@@ -137,15 +137,78 @@ final class KeyboardSurfaceStateTests: XCTestCase {
         XCTAssertEqual(phoneWidths.side, 73.227, accuracy: 0.001)
         XCTAssertEqual(phoneWidths.center, 203.409, accuracy: 0.001)
         XCTAssertEqual(phoneWidths.side2, 81.364, accuracy: 0.001)
+    }
 
-        let iPadWidths = KeyboardChromeLayout.iPadVoiceActionKeyWidths(
-            availableWidth: 1024
+    // MARK: - Wide-host voice key row
+
+    func testVoiceKeyRowOnlyOnWideHosts() {
+        // Unfolded iPhone Duo, full width and in Split View.
+        XCTAssertTrue(keyRowAvailable(expandedPhone: true, width: 801))
+        XCTAssertTrue(keyRowAvailable(expandedPhone: true, width: 655))
+        XCTAssertTrue(keyRowAvailable(iPad: true, width: 834))
+        // A phone outside the expanded / landscape tiers keeps the circle
+        // cluster, however wide.
+        XCTAssertFalse(keyRowAvailable(width: 932))
+        // Too narrow for comfortable icon keys, and the pre-layout zero width.
+        XCTAssertFalse(keyRowAvailable(iPad: true, width: 400))
+        XCTAssertFalse(keyRowAvailable(iPad: true, width: 0))
+        XCTAssertFalse(keyRowAvailable(compactHeightPhone: true, width: 0))
+    }
+
+    private func keyRowAvailable(
+        iPad: Bool = false,
+        expandedPhone: Bool = false,
+        compactHeightPhone: Bool = false,
+        width: CGFloat
+    ) -> Bool {
+        VoiceKeyRowLayout.isAvailable(
+            usesIPadMetrics: iPad,
+            usesExpandedPhoneMetrics: expandedPhone,
+            usesCompactHeightPhoneMetrics: compactHeightPhone,
+            hostWidth: width
         )
-        // 1024 − 3 × 8 = 1000pt: keep the globe compact and give return 40%.
-        XCTAssertEqual(iPadWidths.globe, 100, accuracy: 0.001)
-        XCTAssertEqual(iPadWidths.side, 240, accuracy: 0.001)
-        XCTAssertEqual(iPadWidths.center, 400, accuracy: 0.001)
-        XCTAssertEqual(iPadWidths.side2, 260, accuracy: 0.001)
+    }
+
+    func testCompactVoiceMetricsIgnoreUnmeasuredWidth() {
+        // 0 = the controller has not measured yet; never treat it as compact.
+        XCTAssertFalse(KeyboardChromeLayout.usesCompactVoiceMetrics(width: 0))
+        // Display Zoom on a small iPhone, or iPad Slide Over.
+        XCTAssertTrue(KeyboardChromeLayout.usesCompactVoiceMetrics(width: 320))
+        XCTAssertFalse(KeyboardChromeLayout.usesCompactVoiceMetrics(width: 375))
+
+        XCTAssertFalse(KeyboardChromeLayout.usesCompactIPadVoiceMetrics(isIPad: true, width: 0))
+        XCTAssertTrue(KeyboardChromeLayout.usesCompactIPadVoiceMetrics(isIPad: true, width: 400))
+        XCTAssertFalse(KeyboardChromeLayout.usesCompactIPadVoiceMetrics(isIPad: false, width: 400))
+        XCTAssertFalse(KeyboardChromeLayout.usesCompactIPadVoiceMetrics(isIPad: true, width: 834))
+    }
+
+    func testVoiceContentSpansTypingWidthOnlyWithKeyRow() {
+        XCTAssertEqual(KeyboardChromeLayout.voiceContentWidthCap(usesVoiceKeyRow: false), 700)
+        XCTAssertEqual(KeyboardChromeLayout.voiceContentWidthCap(usesVoiceKeyRow: true), .infinity)
+    }
+
+    func testVoiceKeyRowFillsRowWithEqualIconKeysAndDoubleSend() {
+        let spacing = KeyboardChromeLayout.actionKeySpacing
+        // Duo inner display (801 − 2 × 8 inset), iPad portrait, iPad landscape.
+        for rowWidth: CGFloat in [785, 818, 1350] {
+            let row = VoiceKeyRowLayout.make(rowWidth: rowWidth)
+
+            let keyWidth = row.leadingSide.width
+            for slot in [row.leadingContext, row.trailingContext, row.trailingSide] {
+                XCTAssertEqual(slot.width, keyWidth, accuracy: 0.001)
+            }
+            XCTAssertEqual(row.send.width, keyWidth * VoiceKeyRowLayout.sendWidthMultiplier, accuracy: 0.001)
+
+            // Edge to edge with uniform 8 pt gaps — no hole.
+            let slots = [row.leadingSide, row.leadingContext, row.send, row.trailingContext, row.trailingSide]
+            for (left, right) in zip(slots, slots.dropFirst()) {
+                XCTAssertEqual(right.minX - left.maxX, spacing, accuracy: 0.001)
+            }
+            XCTAssertEqual(row.leadingSide.minX, 0)
+            XCTAssertEqual(row.trailingSide.maxX, rowWidth, accuracy: 0.001)
+            // Symmetric row, so send sits under the microphone.
+            XCTAssertEqual(row.send.midX, rowWidth / 2, accuracy: 0.001)
+        }
     }
 
     func testIPhoneTypingBottomRowOmitsCustomGlobeAndFillsWidth() {
@@ -236,6 +299,174 @@ final class KeyboardSurfaceStateTests: XCTestCase {
             portrait,
             "A full-width landscape grid needs taller rows or keys turn flat"
         )
+    }
+
+    func testExpandedPhoneMetricsRequirePhoneWithRegularSpaceOnBothAxes() {
+        XCTAssertTrue(
+            KeyboardChromeLayout.usesExpandedPhoneMetrics(
+                isPad: false,
+                hasRegularWidth: true,
+                hasRegularHeight: true
+            ),
+            "The unfolded iPhone Duo inner display is regular × regular"
+        )
+        XCTAssertFalse(
+            KeyboardChromeLayout.usesExpandedPhoneMetrics(
+                isPad: false,
+                hasRegularWidth: false,
+                hasRegularHeight: true
+            ),
+            "Portrait iPhones and the folded Duo stay on phone metrics"
+        )
+        XCTAssertFalse(
+            KeyboardChromeLayout.usesExpandedPhoneMetrics(
+                isPad: false,
+                hasRegularWidth: true,
+                hasRegularHeight: false
+            ),
+            "Landscape Max-size iPhones stay on phone metrics"
+        )
+        XCTAssertFalse(
+            KeyboardChromeLayout.usesExpandedPhoneMetrics(
+                isPad: true,
+                hasRegularWidth: true,
+                hasRegularHeight: true
+            ),
+            "iPad keeps its own metrics"
+        )
+    }
+
+    func testGlobeKeyFollowsSystemSwitchRequirementOutsideIPad() {
+        XCTAssertTrue(KeyboardChromeLayout.showsInputModeSwitchKey(isPad: true, systemRequiresSwitchKey: false))
+        XCTAssertTrue(KeyboardChromeLayout.showsInputModeSwitchKey(isPad: false, systemRequiresSwitchKey: true))
+        XCTAssertFalse(
+            KeyboardChromeLayout.showsInputModeSwitchKey(isPad: false, systemRequiresSwitchKey: false),
+            "Face ID iPhones already show the system switch below the keyboard"
+        )
+    }
+
+    func testExpandedPhoneHeightStaysCloseToTheSystemKeyboard() {
+        let phone = TypingSurfaceMetrics.contentHeight(isIPad: false, width: 801)
+        let expanded = TypingSurfaceMetrics.contentHeight(isIPad: false, width: 801, isExpandedPhone: true)
+
+        XCTAssertEqual(phone, KeyboardChromeLayout.totalHeight, "Phone height must not move")
+        XCTAssertEqual(expanded, 260, accuracy: 0.001)
+        XCTAssertEqual(
+            TypingSurfaceMetrics.contentHeight(isIPad: true, width: 834, isExpandedPhone: true),
+            TypingSurfaceMetrics.contentHeight(isIPad: true, width: 834),
+            "iPad ignores the expanded-phone flag"
+        )
+    }
+
+    func testCompactHeightPhoneMetricsCoverEveryLandscapeIPhone() {
+        XCTAssertTrue(
+            KeyboardChromeLayout.usesCompactHeightPhoneMetrics(isPad: false, hasCompactHeight: true),
+            "Landscape iPhones, including the folded Duo, are vertically compact"
+        )
+        XCTAssertFalse(
+            KeyboardChromeLayout.usesCompactHeightPhoneMetrics(isPad: false, hasCompactHeight: false),
+            "Portrait iPhones and the unfolded Duo keep their tiers"
+        )
+        XCTAssertFalse(
+            KeyboardChromeLayout.usesCompactHeightPhoneMetrics(isPad: true, hasCompactHeight: true),
+            "iPad keeps its own metrics"
+        )
+    }
+
+    func testVoiceMicSitsCentredBelowTopBarOnEveryShell() {
+        // (shell, mic row, bottom row) for phone, unfolded Duo, landscape, iPad narrow / wide.
+        let shells: [(name: String, shell: CGFloat, mic: CGFloat, bottom: CGFloat)] = [
+            ("phone", KeyboardChromeLayout.totalHeight, 60, 52),
+            ("duo", TypingSurfaceMetrics.contentHeight(isIPad: false, width: 785, isExpandedPhone: true), 60, 41),
+            ("landscape", TypingSurfaceMetrics.contentHeight(isIPad: false, width: 874, isCompactHeightPhone: true), 56, 40),
+            ("iPadNarrow", TypingSurfaceMetrics.contentHeight(isIPad: true, width: 834), 60, 54),
+            ("iPadWide", TypingSurfaceMetrics.contentHeight(isIPad: true, width: 1194), 60, 76)
+        ]
+        for item in shells {
+            let free = item.shell - 8 - 44 - item.mic - item.bottom
+            let context = VoiceMicPlacement.contextHeight(
+                contextAndGap: free,
+                bottomRowHeight: item.bottom,
+                minimumContextHeight: 66
+            )
+            let gap = free - context
+            XCTAssertEqual(context, gap + item.bottom, accuracy: 0.001, "\(item.name): mic centred below the top bar")
+            XCTAssertGreaterThanOrEqual(context, 66, "\(item.name): live transcript must fit")
+            XCTAssertGreaterThanOrEqual(gap, VoiceMicPlacement.minimumGap, item.name)
+        }
+    }
+
+    func testVoiceMicPlacementKeepsTranscriptFloorAndGapCeiling() {
+        // Too short to centre: the transcript floor wins over centring.
+        XCTAssertEqual(
+            VoiceMicPlacement.contextHeight(contextAndGap: 80, bottomRowHeight: 20, minimumContextHeight: 66),
+            66
+        )
+        // Even shorter: the mic still keeps its minimum gap to the bottom row.
+        XCTAssertEqual(
+            VoiceMicPlacement.contextHeight(contextAndGap: 70, bottomRowHeight: 20, minimumContextHeight: 66),
+            70 - VoiceMicPlacement.minimumGap
+        )
+    }
+
+    func testCompactHeightPhoneShortensPanelButKeepsContextSlot() {
+        let portrait = TypingSurfaceMetrics.contentHeight(isIPad: false, width: 874)
+        let landscape = TypingSurfaceMetrics.contentHeight(isIPad: false, width: 874, isCompactHeightPhone: true)
+        XCTAssertEqual(portrait, KeyboardChromeLayout.totalHeight, "Portrait phone height must not move")
+        XCTAssertEqual(landscape, 244, accuracy: 0.001)
+
+        // Voice surface: 4 + 4 padding, 44 top bar, 56 mic row, key row; the
+        // rest splits into the context slot and the gap below the mic.
+        let keyRow = TypingSurfaceMetrics.metrics(isIPad: false, width: 874, isCompactHeightPhone: true).bottomRowHeight
+        let context = VoiceMicPlacement.contextHeight(
+            contextAndGap: landscape - 8 - 44 - 56 - keyRow,
+            bottomRowHeight: keyRow,
+            minimumContextHeight: 66
+        )
+        XCTAssertEqual(context, 68, accuracy: 0.001, "Context slot must fit the live transcript")
+
+        XCTAssertEqual(
+            TypingSurfaceMetrics.contentHeight(isIPad: true, width: 1194, isCompactHeightPhone: true),
+            TypingSurfaceMetrics.contentHeight(isIPad: true, width: 1194),
+            "iPad ignores the compact-height-phone flag"
+        )
+        // Landscape iPhones are all ≥ 667 pt wide, so the voice key row replaces the circles.
+        XCTAssertTrue(VoiceKeyRowLayout.isAvailable(
+            usesIPadMetrics: false,
+            usesExpandedPhoneMetrics: false,
+            usesCompactHeightPhoneMetrics: true,
+            hostWidth: 667
+        ))
+    }
+
+    func testExpandedPhoneBottomRowWithGlobeFillsWidth() {
+        let width: CGFloat = 785
+        let metrics = TypingSurfaceMetrics.metrics(isIPad: false, width: width, isExpandedPhone: true)
+        let layout = TypingKeyLayoutBuilder.build(
+            size: CGSize(width: width, height: 260),
+            letterRows: [
+                ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
+                ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
+                ["z", "x"]
+            ],
+            pageSwitchLabel: "123",
+            spaceLabel: "space",
+            returnLabel: "return",
+            metrics: metrics,
+            includeGlobeKey: true,
+            keyWeight: { _, _, _ in 1 }
+        )
+
+        let slots = [
+            TypingKeyLayoutBuilder.BottomKeyID.globe.rawValue,
+            TypingKeyLayoutBuilder.BottomKeyID.pageSwitch.rawValue,
+            TypingKeyLayoutBuilder.BottomKeyID.space.rawValue,
+            TypingKeyLayoutBuilder.BottomKeyID.return.rawValue
+        ]
+        let frames = slots.compactMap { layout.key(id: $0)?.visualFrame }
+        XCTAssertEqual(frames.count, 4)
+        XCTAssertEqual(frames.last?.maxX ?? 0, width, accuracy: 0.001)
+        XCTAssertEqual(frames.first?.height ?? 0, TypingSurfaceMetrics.expandedPhoneKeyRowHeight)
     }
 
     func testSecondRowInsetKeepsKeysAsWideAsTheFirstRow() {

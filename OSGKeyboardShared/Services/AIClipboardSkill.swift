@@ -316,6 +316,14 @@ public enum AIClipboardSkillCatalog: Sendable {
     /// Legacy ID consolidated into `summarizeID`.
     public static let extractConclusionsID = "extractConclusions"
     public static let translateID = "translate"
+    /// Translates text that is already in the device language into the user's
+    /// configured translation target language. The mirror of `translateID`
+    /// (which handles foreign text → device language); the keyboard offers one
+    /// or the other depending on the copy's language, never both.
+    public static let translateToTargetID = "translateToTarget"
+    /// Fixes grammar, improves wording, and polishes foreign-language text while
+    /// keeping it in its original language. Offered only for foreign copies.
+    public static let polishOriginalID = "polishOriginal"
     public static let acceptInvitationID = "acceptInvitation"
     public static let declineInvitationID = "declineInvitation"
     public static let acceptTaskID = "acceptTask"
@@ -413,6 +421,24 @@ public enum AIClipboardSkillCatalog: Sendable {
             titleKey: "keyboard.ai.skill.translate",
             cardTitleKey: "skills.translate.name",
             descriptionKey: "skills.translate.description",
+            kind: .transform,
+            isDefault: true
+        ),
+        AIClipboardSkill(
+            id: translateToTargetID,
+            systemImage: "globe",
+            titleKey: "keyboard.ai.skill.translateToTarget",
+            cardTitleKey: "skills.translateToTarget.name",
+            descriptionKey: "skills.translateToTarget.description",
+            kind: .transform,
+            isDefault: true
+        ),
+        AIClipboardSkill(
+            id: polishOriginalID,
+            systemImage: "wand.and.stars",
+            titleKey: "keyboard.ai.skill.polishOriginal",
+            cardTitleKey: "skills.polishOriginal.name",
+            descriptionKey: "skills.polishOriginal.description",
             kind: .transform,
             isDefault: true
         ),
@@ -692,6 +718,14 @@ public enum AIClipboardSkillCatalog: Sendable {
                 now: now
             )
         }
+        // Polishing rewrites the user's own draft, so it carries the same
+        // never-answer boundary as "Speak as me" (built-in prompt only).
+        if skill.id == polishOriginalID, skill.customPrompt == nil {
+            let boundary = locale == "zh"
+                ? PolishPromptComposer.chineseNeverAnswerContract
+                : PolishPromptComposer.englishNeverAnswerContract
+            return "\(baseInstruction)\n\(boundary)"
+        }
         if canonicalID(for: skill.id) == speakAsMeID {
             return speakAsMeInstruction(
                 baseInstruction,
@@ -724,10 +758,27 @@ public enum AIClipboardSkillCatalog: Sendable {
             : "To \(target)"
     }
 
+    /// Chip label for "Translate to <target>". Nil when the user has translation
+    /// turned off (or the id is unknown), in which case the skill is not offered.
+    /// The language name is localized to the UI language ("英语" / "English").
+    public static func translateToTargetButtonTitle(
+        translationTargetLocaleId: String,
+        uiLanguage: AppUILanguage
+    ) -> String? {
+        guard !TranslationLanguageCatalog.isOff(translationTargetLocaleId) else { return nil }
+        let language = TranslationLanguageCatalog.resolve(translationTargetLocaleId)
+        let displayLocale = Locale(identifier: uiLanguage.resolvedLanguageCode())
+        let name = displayLocale.localizedString(forIdentifier: language.id)
+            ?? language.nativeName
+        return uiLanguage.resolvedLanguageCode() == "zh-Hans"
+            ? "翻译\(name)"
+            : "To \(name)"
+    }
+
     public static func instruction(
         skillID: String,
         locale: String,
-        translationTargetLocaleId _: String,
+        translationTargetLocaleId: String,
         preferredLanguages: [String] = Locale.preferredLanguages,
         now: Date = Date()
     ) -> String {
@@ -779,6 +830,15 @@ public enum AIClipboardSkillCatalog: Sendable {
                 locale: locale,
                 preferredLanguages: preferredLanguages
             )
+        case translateToTargetID:
+            return translateToTargetInstruction(
+                zh: zh,
+                translationTargetLocaleId: translationTargetLocaleId
+            )
+        case polishOriginalID:
+            return zh
+                ? "请在不改变语言的前提下优化剪贴板文本：先纠正语法、拼写和标点错误，再改善不自然或不准确的措辞，最后适度润色，让表达通顺、自然、得体。严格使用原文的语言输出，不要翻译；保留原意、事实、数字、人名、链接、代码和段落格式，不要扩写或删减要点。只输出优化后的文本，不要解释，也不要列出修改点。"
+                : "Improve the clipboard text without changing its language: first fix grammar, spelling, and punctuation errors, then improve awkward or inaccurate wording, and finally polish lightly so it reads smoothly, naturally, and appropriately. Output strictly in the source language and never translate. Preserve the meaning, facts, numbers, names, links, code, and paragraph formatting; do not add or drop points. Output only the improved text, with no explanation and no list of changes."
         case businessReplyID:
             return zh
                 ? "请写一段专业但不官腔的商务聊天回复，表达直接、自然，保留人名、组织名、时间和承诺边界，可直接发送。不要套用正式邮件开场和结尾。"
@@ -985,6 +1045,23 @@ public enum AIClipboardSkillCatalog: Sendable {
             Apply only stable wording, rhythm, and expression habits from this style. It must not change the selected skill's intent, facts, safety boundaries, or output language; the selected skill wins on conflict.
             """
         return "\(baseInstruction)\n\(conversationalBaseline)\(sceneInstruction)\n\(personalStyle)"
+    }
+
+    /// Translate into the user's configured target language. An "off" or stale
+    /// target falls back to the catalog default so the Skills-tab prompt preview
+    /// never shows an empty language name.
+    private static func translateToTargetInstruction(
+        zh: Bool,
+        translationTargetLocaleId: String
+    ) -> String {
+        let resolved = TranslationLanguageCatalog.resolve(translationTargetLocaleId)
+        let language = TranslationLanguageCatalog.isOff(resolved.id)
+            ? TranslationLanguageCatalog.resolve(TranslationLanguageCatalog.defaultLocaleId)
+            : resolved
+        let target = language.promptLanguageName
+        return zh
+            ? "请把剪贴板文本翻译成 \(target)，准确保留原意、语气、名称、链接和格式；如果文本本身已经是 \(target)，则原样输出。只输出译文，不要解释。"
+            : "Translate the clipboard text into \(target), preserving meaning, tone, names, links, and formatting. If the text is already in \(target), return it unchanged. Output only the translation with no explanation."
     }
 
     /// Clipboard translation always follows the device's primary system language.

@@ -41,6 +41,14 @@ struct PersonalReplyStyleSection: View {
     private let learningState = PersonalStyleLearningStateStore.shared
     private let generator: LearnedStyleGenerator
 
+    #if DEBUG
+    /// Concept-film recordings start generation after this delay; `simctl`
+    /// cannot tap the button. Nil keeps the production tap-to-generate flow.
+    static var debugAutoGenerationDelay: Duration?
+    /// Shows the App Store 2,500-character gate instead of the internal one.
+    static var debugUsesReleaseCharacterGate = false
+    #endif
+
     init(
         initialEditingPack: PolishStylePack? = nil,
         generator: @escaping LearnedStyleGenerator = { corpus, replyExamples, language, prior in
@@ -92,7 +100,15 @@ struct PersonalReplyStyleSection: View {
         } message: {
             Text(errorAlert?.message ?? "")
         }
-        .task { reload() }
+        .task {
+            reload()
+            #if DEBUG
+            if let delay = Self.debugAutoGenerationDelay {
+                try? await Task.sleep(for: delay)
+                generate(from: corpus)
+            }
+            #endif
+        }
         .onReceive(NotificationCenter.default.publisher(for: .polishStylesDidSyncFromCloud)) { _ in
             reload()
         }
@@ -111,7 +127,12 @@ struct PersonalReplyStyleSection: View {
     /// Debug + TestFlight builds unlock generation at a lower character gate so
     /// internal testers can exercise the pipeline.
     private var minimumCharacterCount: Int {
-        AppDistributionChannel.allowsInternalTools
+        #if DEBUG
+        if Self.debugUsesReleaseCharacterGate {
+            return PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount
+        }
+        #endif
+        return AppDistributionChannel.allowsInternalTools
             ? PolishStyleLearningCorpusBuilder.testBuildEffectiveCharacterCount
             : PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount
     }

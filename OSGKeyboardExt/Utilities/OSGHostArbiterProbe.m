@@ -1,12 +1,10 @@
 // OSGHostArbiterProbe.m
 // OSGKeyboard · Keyboard Extension
 //
-// 临时调试探针（仅 DEBUG），见头文件说明。所有私有符号都在运行时按字符串查找，
+// 宿主识别探针（所有构建配置均编译），见头文件说明。所有私有符号都在运行时按字符串查找，
 // 任何一步找不到都静默放弃，并保证原始实现照常执行。
 
 #import "OSGHostArbiterProbe.h"
-
-#ifdef DEBUG
 
 #import <UIKit/UIKit.h>
 #import <objc/message.h>
@@ -129,5 +127,3 @@ static BOOL OSGAlwaysEnabled(__unused id self, __unused SEL _cmd) {
 }
 
 @end
-
-#endif

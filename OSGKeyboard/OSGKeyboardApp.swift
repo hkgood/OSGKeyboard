@@ -10,14 +10,6 @@ import UIKit
 struct OSGKeyboardApp: App {
     @UIApplicationDelegateAdaptor(AppURLHandler.self) private var appURLHandler
 
-    /// App-local light / dark preference (Settings ▸ Preferences ▸ Appearance).
-    @AppStorage(AppearancePreference.storageKey)
-    private var appearanceRaw = AppearancePreference.system.rawValue
-
-    private var appearance: AppearancePreference {
-        AppearancePreference.fromStored(appearanceRaw)
-    }
-
     init() {
         MaterialIconsFont.registerIfNeeded()
         // Keep system alert and confirmation actions neutral instead of
@@ -39,7 +31,25 @@ struct OSGKeyboardApp: App {
     }
 
     var body: some Scene {
+        // Keep the App free of dynamic state. SwiftUI's async renderer may
+        // re-run a dirty WindowGroup closure off the main thread, which trips
+        // Swift 6's MainActor check; a View body has no such dynamic check.
         WindowGroup {
+            AppSceneRoot()
+        }
+    }
+
+    /// Window root; owns the appearance state the App body must not hold.
+    private struct AppSceneRoot: View {
+        /// App-local light / dark preference (Settings ▸ Preferences ▸ Appearance).
+        @AppStorage(AppearancePreference.storageKey)
+        private var appearanceRaw = AppearancePreference.system.rawValue
+
+        private var appearance: AppearancePreference {
+            AppearancePreference.fromStored(appearanceRaw)
+        }
+
+        var body: some View {
             #if DEBUG
             if OnboardingExperienceView.isPreviewEnabled {
                 OOBEPreviewHarness()
@@ -47,7 +57,9 @@ struct OSGKeyboardApp: App {
             } else if ProcessInfo.processInfo.arguments.contains("--whats-new-host") {
                 // Approach A: Notes-like host only; real keyboard extension overlays it.
                 // Also used by `--keyboard-appear-stress=` (pass both flags).
-                Self.makeWhatsNewHostView()
+                OSGKeyboardApp.makeWhatsNewHostView()
+            } else if let conceptScene = ConceptFilmDemoView.requestedScene {
+                ConceptFilmDemoView(scene: conceptScene)
             } else if ProcessInfo.processInfo.arguments.contains("--edit-demo") {
                 EditDemoView()
             } else if ProcessInfo.processInfo.arguments.contains("--ai-demo") {

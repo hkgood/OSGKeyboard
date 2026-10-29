@@ -11,10 +11,10 @@ OSGKeyboard 是面向 iPhone、iPad 与 Mac 的 AI 语音键盘：开口即文�
 ![Platform](https://img.shields.io/badge/iOS%20%2F%20iPadOS-26%2B-0078D4?logo=apple)
 ![Platform](https://img.shields.io/badge/macOS-15%2B-555?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-6.0-FA7343?logo=swift)
-![Version](https://img.shields.io/badge/version-2.1.5-3aa05a)
+![Version](https://img.shields.io/badge/version-2.1.6-3aa05a)
 ![License](https://img.shields.io/badge/license-Source%20Available-blue)
 
-[官网](https://hkgood.github.io/OSGKeyboard/) · [TestFlight 公测](https://testflight.apple.com/join/c2Bz4qK9) · [English](./README.en.md) · [隐私政策](https://hkgood.github.io/OSGKeyboard/privacy/) · [更新记录](./CHANGELOG.md)
+[官网](https://osg.osglab.com/) · [TestFlight 公测](https://testflight.apple.com/join/c2Bz4qK9) · [English](./README.en.md) · [隐私政策](https://osg.osglab.com/privacy/) · [更新记录](./CHANGELOG.md)
 
 <p align="center">
   <a href="https://apps.apple.com/cn/app/osgkeyboard/id6781553267">
@@ -28,7 +28,7 @@ OSGKeyboard 是面向 iPhone、iPad 与 Mac 的 AI 语音键盘：开口即文�
 
 > 公开下载的 Mac DMG 是已签名并公证的历史版本 1.1。仓库中的 macOS target 随整体源码演进到 2.2；最新源码能力请用 Xcode 26 构建。
 >
-> 当前仓库版本以 [`project.yml`](./project.yml) 为准（`2.1.5` · build 125）。CHANGELOG 中 `2.2.0` 及更新的条目已经包含在本 README 的能力描述中。
+> 当前仓库版本以 [`project.yml`](./project.yml) 为准（`2.1.6` · build 131）。CHANGELOG 中 `2.1.6` 及更新的条目已经包含在本 README 的能力描述中。
 
 ## 一把键盘，四种输入方式
 
@@ -132,7 +132,7 @@ iOS / iPadOS 账号中心支持：
 - **凭证隔离**：用户 API Key 保存在 Keychain；账号会话令牌只在主 App 私有 Keychain
 - **无广告追踪**：不集成第三方分析、广告或追踪 SDK；可退出的第一方产品分析不采集输入内容，不出售个人数据
 
-完整数据类型、保留策略、账号删除与第三方服务说明见[隐私政策](https://hkgood.github.io/OSGKeyboard/privacy/)。
+完整数据类型、保留策略、账号删除与第三方服务说明见[隐私政策](https://osg.osglab.com/privacy/)。
 
 ## 常见问题
 

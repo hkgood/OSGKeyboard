@@ -38,9 +38,16 @@ struct KeyboardSurfaceRoot: View {
     static func height(
         for surface: KeyboardState.Surface,
         isIPad: Bool = false,
-        width: CGFloat = 0
+        width: CGFloat = 0,
+        isExpandedPhone: Bool = false,
+        isCompactHeightPhone: Bool = false
     ) -> CGFloat {
-        TypingSurfaceMetrics.contentHeight(isIPad: isIPad, width: width)
+        TypingSurfaceMetrics.contentHeight(
+            isIPad: isIPad,
+            width: width,
+            isExpandedPhone: isExpandedPhone,
+            isCompactHeightPhone: isCompactHeightPhone
+        )
     }
 
     var body: some View {

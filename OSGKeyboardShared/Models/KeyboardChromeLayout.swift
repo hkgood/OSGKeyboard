@@ -46,6 +46,13 @@ public enum KeyboardChromeLayout {
     /// keyboard), which is why it no longer shares this constant.
     public static let voiceContentMaxWidth: CGFloat = 700
 
+    /// Hosts that draw the keyboard-style voice key row span the typing width:
+    /// the row, top bar and logo must sit on the same frame as the typing keys,
+    /// or they jump sideways on every tab switch.
+    public static func voiceContentWidthCap(usesVoiceKeyRow: Bool) -> CGFloat {
+        usesVoiceKeyRow ? .infinity : voiceContentMaxWidth
+    }
+
     /// Width at or above which the typing surface switches to wide-iPad
     /// metrics (taller rows). Chosen to sit between the widest iPad portrait
     /// width (1024 pt on 13") and the narrowest landscape width (1133 pt on
@@ -60,9 +67,52 @@ public enum KeyboardChromeLayout {
         isPad && hasRegularWidth
     }
 
+    /// System-sized iPhone-shaped keys for a phone host with regular space on
+    /// both axes — the unfolded iPhone Duo inner display. Landscape Max-size
+    /// iPhones are regular × compact and keep the phone metrics.
+    public static func usesExpandedPhoneMetrics(
+        isPad: Bool,
+        hasRegularWidth: Bool,
+        hasRegularHeight: Bool
+    ) -> Bool {
+        !isPad && hasRegularWidth && hasRegularHeight
+    }
+
+    /// Shorter phone panel whenever the host is vertically compact: every
+    /// iPhone in landscape, including the folded iPhone Duo. Compact-height
+    /// iPad windows keep their own metrics.
+    public static func usesCompactHeightPhoneMetrics(isPad: Bool, hasCompactHeight: Bool) -> Bool {
+        !isPad && hasCompactHeight
+    }
+
+    /// iPad always draws its own globe key. Elsewhere UIKit decides: Face ID
+    /// iPhones get a system switch below the keyboard, while the unfolded
+    /// iPhone Duo and Home-button iPhones need the keyboard to provide one.
+    public static func showsInputModeSwitchKey(
+        isPad: Bool,
+        systemRequiresSwitchKey: Bool
+    ) -> Bool {
+        isPad || systemRequiresSwitchKey
+    }
+
     /// Wide metrics need iPad-scale keys *and* enough width to justify them.
     public static func usesWideIPadMetrics(isIPad: Bool, width: CGFloat) -> Bool {
         isIPad && width >= wideIPadWidthThreshold
+    }
+
+    /// Below this width the voice microphone capsule shrinks (Display Zoom on
+    /// a small iPhone, iPad Slide Over). Every current iPhone is wider.
+    public static let compactVoiceWidthThreshold: CGFloat = 350
+    /// Below this width an iPad-metrics voice surface uses its smaller circles.
+    public static let compactIPadVoiceWidthThreshold: CGFloat = 420
+
+    /// `width == 0` means "not measured yet" and never counts as compact.
+    public static func usesCompactVoiceMetrics(width: CGFloat) -> Bool {
+        width > 0 && width < compactVoiceWidthThreshold
+    }
+
+    public static func usesCompactIPadVoiceMetrics(isIPad: Bool, width: CGFloat) -> Bool {
+        isIPad && width > 0 && width < compactIPadVoiceWidthThreshold
     }
 
     /// Splits the width left after three gaps into a 12 / 18 / 50 / 20 row for
@@ -90,28 +140,6 @@ public enum KeyboardChromeLayout {
             side: keyWidth * sideActionKeyFraction / fractionTotal,
             center: keyWidth * centerActionKeyFraction / fractionTotal,
             side2: keyWidth * side2ActionKeyFraction / fractionTotal
-        )
-    }
-
-    /// iPad voice bottom row `[globe · delete · return · space]`. The phone's
-    /// 12/18/50/20 split would hand the centre key ~577 pt once the surface
-    /// spans an iPad; these fractions keep every key in a usable range while
-    /// giving the primary return action a little more room.
-    public static let iPadVoiceGlobeFraction: CGFloat = 0.10
-    public static let iPadVoiceSideFraction: CGFloat = 0.24
-    public static let iPadVoiceCenterFraction: CGFloat = 0.40
-    public static let iPadVoiceSide2Fraction: CGFloat = 0.26
-
-    /// iPad variant of `actionKeyWidths` for the voice surface.
-    public static func iPadVoiceActionKeyWidths(
-        availableWidth: CGFloat
-    ) -> (globe: CGFloat, side: CGFloat, center: CGFloat, side2: CGFloat) {
-        let keyWidth = max(0, availableWidth - actionKeySpacing * 3)
-        return (
-            globe: keyWidth * iPadVoiceGlobeFraction,
-            side: keyWidth * iPadVoiceSideFraction,
-            center: keyWidth * iPadVoiceCenterFraction,
-            side2: keyWidth * iPadVoiceSide2Fraction
         )
     }
 

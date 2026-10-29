@@ -21,6 +21,9 @@ struct MainTabView: View {
         #endif
         return .keyboard
     }()
+    /// Window top safe area; wide pages derive their corner clearance from it.
+    /// `nil` until measured, so the first frame does not flash extra padding.
+    @State private var topSafeAreaInset: CGFloat?
 
     private var usesSplitLayout: Bool {
         horizontalSizeClass == .regular
@@ -38,6 +41,16 @@ struct MainTabView: View {
                     phoneTabLayout
                 }
             }
+            .environment(
+                \.wideTopCornerClearance,
+                topSafeAreaInset.map { WideLayoutMetrics.topCornerClearance(topSafeAreaInset: $0) } ?? 0
+            )
+        }
+        // Fold, rotation and Split View all move the status bar, so track it live.
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.safeAreaInsets.top
+        } action: { inset in
+            topSafeAreaInset = inset
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .onReceive(NotificationCenter.default.publisher(for: .osgOpenSettingsDeepLink)) { _ in

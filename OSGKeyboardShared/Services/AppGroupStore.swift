@@ -498,6 +498,12 @@ public struct AppGroupStore: @unchecked Sendable {
             if storedMigrationVersion < 8 {
                 additionIDs.insert(AIClipboardSkillCatalog.blessingReplyID)
             }
+            if storedMigrationVersion < 12 {
+                // Translate-to-target and Polish ship as defaults; install them
+                // once for existing layouts (a later opt-out stays opted out).
+                additionIDs.insert(AIClipboardSkillCatalog.translateToTargetID)
+                additionIDs.insert(AIClipboardSkillCatalog.polishOriginalID)
+            }
             // v9 consolidates playful and business reply into Reply. Do not
             // add Reply here: `sanitized` preserves it only when any reply ID
             // was enabled, so a user's explicit disabled state stays disabled.
@@ -529,7 +535,7 @@ public struct AppGroupStore: @unchecked Sendable {
         }
     }
 
-    private static let currentAgentSkillDefaultsMigrationVersion = 11
+    private static let currentAgentSkillDefaultsMigrationVersion = 12
 
     private static func decodeUserSkillCatalog(from defaults: UserDefaults) -> AIUserSkillCatalog {
         guard let data = defaults.data(forKey: AppGroupConfiguration.Keys.agentUserSkillCatalog) else {

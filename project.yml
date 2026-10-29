@@ -48,8 +48,8 @@ settings:
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
-    MARKETING_VERSION: "2.1.5"
-    CURRENT_PROJECT_VERSION: "125"
+    MARKETING_VERSION: "2.1.6"
+    CURRENT_PROJECT_VERSION: "131"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -598,6 +598,7 @@ targets:
       - path: OSGKeyboard/Views/Account/AccountCreditStore.swift
       - path: OSGKeyboard/Views/Account/AccountCreditPurchaseManager.swift
       - path: OSGKeyboard/Views/Account/LiveAccountServices.swift
+      - path: OSGKeyboard/Views/Account/DebugAccountSessionHandoff.swift
       - path: OSGKeyboard/Views/Account/ReferralProfileViewModel.swift
       # Invitation QR poster: pure SwiftUI + Core Image, shared with iOS.
       - path: OSGKeyboard/Views/Account/InvitePoster.swift

@@ -64,7 +64,7 @@ struct MacRootView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(height: 28)
-                .foregroundStyle(palette.accent)
+                .foregroundStyle(palette.textPrimary)
                 .accessibilityLabel("OSGKeyboard")
             Spacer()
         }

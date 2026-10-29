@@ -237,13 +237,30 @@ public final class KeyboardState {
     /// The view controller resolves this from device idiom + horizontal size
     /// class so SwiftUI and the UIKit height constraint cannot disagree.
     public var usesIPadLayoutMetrics: Bool = false
-    /// The custom system-keyboard switch is iPad-only. iPhone relies on the
-    /// system-provided switch below the keyboard instead of showing a duplicate.
+    /// Unfolded iPhone Duo: phone key layout on rows sized to the system
+    /// keyboard of the inner display. Resolved alongside
+    /// `usesIPadLayoutMetrics`; never true at the same time.
+    public var usesExpandedPhoneLayoutMetrics: Bool = false
+    /// Any iPhone in landscape (vertically compact): a shorter phone panel.
+    /// Never true together with the iPad or expanded-phone metrics.
+    public var usesCompactHeightPhoneLayoutMetrics: Bool = false
+    /// Whether the keyboard draws its own globe key: always on iPad, and
+    /// elsewhere only when UIKit reports no system switch below the keyboard.
     public var showsSystemGlobeKey: Bool = false
     /// Width the controller sized the keyboard to. Both the UIKit height
     /// constraint and the SwiftUI key grid pick their metrics from this one
     /// value so they can never disagree and clip the bottom row.
     public var layoutWidth: CGFloat = 0
+    /// Wide hosts swap the voice surface's circle cluster for a keyboard-style
+    /// bottom row aligned with the typing keys (see `VoiceKeyRowLayout`).
+    public var usesVoiceKeyRow: Bool {
+        VoiceKeyRowLayout.isAvailable(
+            usesIPadMetrics: usesIPadLayoutMetrics,
+            usesExpandedPhoneMetrics: usesExpandedPhoneLayoutMetrics,
+            usesCompactHeightPhoneMetrics: usesCompactHeightPhoneLayoutMetrics,
+            hostWidth: layoutWidth
+        )
+    }
     /// `true` when the last voice insertion is still at the caret and can
     /// be undone (suffix-checked against `documentContextBeforeInput`).
     public var undoAvailable: Bool = false

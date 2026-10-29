@@ -1,9 +1,9 @@
 // AccountRewardsCard.swift
 // OSGKeyboard · Main App
 //
-// Compact Home account surface. Signed-in users see the same credit progress
-// and invitation controls formerly shown in Settings; signed-out users see
-// the concrete free-credit paths before authenticating.
+// Quiet signed-in account summary on Home: credit progress plus invitation
+// controls. `HomeAccountSurfacePolicy` decides when it appears; signed-out and
+// problem states use `HomeAccountProblemCard` instead.
 
 import OSGKeyboardShared
 import SwiftUI
@@ -13,61 +13,14 @@ struct AccountRewardsCard: View {
     @EnvironmentObject private var coordinator: AccountSessionCoordinator
     @ObservedObject private var config = ProviderConfig.shared
 
+    /// BYOK users keep credits as account metadata, so the card says which
+    /// service is actually in use.
+    var showsOwnKeyNote = false
     let onOpenAccount: () -> Void
 
     var body: some View {
-        Group {
-            switch coordinator.sessionPhase {
-            case .restoring:
-                loadingContent("account.settings.restoring")
-            case .signedOut:
-                signedOutContent
-            case .signedIn:
-                signedInContent
-            }
-        }
-        .surfaceCard()
-        .task(id: coordinator.accountID) {
-            guard coordinator.isSignedIn else { return }
-            await coordinator.refreshAccountData()
-        }
-    }
-
-    private var signedOutContent: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            HStack(alignment: .center, spacing: Spacing.md) {
-                Image(systemName: "gift")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(palette.textPrimary)
-                    .symbolRenderingMode(.monochrome)
-                    .frame(width: 38, height: 38)
-                    .background(
-                        palette.textPrimary.opacity(0.08),
-                        in: RoundedRectangle(
-                            cornerRadius: Radius.medium,
-                            style: .continuous
-                        )
-                    )
-
-                VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    Text(AppL10n.string("account.signedOut.title"))
-                        .font(TypeStyle.headline)
-                        .foregroundStyle(palette.textPrimary)
-                    Text(AppL10n.string("account.signedOut.body"))
-                        .font(TypeStyle.footnote)
-                        .foregroundStyle(palette.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            AccountAppleAuthorizationButton(purpose: .signIn)
-                .disabled(coordinator.operation != nil)
-
-            Divider().background(palette.divider)
-            ReferralCodeEntryRow()
-        }
-        .padding(Spacing.md)
+        signedInContent
+            .surfaceCard()
     }
 
     private var signedInContent: some View {
@@ -117,6 +70,11 @@ struct AccountRewardsCard: View {
                         Text(AppL10n.string("account.credits.balance"))
                             .font(TypeStyle.caption)
                             .foregroundStyle(palette.textSecondary)
+                        if showsOwnKeyNote {
+                            Text(AppL10n.string("home.account.usingOwnKey"))
+                                .font(TypeStyle.caption2)
+                                .foregroundStyle(palette.textTertiary)
+                        }
                     }
 
                     Spacer(minLength: Spacing.xs)

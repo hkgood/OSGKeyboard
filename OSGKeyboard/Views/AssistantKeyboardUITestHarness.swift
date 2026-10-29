@@ -18,6 +18,10 @@ struct AssistantKeyboardUITestHarness: View {
         case autoReplyGuidance
         case translateResult
         case yesNoReply
+        /// Production fresh-copy state: Paste + ranked skill capsules in the top bar.
+        case clipboardBar
+        /// Dictation with a transcript long enough to fill the 3-line viewport.
+        case liveTranscript
     }
 
     @State private var state = KeyboardState()
@@ -37,6 +41,13 @@ struct AssistantKeyboardUITestHarness: View {
             .dropFirst(prefix.count)
         return raw.flatMap { Scenario(rawValue: String($0)) } ?? .idle
     }()
+
+    /// `--assistant-compact-height`: render the landscape-iPhone tier inside the
+    /// portrait-only host, since the simulator cannot rotate every device.
+    private let forcesCompactHeightPhone = ProcessInfo.processInfo.arguments
+        .contains("--assistant-compact-height")
+    private let forcesExpandedPhone = ProcessInfo.processInfo.arguments
+        .contains("--assistant-expanded-phone")
 
     var body: some View {
         GeometryReader { proxy in
@@ -265,9 +276,9 @@ struct AssistantKeyboardUITestHarness: View {
             AIKeyboardView.debugPreviewSkills = nil
             state.skillTipText = "Skill failed"
         case .skills:
-            // Keep the pagination assertion independent from production catalog
-            // ordering: Navigate is guaranteed to appear after one swipe on both
-            // four- and five-item pages.
+            // Keep the scroll assertion independent from production catalog
+            // ordering: Navigate is always the last top-bar capsule, past the
+            // visible width on a phone.
             let navigate = AIClipboardSkillCatalog.catalog.first {
                 $0.id == AIClipboardSkillCatalog.navigateID
             }
@@ -294,6 +305,20 @@ struct AssistantKeyboardUITestHarness: View {
         case .autoReplyGuidance:
             AIKeyboardView.debugPreviewSkills = nil
             state.clipboardOverlay = .autoReplyGuide
+        case .clipboardBar:
+            AIKeyboardView.debugPreviewSkills = nil
+            let copied = "明天下午三点方便吗？"
+            state.clipboardHistoryEnabled = true
+            state.clipboardSuggestionText = copied
+            state.clipboardSuggestionChangeCount = 2
+            ClipboardHistoryStore.shared.ingest(rawText: copied, changeCount: 2)
+            state.undoAvailable = true
+            state.editAvailable = true
+        case .liveTranscript:
+            AIKeyboardView.debugPreviewSkills = nil
+            state.phase = .recording
+            state.lastTranscript = "明天下午三点我们在会议室碰一下新版本的发布计划，"
+                + "顺便把横屏和折叠屏的适配问题过一遍，最后确认一下上线时间和回滚方案"
         }
     }
 
@@ -301,6 +326,8 @@ struct AssistantKeyboardUITestHarness: View {
         let isIPad = UIDevice.current.userInterfaceIdiom == .pad
         state.layoutWidth = width
         state.usesIPadLayoutMetrics = isIPad
+        state.usesCompactHeightPhoneLayoutMetrics = !isIPad && forcesCompactHeightPhone
+        state.usesExpandedPhoneLayoutMetrics = !isIPad && !forcesCompactHeightPhone && forcesExpandedPhone
         state.showsSystemGlobeKey = isIPad
     }
 }

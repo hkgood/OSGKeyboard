@@ -1,9 +1,10 @@
 // HomeView.swift
 // OSGKeyboard · Main App
 //
-// Home: logo, transient Flow connection status, usage stats, account rewards,
-// and dictionary suggestions. History/dictionary/account destinations open
-// via push (system back) rather than bottom-tab destinations.
+// Home: logo, Flow session status capsule, at most one account surface
+// (`HomeAccountSurfacePolicy`), usage stats, and dictionary suggestions.
+// History/dictionary/account destinations open via push (system back) rather
+// than bottom-tab destinations.
 
 import OSGKeyboardHostSupport
 import OSGKeyboardShared
@@ -76,40 +77,9 @@ enum FlowHomePiPStatusPolicy {
         guard case .failed = lifecycle else { return false }
         return !needsPermissionSetup
     }
-
-    static func shouldShowConnectionCard(
-        lifecycle: FlowPiPLifecycleState,
-        needsPermissionSetup: Bool,
-        needsAPIKeySetup: Bool,
-        hasSessionWarning: Bool,
-        isRecording: Bool,
-        isProcessing: Bool,
-        isHostReady: Bool
-    ) -> Bool {
-        if needsPermissionSetup || needsAPIKeySetup || hasSessionWarning {
-            return true
-        }
-        if isRecording || isProcessing {
-            return false
-        }
-        if case .active = lifecycle {
-            return !isHostReady
-        }
-        return true
-    }
 }
 
 enum HomeServiceSetupPolicy {
-    static func apiKeyMessageKey(
-        isLocalEngine: Bool,
-        isASRConfigured: Bool
-    ) -> String {
-        if isLocalEngine || isASRConfigured {
-            return "home.setup.polishKeyMissing"
-        }
-        return "home.setup.cloudIncomplete"
-    }
-
     static func apiKeyDeepLink(
         isLocalEngine: Bool,
         isASRConfigured: Bool
@@ -126,39 +96,70 @@ struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.wideTopCornerClearance) private var topCornerClearance
 
     @ObservedObject private var config = ProviderConfig.shared
     @EnvironmentObject private var flowManager: FlowSessionManager
+    @EnvironmentObject private var accountSession: AccountSessionCoordinator
     @State private var micStatus = AppPermissions.micStatus
     @State private var speechStatus = AppPermissions.speechStatus
     @State private var path = NavigationPath()
     @State private var dictionarySuggestions: [FrequentTerm] = []
     @State private var pendingDictionarySuggestion: FrequentTerm?
+    @State private var containerWidth: CGFloat = 0
+    /// "Not now" on the invitation card lasts for this launch; the code itself
+    /// stays saved and is still redeemed on the next sign-in.
+    @State private var isInvitationDeferred = false
 
     private let appGroupStore = AppGroupStore()
     private let dictionaryEntryService = PersonalDictionaryEntryService()
     private let frequentTermStore = FrequentTermStore()
 
     private var usesWideLayout: Bool {
-        horizontalSizeClass == .regular
+        HomeLayoutPolicy.usesWideLayout(
+            isRegularWidth: horizontalSizeClass == .regular,
+            containerWidth: containerWidth
+        )
     }
 
     private var sessionIsLive: Bool {
         flowManager.isActive || flowManager.isStarting
     }
 
-    /// Cloud: ASR + polish keys. Local: polish LLM key (ASR is on-device).
-    private var needsAPIKeySetup: Bool {
-        if config.isLocalEngine {
-            return !config.isPolishConfigured
+    private var accountPhase: HomeAccountPhase {
+        switch accountSession.sessionPhase {
+        case .restoring: return .restoring
+        case .signedOut: return .signedOut
+        case .signedIn: return .signedIn
         }
-        return !config.isConfigured
     }
 
-    private var apiKeySetupMessageKey: String {
-        HomeServiceSetupPolicy.apiKeyMessageKey(
-            isLocalEngine: config.isLocalEngine,
-            isASRConfigured: config.isASRConfigured
+    private var serviceReadiness: HomeServiceReadiness {
+        HomeAccountSurfacePolicy.readiness(
+            credentialSource: config.credentialSource,
+            account: accountPhase,
+            isASRConfigured: config.isASRConfigured,
+            isPolishConfigured: config.isPolishConfigured
+        )
+    }
+
+    private var creditsState: HomeCreditsState {
+        switch accountSession.snapshotPhase {
+        case .idle, .loading: return .loading
+        case .failed: return .failed
+        case .loaded(let snapshot): return .balance(snapshot.credits.balance)
+        }
+    }
+
+    private var accountSurface: HomeAccountSurface? {
+        HomeAccountSurfacePolicy.surface(
+            needsPermissionSetup: needsPermissionSetup,
+            account: accountPhase,
+            pendingReferralCode: accountSession.pendingReferralCode,
+            isInvitationDeferred: isInvitationDeferred,
+            credentialSource: config.credentialSource,
+            readiness: serviceReadiness,
+            credits: creditsState
         )
     }
 
@@ -169,8 +170,20 @@ struct HomeView: View {
         )
     }
 
+    /// Credits users first switch the service source; BYOK users go straight
+    /// to the missing key.
+    private var ownKeySettingsDeepLink: SettingsDeepLink {
+        config.credentialSource == .managed ? .aiService : apiKeySettingsDeepLink
+    }
+
     private var needsPermissionSetup: Bool {
         micStatus != .granted || speechStatus != .granted
+    }
+
+    /// The permission card already explains why voice input cannot start, and
+    /// the split layout's footer already reports the session on every tab.
+    private var showsStatusCapsule: Bool {
+        !needsPermissionSetup && horizontalSizeClass != .regular
     }
 
     /// Can the user start a session right now from the Home footer? Only when
@@ -197,20 +210,6 @@ struct HomeView: View {
         }
     }
 
-    /// Healthy sessions need no persistent chrome. Keep the connection card
-    /// only for setup, startup, recovery, or a genuinely unavailable session.
-    private var showsFlowConnectionCard: Bool {
-        FlowHomePiPStatusPolicy.shouldShowConnectionCard(
-            lifecycle: flowManager.pipLifecycleState,
-            needsPermissionSetup: needsPermissionSetup,
-            needsAPIKeySetup: needsAPIKeySetup,
-            hasSessionWarning: flowManager.sessionWarning != nil,
-            isRecording: flowManager.isUtteranceRecording,
-            isProcessing: flowManager.isUtteranceProcessing,
-            isHostReady: FlowSessionBridge.isHostReady()
-        )
-    }
-
     var body: some View {
         NavigationStack(path: $path) {
             Group {
@@ -233,6 +232,18 @@ struct HomeView: View {
             }
         }
         .navigationStackTabBarVisibility(isRoot: path.isEmpty)
+        // Folding or unfolding an iPhone Duo changes this width mid-session.
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.width
+        } action: { width in
+            containerWidth = width
+        }
+        // Home owns the account refresh now that the summary card is not
+        // always on screen; the coordinator's freshness window dedupes calls.
+        .task(id: accountSession.accountID) {
+            guard accountSession.isSignedIn else { return }
+            await accountSession.refreshAccountData()
+        }
         .onAppear {
             refreshPermissionStatuses()
             refreshDictionarySuggestions()
@@ -241,6 +252,9 @@ struct HomeView: View {
             guard phase == .active else { return }
             refreshPermissionStatuses()
             refreshDictionarySuggestions()
+            if accountSession.isSignedIn {
+                Task { await accountSession.refreshAccountData() }
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             refreshPermissionStatuses()
@@ -273,14 +287,12 @@ struct HomeView: View {
                     VStack(spacing: 0) {
                         logoHeader(compact: isCompact)
                             .padding(.top, logoTopPadding)
-                            .padding(.bottom, logoBottomPadding)
+                            .padding(.bottom, showsStatusCapsule ? Spacing.md : logoBottomPadding)
 
-                        // Connection status is transient: once Flow is ready,
-                        // content moves up and the card disappears completely.
-                        if showsFlowConnectionCard {
-                            scrollStatusFooter
+                        if showsStatusCapsule {
+                            flowStatusCapsule
                                 .padding(.horizontal, Spacing.lg)
-                                .padding(.bottom, CardLayoutMetrics.sectionSpacing)
+                                .padding(.bottom, logoBottomPadding)
                         }
 
                         homeContentSections(layout: .stacked, compact: isCompact)
@@ -295,31 +307,17 @@ struct HomeView: View {
         }
     }
 
-    /// Compact Flow connection status — no engine/model details.
-    private var scrollStatusFooter: some View {
-        setupGuidanceCard {
-            flowStatusFooter
-            if needsAPIKeySetup {
-                apiKeySetupGuidance
-            }
-        }
-    }
-
-    // MARK: - Wide layout (iPad / regular width)
+    // MARK: - Wide layout (iPad / unfolded iPhone Duo)
 
     private var wideBody: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: CardLayoutMetrics.sectionSpacing) {
                 wideHeroHeader
 
-                if showsFlowConnectionCard {
-                    scrollStatusFooter
-                }
-
                 homeContentSections(layout: .split)
             }
             .padding(.horizontal, WideLayoutMetrics.pageHorizontalInset)
-            .padding(.top, Spacing.sm)
+            .padding(.top, Spacing.sm + topCornerClearance)
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .tabBarScrollBottomPadding()
         }
@@ -337,14 +335,20 @@ struct HomeView: View {
             Text(AppL10n.string("home.wide.tagline.subtitle"))
                 .font(TypeStyle.footnote)
                 .foregroundStyle(palette.textTertiary)
+
+            if showsStatusCapsule {
+                flowStatusCapsule
+                    .padding(.top, Spacing.xs)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Usage, account, and dictionary
 
-    /// Keep the Home information hierarchy stable on both phone and iPad:
-    /// account rewards → four metrics → calendar → personal dictionary.
+    /// Keep the Home information hierarchy stable on phone, iPhone Duo, and
+    /// iPad: account surface (problem card or summary, never both) → four
+    /// metrics → calendar → personal dictionary.
     private func homeContentSections(
         layout: UsageStatsClusterLayout,
         compact: Bool = false
@@ -369,8 +373,25 @@ struct HomeView: View {
         layout: UsageStatsClusterLayout,
         compact: Bool
     ) -> some View {
-            AccountRewardsCard {
-                path.append(HomeRoute.account)
+            switch accountSurface {
+            case .accountSummary:
+                AccountRewardsCard(showsOwnKeyNote: config.credentialSource == .byok) {
+                    path.append(HomeRoute.account)
+                }
+            case .signInPromo:
+                HomeSignInPromoRow {
+                    path.append(HomeRoute.account)
+                }
+            case let surface?:
+                HomeAccountProblemCard(
+                    surface: surface,
+                    readiness: serviceReadiness,
+                    compact: compact,
+                    actions: accountSurfaceActions
+                )
+                .transition(.opacity)
+            case nil:
+                EmptyView()
             }
 
             HomeUsageStatsSection(
@@ -392,6 +413,19 @@ struct HomeView: View {
             )
 
             dictionaryCard
+    }
+
+    private var accountSurfaceActions: HomeAccountSurfaceActions {
+        HomeAccountSurfaceActions(
+            requestPermissions: handlePermissionGuidanceAction,
+            openOwnKeySettings: { openSettings(ownKeySettingsDeepLink) },
+            openAccount: { path.append(HomeRoute.account) },
+            deferInvitation: {
+                withAnimation(Motion.soft) {
+                    isInvitationDeferred = true
+                }
+            }
+        )
     }
 
     private var dictionaryCard: some View {
@@ -594,8 +628,8 @@ struct HomeView: View {
     }
 
     private var headerGradientColors: [Color] {
-        // 云端引擎未配置（缺 API Key）时不算就绪，保持中性灰渐变。
-        if sessionIsLive, !needsAPIKeySetup {
+        // 云端识别没有可用的 API Key 或积分时不算就绪，保持中性灰渐变。
+        if sessionIsLive, serviceReadiness.canDictate {
             let leadingOpacity = colorScheme == .dark ? 0.18 : 0.28
             let trailingOpacity = colorScheme == .dark ? 0.06 : 0.10
             return [
@@ -634,14 +668,15 @@ struct HomeView: View {
         .padding(.horizontal, Spacing.lg)
     }
 
-    // 就绪信息：绿点 + 状态文字（+ 计时 / 结束文本按钮），字号对齐引擎信息行。
-    private var flowStatusFooter: some View {
+    // 会话状态胶囊：圆点 + 状态文字（就绪时附服务来源与计时）+ 开启 / 结束 / 重试。
+    // 设置类问题由账号问题卡负责，这里只报告语音会话本身。
+    private var flowStatusCapsule: some View {
         HStack(spacing: Spacing.xs) {
             Circle()
                 .fill(flowStatusColor)
                 .frame(width: 6, height: 6)
 
-            if needsPermissionSetup || needsAPIKeySetup {
+            if !serviceReadiness.canDictate {
                 Text(AppL10n.string("home.flow.notReady"))
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.warning)
@@ -663,9 +698,13 @@ struct HomeView: View {
                 Text(AppL10n.string("home.flow.label"))
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textPrimary)
-                Text(":")
+                Text("·")
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textTertiary)
+                Text(AppL10n.string(serviceSourceLabelKey))
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.textSecondary)
+                    .lineLimit(1)
                 Text(expires, style: .timer)
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textSecondary)
@@ -678,21 +717,8 @@ struct HomeView: View {
                     .minimumScaleFactor(0.85)
             }
 
-            if needsPermissionSetup {
-                Button(action: handlePermissionGuidanceAction) {
-                    Text(
-                        AppPermissions.canRequestPermissionsInApp
-                            ? "home.setup.permission.request"
-                            : "home.flow.openSettings"
-                    )
-                    .font(TypeStyle.caption2)
-                    .foregroundStyle(palette.accent)
-                }
-                .buttonStyle(.plain)
-                .padding(.leading, Spacing.xs)
-            } else if needsAPIKeySetup {
-                // The explanatory copy and both setup paths sit below this
-                // compact status row so they remain readable on narrow phones.
+            if !serviceReadiness.canDictate {
+                // The account card offers the setup paths.
                 EmptyView()
             } else if canRetryPiP {
                 Button {
@@ -740,73 +766,29 @@ struct HomeView: View {
                 .padding(.leading, Spacing.xs)
             }
         }
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, 6)
+        .background(palette.textPrimary.opacity(0.06), in: Capsule())
         .animation(Motion.soft, value: flowManager.isActive)
+        .accessibilityIdentifier("home.flow.statusCapsule")
     }
 
-    private var apiKeySetupGuidance: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(AppL10n.string(apiKeySetupMessageKey))
-                .font(TypeStyle.footnote)
-                .foregroundStyle(palette.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text(AppL10n.string("home.setup.credits.alternative"))
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            HStack(spacing: Spacing.sm) {
-                Button {
-                    openSettings(apiKeySettingsDeepLink)
-                } label: {
-                    Label(AppL10n.string("home.setup.byok.configure"), systemImage: "key")
-                        .foregroundStyle(palette.textPrimary)
-                        .padding(.horizontal, Spacing.sm)
-                        .frame(minHeight: 34)
-                        .background(
-                            palette.surfaceElevated,
-                            in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-                        )
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    openSettings(.aiService)
-                } label: {
-                    Label(AppL10n.string("home.setup.credits.open"), systemImage: "sparkles")
-                        .foregroundStyle(palette.textOnAccent)
-                        .padding(.horizontal, Spacing.sm)
-                        .frame(minHeight: 34)
-                        .background(
-                            palette.accent,
-                            in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-            .font(TypeStyle.body)
+    private var serviceSourceLabelKey: String {
+        switch serviceReadiness {
+        case .credits: return "home.flow.source.credits"
+        case .ownKey: return "home.flow.source.ownKey"
+        case .dictationOnly, .unavailable: return "home.flow.source.dictationOnly"
         }
-    }
-
-    private func setupGuidanceCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            content()
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Spacing.md)
-        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-        .cardElevation()
     }
 
     private var flowStatusColor: Color {
-        if needsAPIKeySetup { return palette.warning }
+        if !serviceReadiness.canDictate { return palette.warning }
         if flowManager.isUtteranceRecording { return palette.accent }
         if flowManager.isUtteranceProcessing { return palette.accent }
         if case .failed = flowManager.pipLifecycleState { return palette.warning }
         if case .waitingForForeground = flowManager.pipLifecycleState { return palette.warning }
         if flowManager.isActive, FlowSessionBridge.isHostReady() { return palette.accent }
         if flowManager.isStarting { return palette.accent }
-        if needsPermissionSetup { return palette.warning }
         if flowManager.sessionWarning != nil { return palette.warning }
         // Active but not host-ready (e.g. mid-utterance / audio proof) — amber.
         if flowManager.isActive { return palette.warning }

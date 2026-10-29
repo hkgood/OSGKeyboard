@@ -8,6 +8,25 @@ struct LastInputEditView: View {
     private enum Layout {
         static let primaryButtonHeight = KeyboardChromeLayout.assistantActionCapsuleHeight
         static let primaryButtonWidth: CGFloat = primaryButtonHeight * 3
+        static let pagesHeight: CGFloat = 174
+    }
+
+    /// Phone and iPad keep the fixed 281 pt column; the shorter expanded-phone
+    /// and landscape-phone shells take the difference out of the review pages.
+    private var surfaceHeight: CGFloat {
+        guard state.usesExpandedPhoneLayoutMetrics || state.usesCompactHeightPhoneLayoutMetrics else {
+            return KeyboardChromeLayout.totalHeight
+        }
+        return TypingSurfaceMetrics.contentHeight(
+            isIPad: false,
+            width: state.layoutWidth,
+            isExpandedPhone: state.usesExpandedPhoneLayoutMetrics,
+            isCompactHeightPhone: state.usesCompactHeightPhoneLayoutMetrics
+        )
+    }
+
+    private var pagesHeight: CGFloat {
+        Layout.pagesHeight - (KeyboardChromeLayout.totalHeight - surfaceHeight)
     }
 
     @Environment(\.colorScheme) private var colorScheme
@@ -32,17 +51,17 @@ struct LastInputEditView: View {
                     }
                     .allowsHitTesting(false)
                 }
-                .frame(height: 174)
+                .frame(height: pagesHeight)
                 .contentShape(Rectangle())
                 .simultaneousGesture(reviewSwipeGesture)
                 primaryRow.frame(height: 55)
             }
-            .frame(maxWidth: KeyboardChromeLayout.voiceContentMaxWidth)
+            .frame(maxWidth: KeyboardChromeLayout.voiceContentWidthCap(usesVoiceKeyRow: state.usesVoiceKeyRow))
         }
         .padding(.vertical, 4)
         .padding(.horizontal, KeyboardChromeLayout.horizontalInset)
         .frame(maxWidth: .infinity)
-        .frame(height: KeyboardChromeLayout.totalHeight)
+        .frame(height: surfaceHeight)
         .environment(\.themePalette, palette)
         .onChange(of: state.editSession) { _, newValue in
             guard let review = newValue.review else {

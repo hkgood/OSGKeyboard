@@ -1,13 +1,13 @@
 // OSGHostArbiterProbe.h
 // OSGKeyboard · Keyboard Extension
 //
-// 临时调试探针（仅 DEBUG）：iOS 26.4+ 通过 _UIKeyboardArbiterClient 回调
-// 读取宿主 App 的 bundle ID。原理参考 editorss/KeyboardHostBundleID（MIT）。
+// 宿主识别探针（Debug / TestFlight / Release 均编译）：iOS 26.4+ 通过
+// _UIKeyboardArbiterClient 回调读取宿主 App 的 bundle ID，供冷启动后自动跳回。
+// 原理参考 editorss/KeyboardHostBundleID（MIT）。
 // 必须在 +load 安装，否则可能错过键盘首次切换宿主时的回调。
+// 所有私有符号运行时按字符串查找，任何一步失败都静默退化为“识别不到宿主”。
 
 #import <Foundation/Foundation.h>
-
-#ifdef DEBUG
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -34,5 +34,3 @@ typedef void (^OSGHostArbiterCaptureHandler)(NSString *_Nullable bundleId, NSStr
 @end
 
 NS_ASSUME_NONNULL_END
-
-#endif

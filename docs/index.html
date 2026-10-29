@@ -61,6 +61,30 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- v= 查询串用于缓存刷新：GitHub Pages 对静态资源有 10 分钟缓存窗口，改版本号强制浏览器取新文件 -->
   <link rel="stylesheet" href="assets/site.css?v=20261002a">
+  <style>
+    /* 工信部备案号：唯一「样式内联在页面里」的组件。
+       原因：备案号是合规硬要求，首页必须始终正确展示。放进 assets/site.css 会带来两个
+       部署风险——① 只同步了 index.html（漏传 CSS）时样式整段失效，备案号变成 16px 左对齐；
+       ② CSS 有浏览器/CDN 缓存，规则改了但用户看到的还是旧样式。
+       所以这里用 <style> 块承载，并给 var() 写上兜底值，保证脱离 site.css 也能正常渲染。
+       改动备案号时只改页脚那一个 <p>，样式规则保持在本块内。 */
+    .footer-icp {
+      width: var(--content, min(1120px, calc(100vw - 48px)));
+      margin: 16px auto 0;
+      color: var(--ink-2, #596067);
+      font-size: 0.8rem;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .footer-icp a {
+      transition: color 0.2s ease;
+    }
+
+    .footer-icp a:hover {
+      color: var(--ink, #15181a);
+    }
+  </style>
   <script>
     // 首屏前确定主题，避免闪烁；无保存偏好时跟随系统。
     // .js 类只在脚本可用时出现：所有「先隐藏、再动效显现」的初始态都挂在它下面，
@@ -93,7 +117,7 @@
         "operatingSystem": "iOS 26, iPadOS 26, macOS 15",
         "applicationCategory": "UtilitiesApplication",
         "applicationSubCategory": "Keyboard",
-        "softwareVersion": "2.1.5",
+        "softwareVersion": "2.1.6",
         "description": "OSGKeyboard is an agentic keyboard and AI voice keyboard (语音输入法 / 嘴替输入法) for iPhone, iPad, and Mac: on-device dictation by default, an AI assistant with preview-before-insert, a learned personal style that sounds like you, agentic clipboard skills that act on what you copy, Chinese and English typing, providers configured with your own API key, and optional managed credits. Source available, not open source.",
         "downloadUrl": "https://apps.apple.com/app/osgkeyboard/id6781553267",
         "installUrl": "https://apps.apple.com/app/osgkeyboard/id6781553267",
@@ -899,8 +923,8 @@
 
   <footer class="site-footer">
     <div class="footer-inner">
-      <span data-zh="OSGKeyboard 2.1.5 · AI 语音输入法 · 源码可见，非开源软件" data-en="OSGKeyboard 2.1.5 · AI voice keyboard · Source-available, not open source">
-        OSGKeyboard 2.1.5 · AI 语音输入法 · 源码可见，非开源软件
+      <span data-zh="OSGKeyboard 2.1.6 · AI 语音输入法 · 源码可见，非开源软件" data-en="OSGKeyboard 2.1.6 · AI voice keyboard · Source-available, not open source">
+        OSGKeyboard 2.1.6 · AI 语音输入法 · 源码可见，非开源软件
       </span>
       <div class="footer-links">
         <a href="privacy/" data-zh="隐私政策" data-en="Privacy">隐私政策</a>
@@ -909,6 +933,12 @@
         <a href="https://github.com/hkgood/OSGKeyboard" data-zh="源码" data-en="Source">源码</a>
       </div>
     </div>
+    <!-- 工信部要求：网站首页底部展示备案号，并链接到 beian.miit.gov.cn。
+         备案号变更（接入商变更、主体变更、重新备案）后请同步更新这一行。
+         样式见文件头部的 .footer-icp 规则块。 -->
+    <p class="footer-icp">
+      <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener nofollow">沪ICP备14049723号-2</a>
+    </p>
   </footer>
 
   <script src="assets/site.js?v=20261002a"></script>

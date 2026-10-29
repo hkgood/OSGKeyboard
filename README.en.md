@@ -11,10 +11,10 @@ OSGKeyboard is an AI voice keyboard for iPhone, iPad, and Mac: say it and it's t
 ![Platform](https://img.shields.io/badge/iOS%20%2F%20iPadOS-26%2B-0078D4?logo=apple)
 ![Platform](https://img.shields.io/badge/macOS-15%2B-555?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-6.0-FA7343?logo=swift)
-![Version](https://img.shields.io/badge/version-2.1.5-3aa05a)
+![Version](https://img.shields.io/badge/version-2.1.6-3aa05a)
 ![License](https://img.shields.io/badge/license-Source%20Available-blue)
 
-[Website](https://hkgood.github.io/OSGKeyboard/?lang=en) · [TestFlight Beta](https://testflight.apple.com/join/c2Bz4qK9) · [中文](./README.md) · [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/) · [Changelog](./CHANGELOG.md)
+[Website](https://osg.osglab.com/?lang=en) · [TestFlight Beta](https://testflight.apple.com/join/c2Bz4qK9) · [中文](./README.md) · [Privacy Policy](https://osg.osglab.com/privacy/) · [Changelog](./CHANGELOG.md)
 
 <p align="center">
   <a href="https://apps.apple.com/app/osgkeyboard/id6781553267">
@@ -28,7 +28,7 @@ OSGKeyboard is an AI voice keyboard for iPhone, iPad, and Mac: say it and it's t
 
 > The public Mac DMG is the signed and notarized historical version 1.1. The macOS target in this repository has moved forward with the 2.2 codebase; build with Xcode 26 for the latest source capabilities.
 >
-> The repository version follows [`project.yml`](./project.yml) (2.1.5, build 125). The `2.2.0` and later entries in CHANGELOG are already reflected in the capability descriptions below.
+> The repository version follows [`project.yml`](./project.yml) (2.1.6, build 131). The `2.1.6` and later entries in CHANGELOG are already reflected in the capability descriptions below.
 
 ## One keyboard, four ways to input
 
@@ -132,7 +132,7 @@ The iOS / iPadOS account center includes:
 - **Credential isolation** — user API keys stay in Keychain; account session tokens stay in the main app's private Keychain
 - **No ad tracking** — no advertising, analytics, or tracking SDKs, and no sale of personal data
 
-See the [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/) for data categories, retention, account deletion, and third-party services.
+See the [Privacy Policy](https://osg.osglab.com/privacy/) for data categories, retention, account deletion, and third-party services.
 
 ## Frequently asked questions
 

@@ -22,7 +22,9 @@ struct AIKeyboardView: View {
         static let compactIPadCircleSize: CGFloat = 44
         static let sideButtonEdgeInset: CGFloat = 8
         static let actionClusterMaxWidth: CGFloat = 430
-        static let primaryToSecondaryGap: CGFloat = 25
+        static let surfaceVerticalPadding: CGFloat = 4
+        /// The 3-line live transcript plus a little air above and below it.
+        static let minimumContextHeight: CGFloat = statusViewportHeight + 12
         static let hotwordHeight: CGFloat = 28
         static let hotwordMaxWidth: CGFloat = 180
         static let skillTipMaxWidth: CGFloat = 300
@@ -30,12 +32,6 @@ struct AIKeyboardView: View {
         /// belongs visually to the label-to-tab gap, so compensate by 3.5 pt.
         static let contextVisualOffset: CGFloat = -3.5
         static let carouselInterval: TimeInterval = 4
-        static let skillButtonSize: CGFloat = 48
-        static let skillCellWidth: CGFloat = 60
-        static let skillCellSpacing: CGFloat = 10
-        static let pageDotSize: CGFloat = 5
-        static let skillPaginationBottomInset: CGFloat = 6
-        static let maximumSemanticSkills = 5
         static let statusViewportHeight = UIFont.systemFont(ofSize: 15).lineHeight * 3
     }
 
@@ -52,7 +48,8 @@ struct AIKeyboardView: View {
     }
 
     #if DEBUG
-    /// Layout preview for `--ai-skills-demo`. Nil keeps production clipboard-window gating.
+    /// Top-bar skill capsules for `--ai-skills-demo` / harness / demo recordings.
+    /// Nil keeps production clipboard-window gating.
     static var debugPreviewSkills: [AIClipboardSkill]?
     /// Deterministic intent/domain labels for the assistant UI harness.
     static var debugPreviewSemanticBadgeKeys: (intent: String?, domain: String?)?
@@ -77,7 +74,6 @@ struct AIKeyboardView: View {
     @State private var hintOpacity: Double = 1
     @State private var carouselBag = AIHintCarouselBag()
     @State private var poolCards: [AIHintCard] = []
-    @State private var selectedSkillPage = 0
     @State private var debugSkillsDismissed = false
     @State private var micLongPressConsumed = false
     @State private var micIsHoldingForAI = false
@@ -124,15 +120,10 @@ struct AIKeyboardView: View {
         .onChange(of: clipboardHistory.entries.first?.id) { _, _ in
             state.dismissedClipboardSkillEntryID = nil
             debugSkillsDismissed = false
-            selectedSkillPage = 0
             resetCarousel()
         }
         .onChange(of: state.clipboardSkillCatalog) { _, _ in
-            selectedSkillPage = 0
             resetCarousel()
-        }
-        .onChange(of: semanticRanking.snapshot) { _, _ in
-            selectedSkillPage = 0
         }
         .onChange(of: state.skillTipText) { _, tip in
             guard let tip, !tip.isEmpty else { return }
@@ -152,7 +143,7 @@ struct AIKeyboardView: View {
         ) { _ in
             guard assistantIsResting else { return }
             reloadHintPool(resetBag: false)
-            guard !showsClipboardSkills, !showsLongPressCoach else { return }
+            guard !showsLongPressCoach else { return }
             if reduceMotion, let hint = currentHint,
                poolCards.contains(where: { $0.id == hint.id }) {
                 return
@@ -178,13 +169,17 @@ struct AIKeyboardView: View {
             contextArea
                 .frame(maxHeight: .infinity)
                 .offset(y: Layout.contextVisualOffset)
-            primaryActionRow.frame(height: Layout.primaryHeight)
-            Color.clear.frame(height: Layout.primaryToSecondaryGap)
-            secondaryActionRow.frame(height: Layout.secondaryHeight)
+            primaryActionRow.frame(height: primaryRowHeight)
+            Color.clear.frame(height: primaryToSecondaryGap)
+            if state.usesVoiceKeyRow {
+                voiceKeyRow.frame(height: voiceKeyRowHeight)
+            } else {
+                secondaryActionRow.frame(height: Layout.secondaryHeight)
+            }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, Layout.surfaceVerticalPadding)
         .padding(.horizontal, KeyboardChromeLayout.horizontalInset)
-        .frame(maxWidth: KeyboardChromeLayout.voiceContentMaxWidth)
+        .frame(maxWidth: voiceContentWidthCap)
         .frame(maxWidth: .infinity)
         .frame(height: resolvedHeight)
     }
@@ -233,9 +228,9 @@ struct AIKeyboardView: View {
                 .scrollBounceBehavior(.basedOnSize)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, Layout.surfaceVerticalPadding)
         .padding(.horizontal, KeyboardChromeLayout.horizontalInset)
-        .frame(maxWidth: KeyboardChromeLayout.voiceContentMaxWidth)
+        .frame(maxWidth: voiceContentWidthCap)
         .frame(maxWidth: .infinity)
         .frame(height: resolvedHeight)
     }
@@ -288,9 +283,9 @@ struct AIKeyboardView: View {
             .scrollBounceBehavior(.basedOnSize)
             .accessibilityIdentifier("assistant.replyVariants")
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, Layout.surfaceVerticalPadding)
         .padding(.horizontal, KeyboardChromeLayout.horizontalInset)
-        .frame(maxWidth: KeyboardChromeLayout.voiceContentMaxWidth)
+        .frame(maxWidth: voiceContentWidthCap)
         .frame(maxWidth: .infinity)
         .frame(height: resolvedHeight)
     }
@@ -348,8 +343,46 @@ struct AIKeyboardView: View {
     private var resolvedHeight: CGFloat {
         TypingSurfaceMetrics.contentHeight(
             isIPad: state.usesIPadLayoutMetrics,
-            width: state.layoutWidth
+            width: state.layoutWidth,
+            isExpandedPhone: state.usesExpandedPhoneLayoutMetrics,
+            isCompactHeightPhone: state.usesCompactHeightPhoneLayoutMetrics
         )
+    }
+
+    private var primaryRowHeight: CGFloat {
+        state.usesCompactHeightPhoneLayoutMetrics ? Layout.compactPrimaryHeight : Layout.primaryHeight
+    }
+
+    /// Gap below the mic. The context slot above it is flexible, so whatever
+    /// this gap doesn't take piles up there; `VoiceMicPlacement` splits the
+    /// free height so the mic sits centred on every shell height.
+    private var primaryToSecondaryGap: CGFloat {
+        let bottomRow = state.usesVoiceKeyRow ? voiceKeyRowHeight : Layout.secondaryHeight
+        let contextAndGap = resolvedHeight
+            - 2 * Layout.surfaceVerticalPadding
+            - Layout.topBarHeight
+            - primaryRowHeight
+            - bottomRow
+        let context = VoiceMicPlacement.contextHeight(
+            contextAndGap: contextAndGap,
+            bottomRowHeight: bottomRow,
+            minimumContextHeight: Layout.minimumContextHeight
+        )
+        return max(0, contextAndGap - context)
+    }
+
+    private var voiceContentWidthCap: CGFloat {
+        KeyboardChromeLayout.voiceContentWidthCap(usesVoiceKeyRow: state.usesVoiceKeyRow)
+    }
+
+    /// Same height as the typing bottom row so the two rows coincide.
+    private var voiceKeyRowHeight: CGFloat {
+        TypingSurfaceMetrics.metrics(
+            isIPad: state.usesIPadLayoutMetrics,
+            width: state.layoutWidth,
+            isExpandedPhone: state.usesExpandedPhoneLayoutMetrics,
+            isCompactHeightPhone: state.usesCompactHeightPhoneLayoutMetrics
+        ).bottomRowHeight
     }
 
     // MARK: - Top bar
@@ -375,16 +408,9 @@ struct AIKeyboardView: View {
                 hintKey: "keyboard.voice.cancelHint"
             )
         } else if showsClipboardSkillBar {
-            // Fresh copy, no AI result yet: the top bar becomes the skill entry
-            // point (paste + every applicable skill + dismiss).
+            // Fresh copy (or an OOBE lesson), no AI result yet: the top bar becomes
+            // the only skill entry point (paste + every applicable skill + dismiss).
             clipboardSkillTopBar
-        } else if showsClipboardSkills {
-            // OOBE / debug chip pager keeps its dismiss bar.
-            cancelTopBar(
-                action: dismissClipboardPresentation,
-                labelKey: "keyboard.assistant.dismissClipboard",
-                hintKey: "keyboard.assistant.dismissClipboardHint"
-            )
         } else {
             ZStack {
                 KeyboardTopControls(
@@ -405,28 +431,34 @@ struct AIKeyboardView: View {
     /// Fresh-copy top bar (no active result): paste + scrollable skills + dismiss.
     private var clipboardSkillTopBar: some View {
         HStack(spacing: 6) {
-            leadingScrollRow
-            KeyboardCancelButton(
-                action: dismissClipboardPresentation,
-                accessibilityLabel: ExtL10n.text("keyboard.assistant.dismissClipboard"),
-                accessibilityHint: ExtL10n.text("keyboard.assistant.dismissClipboardHint"),
-                accessibilityIdentifier: "assistant.clipboard.dismiss"
-            )
+            leadingScrollRow(skills: restingBarSkills)
+            // An OOBE lesson has no real copy to dismiss; its skill stays put.
+            if !showsOOBEClipboardSkill {
+                KeyboardCancelButton(
+                    action: dismissClipboardPresentation,
+                    accessibilityLabel: ExtL10n.text("keyboard.assistant.dismissClipboard"),
+                    accessibilityHint: ExtL10n.text("keyboard.assistant.dismissClipboardHint"),
+                    accessibilityIdentifier: "assistant.clipboard.dismiss"
+                )
+            }
         }
         .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
     }
 
     /// Fresh copy with applicable skills and no active AI result to defer to.
     private var showsClipboardSkillBar: Bool {
-        guard assistantIsResting,
-              state.oobePracticeSession == nil,
+        guard assistantIsResting, !restingBarSkills.isEmpty else { return false }
+        #if DEBUG
+        if Self.debugPreviewSkills?.isEmpty == false { return true }
+        #endif
+        if showsOOBEClipboardSkill { return true }
+        guard state.oobePracticeSession == nil,
               state.clipboardHistoryEnabled,
               state.aiServiceAvailable,
               !state.aiSession.canInsert,
               !state.aiSession.canSelectReplyVariant,
               let newest = clipboardHistory.newestEntry,
-              newest.id != state.dismissedClipboardSkillEntryID,
-              !topBarSkills.isEmpty else {
+              newest.id != state.dismissedClipboardSkillEntryID else {
             return false
         }
         return AIHintPool.isClipboardSkillWindowActive(
@@ -470,7 +502,7 @@ struct AIKeyboardView: View {
     ) -> some View {
         HStack(spacing: 6) {
             // Paste + every applicable skill scroll together; the X stays put.
-            leadingScrollRow
+            leadingScrollRow(skills: topBarSkills)
             KeyboardCancelButton(
                 action: action,
                 accessibilityLabel: ExtL10n.text(labelKey),
@@ -486,9 +518,8 @@ struct AIKeyboardView: View {
     /// Paste capsule followed by every applicable skill — so Paste scrolls along
     /// with the skills instead of staying pinned.
     @ViewBuilder
-    private var leadingScrollRow: some View {
+    private func leadingScrollRow(skills: [AIClipboardSkill]) -> some View {
         let paste = shouldShowClipboardSuggestion
-        let skills = topBarSkills
         HStack(spacing: 6) {
             if !paste {
                 KeyboardBrandLogo(action: state.openSettings)
@@ -534,6 +565,20 @@ struct AIKeyboardView: View {
         .accessibilityLabel(Text(clipboardSkillTitle(skill)))
     }
 
+    /// Capsules for the resting skill bar: the DEBUG preview, the one skill an
+    /// OOBE lesson practises, or the ranked production list.
+    private var restingBarSkills: [AIClipboardSkill] {
+        #if DEBUG
+        if let preview = Self.debugPreviewSkills, !preview.isEmpty {
+            return debugSkillsDismissed ? [] : preview
+        }
+        #endif
+        if let expectedSkillID = oobeExpectedSkillID {
+            return AIClipboardSkillCatalog.catalog.filter { $0.id == expectedSkillID }
+        }
+        return topBarSkills
+    }
+
     /// Skills that apply to the current copy, most-relevant first. This is the
     /// sole skill entry point now that the circular chips are gone; it shows with
     /// or without an active result (the invoked skill is excluded when active).
@@ -572,7 +617,8 @@ struct AIKeyboardView: View {
                 sourceText: newest.text,
                 analysis: snapshot.analysis,
                 uiLanguage: state.uiLanguage,
-                limit: 6
+                limit: 6,
+                translationTargetLocaleId: state.translationTargetLocaleId
             )
         )
     }
@@ -604,9 +650,7 @@ struct AIKeyboardView: View {
     @ViewBuilder
     private var contextArea: some View {
         ZStack {
-            if showsOOBEClipboardSkill, !hasActiveStatus {
-                clipboardSkillPager
-            } else if let onboardingPracticeHint, !hasActiveStatus {
+            if let onboardingPracticeHint, !hasActiveStatus {
                 Text(onboardingPracticeHint)
                     .font(TypeStyle.footnote.weight(.semibold))
                     .foregroundStyle(palette.textPrimary)
@@ -627,13 +671,6 @@ struct AIKeyboardView: View {
                         .glassEffect(.regular, in: Capsule())
                 }
                 .accessibilityIdentifier("assistant.skillTip")
-            } else if showsClipboardSkills {
-                VStack(spacing: Spacing.xs) {
-                    if let content = semanticBadgeContent {
-                        semanticBadge(content)
-                    }
-                    clipboardSkillPager
-                }
             } else if let content = semanticBadgeContent {
                 semanticBadge(content)
             } else if hasActiveStatus {
@@ -848,74 +885,6 @@ struct AIKeyboardView: View {
 
     // MARK: - Clipboard skills
 
-    private var clipboardSkillPager: some View {
-        GeometryReader { proxy in
-            let skillsPerPage = proxy.size.width < 352 ? 4 : 5
-            let pages = skillPages(from: visibleClipboardSkills, count: skillsPerPage)
-            VStack(spacing: 5) {
-                TabView(selection: $selectedSkillPage) {
-                    ForEach(Array(pages.enumerated()), id: \.offset) { page, skills in
-                        HStack(spacing: Layout.skillCellSpacing) {
-                            ForEach(skills) { skill in
-                                skillChip(skill)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .tag(page)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .accessibilityIdentifier("assistant.skills.pager")
-
-                HStack(spacing: Layout.pageDotSize) {
-                    ForEach(pages.indices, id: \.self) { page in
-                        Circle()
-                            .fill(page == selectedSkillPage
-                                ? palette.textPrimary
-                                : palette.textTertiary.opacity(0.45))
-                            .frame(width: Layout.pageDotSize, height: Layout.pageDotSize)
-                    }
-                }
-                .opacity(pages.count > 1 ? 1 : 0)
-                .accessibilityHidden(true)
-            }
-            .padding(.bottom, Layout.skillPaginationBottomInset)
-        }
-    }
-
-    private func skillPages(
-        from skills: [AIClipboardSkill],
-        count: Int
-    ) -> [[AIClipboardSkill]] {
-        stride(from: 0, to: skills.count, by: count).map { start in
-            Array(skills[start ..< min(start + count, skills.count)])
-        }
-    }
-
-    private func skillChip(_ skill: AIClipboardSkill) -> some View {
-        Button {
-            state.submitAIClipboardSkill(skill, replyScene(for: skill))
-        } label: {
-            VStack(spacing: 6) {
-                Image(systemName: skill.systemImage)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(palette.textPrimary.opacity(0.85))
-                    .frame(width: Layout.skillButtonSize, height: Layout.skillButtonSize)
-                    .glassEffect(.regular.interactive(), in: Circle())
-                Text(clipboardSkillTitle(skill))
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.textSecondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-            }
-            .frame(width: Layout.skillCellWidth)
-        }
-        .buttonStyle(.plain)
-        .disabled(!state.aiServiceAvailable || state.aiSession.isBusy)
-        .accessibilityIdentifier("assistant.skill.\(skill.id)")
-        .accessibilityLabel(Text(clipboardSkillTitle(skill)))
-    }
-
     private func replyScene(for skill: AIClipboardSkill) -> AIClipboardReplyScene? {
         guard skill.id == AIClipboardSkillCatalog.replyID,
               state.oobePracticeSession == nil,
@@ -937,49 +906,15 @@ struct AIKeyboardView: View {
            !custom.isEmpty {
             return custom
         }
+        // "Translate to <target>" names the user's configured target language.
+        if skill.id == AIClipboardSkillCatalog.translateToTargetID,
+           let title = AIClipboardSkillCatalog.translateToTargetButtonTitle(
+               translationTargetLocaleId: state.translationTargetLocaleId,
+               uiLanguage: state.uiLanguage
+           ) {
+            return title
+        }
         return ExtL10n.string(skill.titleKey)
-    }
-
-    private var showsClipboardSkills: Bool {
-        #if DEBUG
-        if let preview = Self.debugPreviewSkills,
-           !preview.isEmpty,
-           !debugSkillsDismissed {
-            return assistantIsResting
-        }
-        #endif
-        if showsOOBEClipboardSkill {
-            return assistantIsResting
-        }
-        // The idle circular skill chips are retired: auto mode runs one skill and
-        // the result panel's top-bar capsules offer the rest. Only OOBE / debug
-        // still present the chip pager above.
-        return false
-    }
-
-    private var visibleClipboardSkills: [AIClipboardSkill] {
-        #if DEBUG
-        if let preview = Self.debugPreviewSkills, !preview.isEmpty {
-            return preview
-        }
-        #endif
-        if let expectedSkillID = oobeExpectedSkillID {
-            return AIClipboardSkillCatalog.catalog.filter { $0.id == expectedSkillID }
-        }
-        guard let newest = clipboardHistory.newestEntry else { return [] }
-        guard let snapshot = semanticRanking.snapshot,
-              snapshot.entryID == newest.id else {
-            return state.clipboardSkillCatalog.filter {
-                $0.id == AIClipboardSkillCatalog.replyID
-            }
-        }
-        return ClipboardSkillSemanticRanker.recommended(
-            skills: state.clipboardSkillCatalog,
-            sourceText: newest.text,
-            analysis: snapshot.analysis,
-            uiLanguage: state.uiLanguage,
-            limit: Layout.maximumSemanticSkills
-        )
     }
 
     private var showsOOBEClipboardSkill: Bool {
@@ -1018,16 +953,19 @@ struct AIKeyboardView: View {
 
     private var primaryActionRow: some View {
         ZStack {
-            HStack {
-                primarySideButton(leading: true)
-                    .offset(x: Layout.sideButtonEdgeInset)
-                Spacer(minLength: 0)
-                primarySideButton(leading: false)
-                    .offset(x: -Layout.sideButtonEdgeInset)
+            // The key row already carries space / delete, so the mic stands alone.
+            if !state.usesVoiceKeyRow {
+                HStack {
+                    primarySideButton(leading: true)
+                        .offset(x: Layout.sideButtonEdgeInset)
+                    Spacer(minLength: 0)
+                    primarySideButton(leading: false)
+                        .offset(x: -Layout.sideButtonEdgeInset)
+                }
+                .opacity(sideButtonsVisible ? 1 : 0)
+                .allowsHitTesting(sideButtonsVisible)
+                .accessibilityHidden(!sideButtonsVisible)
             }
-            .opacity(sideButtonsVisible ? 1 : 0)
-            .allowsHitTesting(sideButtonsVisible)
-            .accessibilityHidden(!sideButtonsVisible)
 
             microphoneButton
         }
@@ -1035,11 +973,16 @@ struct AIKeyboardView: View {
         .frame(maxWidth: .infinity)
     }
 
+    /// Handedness rule shared by the circle cluster and the key row: space and
+    /// edit share one side, delete and undo the other.
+    private func placesSpaceAndEdit(leading: Bool) -> Bool {
+        let swapped = state.handednessPreference.swapsActionKeys
+        return leading ? swapped : !swapped
+    }
+
     @ViewBuilder
     private func primarySideButton(leading: Bool) -> some View {
-        let swapped = state.handednessPreference.swapsActionKeys
-        let showsSpace = leading ? swapped : !swapped
-        if showsSpace {
+        if placesSpaceAndEdit(leading: leading) {
             circleActionButton(
                 systemName: "space",
                 label: ExtL10n.string("keyboard.assistant.space"),
@@ -1225,13 +1168,14 @@ struct AIKeyboardView: View {
     }
 
     private var primaryButtonWidth: CGFloat {
-        state.layoutWidth > 0 && state.layoutWidth < 350
+        KeyboardChromeLayout.usesCompactVoiceMetrics(width: state.layoutWidth)
             ? Layout.compactPrimaryWidth
             : Layout.primaryWidth
     }
 
     private var primaryButtonHeight: CGFloat {
-        state.layoutWidth > 0 && state.layoutWidth < 350
+        KeyboardChromeLayout.usesCompactVoiceMetrics(width: state.layoutWidth)
+            || state.usesCompactHeightPhoneLayoutMetrics
             ? Layout.compactPrimaryHeight
             : Layout.primaryHeight
     }
@@ -1313,38 +1257,17 @@ struct AIKeyboardView: View {
         .accessibilityHidden(activePipeline)
     }
 
-    @ViewBuilder
+    /// No globe here: switching input modes stays on the typing tab.
     private func lowerActionCluster(leading: Bool) -> some View {
-        let button = lowerSideButton(leading: leading)
+        lowerSideButton(leading: leading)
             .offset(x: leading
                 ? Layout.sideButtonEdgeInset
                 : -Layout.sideButtonEdgeInset)
-        if state.showsSystemGlobeKey {
-            if leading {
-                HStack(spacing: 8) {
-                    SystemGlobeKey(
-                        state: state,
-                        width: compactIPadLayout ? 40 : 44,
-                        height: lowerCircleSize
-                    )
-                    button
-                }
-            } else {
-                HStack(spacing: 8) {
-                    button
-                    Color.clear.frame(width: compactIPadLayout ? 40 : 44)
-                }
-            }
-        } else {
-            button
-        }
     }
 
     @ViewBuilder
     private func lowerSideButton(leading: Bool) -> some View {
-        let swapped = state.handednessPreference.swapsActionKeys
-        let showsEdit = leading ? swapped : !swapped
-        if showsEdit {
+        if placesSpaceAndEdit(leading: leading) {
             circleActionButton(
                 systemName: "pencil.line",
                 label: ExtL10n.string("keyboard.edit.apply"),
@@ -1422,12 +1345,123 @@ struct AIKeyboardView: View {
             : Layout.fieldActionWidth
     }
 
+    // MARK: - Key row (iPad, unfolded iPhone Duo)
+
+    /// `[space][edit][ send ][undo][delete]` for a right-handed setting;
+    /// handedness mirrors the row. Every key calls the same action as its phone
+    /// circle — only placement and key face differ. No globe here: switching
+    /// input modes stays on the typing tab.
+    private var voiceKeyRow: some View {
+        GeometryReader { proxy in
+            let row = VoiceKeyRowLayout.make(rowWidth: proxy.size.width)
+            let height = proxy.size.height
+            ZStack(alignment: .topLeading) {
+                keyRowSlot(row.leadingSide, height: height) { keyRowSideKey(leading: true) }
+                keyRowSlot(row.leadingContext, height: height) { keyRowContextKey(leading: true) }
+                keyRowSlot(row.send, height: height) { keyRowSendKey }
+                keyRowSlot(row.trailingContext, height: height) { keyRowContextKey(leading: false) }
+                keyRowSlot(row.trailingSide, height: height) { keyRowSideKey(leading: false) }
+            }
+        }
+    }
+
+    private func keyRowSlot<Content: View>(
+        _ slot: VoiceKeyRowLayout.Slot,
+        height: CGFloat,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        content()
+            .frame(width: slot.width, height: height)
+            .position(x: slot.midX, y: height / 2)
+    }
+
+    /// Keys stay in place while dictation / AI runs; they grey out instead of
+    /// hiding so the row never jumps and a held mic cannot hit them.
+    private var keyRowKeysEnabled: Bool {
+        assistantIsResting
+    }
+
+    @ViewBuilder
+    private func keyRowSideKey(leading: Bool) -> some View {
+        if placesSpaceAndEdit(leading: leading) {
+            RectangularToolbarButton(
+                systemName: "space",
+                label: ExtL10n.string("keyboard.assistant.space"),
+                disabled: !keyRowKeysEnabled,
+                hapticIntensity: state.keyboardHapticIntensity,
+                action: state.insertSpace
+            )
+            .accessibilityIdentifier("assistant.space")
+        } else {
+            RepeatingDeleteButton(
+                disabled: !keyRowKeysEnabled,
+                hapticIntensity: state.keyboardHapticIntensity,
+                action: state.deleteBackward
+            )
+            .accessibilityIdentifier("assistant.delete")
+            .accessibilityLabel(Text(ExtL10n.string("keyboard.assistant.delete")))
+        }
+    }
+
+    /// Undo / edit are always shown here and grey out while unavailable.
+    @ViewBuilder
+    private func keyRowContextKey(leading: Bool) -> some View {
+        if placesSpaceAndEdit(leading: leading) {
+            RectangularToolbarButton(
+                systemName: "pencil.line",
+                label: ExtL10n.string("keyboard.edit.apply"),
+                disabled: !state.editAvailable || !keyRowKeysEnabled,
+                hapticIntensity: state.keyboardHapticIntensity,
+                onPressingChanged: state.setMicTouchActive,
+                action: state.beginEditLastInput
+            )
+            .accessibilityIdentifier("assistant.edit")
+            .accessibilityHidden(!state.editAvailable)
+        } else {
+            RectangularToolbarButton(
+                systemName: "arrow.uturn.backward",
+                label: ExtL10n.string("keyboard.undoA11y"),
+                disabled: !state.undoAvailable || !keyRowKeysEnabled,
+                hapticIntensity: state.keyboardHapticIntensity,
+                action: state.undoLastInsertion
+            )
+            .accessibilityIdentifier("assistant.undo")
+            .accessibilityHidden(!state.undoAvailable)
+        }
+    }
+
+    /// Same icon, enablement and check-mark confirmation as `fieldActionButton`.
+    private var keyRowSendKey: some View {
+        Button(action: performFieldAction) {
+            Image(systemName: fieldActionSystemImage)
+                .font(TypeStyle.title3)
+                .foregroundStyle(fieldActionButtonForeground)
+        }
+        .buttonStyle(
+            NativeKeyboardKeyStyle(
+                fill: fieldActionButtonFill,
+                pressedFill: NativeKeyboardKeyColors.pressedFill(for: colorScheme),
+                border: palette.divider,
+                cornerRadius: KeyboardChromeLayout.actionKeyCornerRadius
+            )
+        )
+        .disabled(!state.assistantActionAvailable || activePipeline)
+        .opacity(activePipeline ? 0.38 : 1)
+        .accessibilityIdentifier(
+            "assistant.action.\(state.returnKeyRole.assistantActionIdentifier)"
+        )
+        .accessibilityLabel(ExtL10n.text(state.returnKeyRole.titleKey))
+    }
+
     private var lowerCircleSize: CGFloat {
         compactIPadLayout ? Layout.compactIPadCircleSize : Layout.circleSize
     }
 
     private var compactIPadLayout: Bool {
-        state.usesIPadLayoutMetrics && state.layoutWidth > 0 && state.layoutWidth < 420
+        KeyboardChromeLayout.usesCompactIPadVoiceMetrics(
+            isIPad: state.usesIPadLayoutMetrics,
+            width: state.layoutWidth
+        )
     }
 
     private func circleActionButton(
@@ -1532,7 +1566,7 @@ struct AIKeyboardView: View {
 
     private func resetCarousel() {
         reloadHintPool(resetBag: true)
-        guard !showsClipboardSkills, semanticBadgeContent == nil else { return }
+        guard semanticBadgeContent == nil else { return }
         showNextHint(animated: false)
     }
 

@@ -421,7 +421,7 @@ struct ClipboardHistoryDemoView: View {
         state.showsSystemGlobeKey = false
         // The skill ranker localizes chip titles off this.
         state.uiLanguage = Self.isEnglish ? .english : .chinese
-        // `AIKeyboardView.showsClipboardSkills` gates on this — without it the
+        // `AIKeyboardView.showsClipboardSkillBar` gates on this — without it the
         // real skill row never appears no matter what the ranker returns.
         state.clipboardHistoryEnabled = true
         state.clipboardCandidateBarEnabled = true

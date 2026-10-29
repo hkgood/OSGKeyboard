@@ -141,6 +141,8 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             [
                 AIClipboardSkillCatalog.replyID,
                 AIClipboardSkillCatalog.translateID,
+                AIClipboardSkillCatalog.translateToTargetID,
+                AIClipboardSkillCatalog.polishOriginalID,
                 AIClipboardSkillCatalog.openLinkID,
                 AIClipboardSkillCatalog.summarizeWebPageID,
                 AIClipboardSkillCatalog.callPhoneID,
@@ -173,6 +175,8 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             [
                 AIClipboardSkillCatalog.replyID,
                 AIClipboardSkillCatalog.translateID,
+                AIClipboardSkillCatalog.translateToTargetID,
+                AIClipboardSkillCatalog.polishOriginalID,
                 AIClipboardSkillCatalog.openLinkID,
                 AIClipboardSkillCatalog.summarizeWebPageID,
                 AIClipboardSkillCatalog.callPhoneID,
@@ -205,6 +209,8 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             [
                 AIClipboardSkillCatalog.replyID,
                 AIClipboardSkillCatalog.translateID,
+                AIClipboardSkillCatalog.translateToTargetID,
+                AIClipboardSkillCatalog.polishOriginalID,
                 AIClipboardSkillCatalog.callPhoneID,
                 AIClipboardSkillCatalog.createContactID,
                 AIClipboardSkillCatalog.summarizeID,
@@ -240,6 +246,8 @@ final class AIAgentSkillLayoutTests: XCTestCase {
                 AIClipboardSkillCatalog.replyID,
                 AIClipboardSkillCatalog.summarizeID,
                 AIClipboardSkillCatalog.translateID,
+                AIClipboardSkillCatalog.translateToTargetID,
+                AIClipboardSkillCatalog.polishOriginalID,
                 AIClipboardSkillCatalog.organizeListID
             ]
         )
@@ -247,7 +255,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             defaults.integer(
                 forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
             ),
-            11
+            12
         )
     }
 
@@ -272,6 +280,8 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             [
                 AIClipboardSkillCatalog.replyID,
                 AIClipboardSkillCatalog.translateID,
+                AIClipboardSkillCatalog.translateToTargetID,
+                AIClipboardSkillCatalog.polishOriginalID,
                 AIClipboardSkillCatalog.summarizeID,
                 AIClipboardSkillCatalog.organizeListID
             ]
@@ -306,12 +316,19 @@ final class AIAgentSkillLayoutTests: XCTestCase {
 
         let migrated = AppGroupStore(defaults: defaults).agentSkillLayout
 
-        XCTAssertEqual(migrated.enabledIDs, [AIClipboardSkillCatalog.replyID])
+        XCTAssertEqual(
+            migrated.enabledIDs,
+            [
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.translateToTargetID,
+                AIClipboardSkillCatalog.polishOriginalID
+            ]
+        )
         XCTAssertEqual(
             defaults.integer(
                 forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
             ),
-            11
+            12
         )
     }
 
@@ -332,16 +349,27 @@ final class AIAgentSkillLayoutTests: XCTestCase {
 
         let store = AppGroupStore(defaults: defaults)
 
-        XCTAssertEqual(store.agentSkillLayout.enabledIDs, [AIClipboardSkillCatalog.translateID])
+        XCTAssertEqual(
+            store.agentSkillLayout.enabledIDs,
+            [
+                AIClipboardSkillCatalog.translateID,
+                AIClipboardSkillCatalog.translateToTargetID,
+                AIClipboardSkillCatalog.polishOriginalID
+            ]
+        )
         XCTAssertEqual(
             defaults.integer(
                 forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
             ),
-            11
+            12
         )
         XCTAssertEqual(
             AppGroupStore(defaults: defaults).agentSkillLayout.enabledIDs,
-            [AIClipboardSkillCatalog.translateID]
+            [
+                AIClipboardSkillCatalog.translateID,
+                AIClipboardSkillCatalog.translateToTargetID,
+                AIClipboardSkillCatalog.polishOriginalID
+            ]
         )
     }
 
@@ -367,13 +395,18 @@ final class AIAgentSkillLayoutTests: XCTestCase {
 
         XCTAssertEqual(
             migrated.enabledIDs,
-            [AIClipboardSkillCatalog.replyID, AIClipboardSkillCatalog.translateID]
+            [
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.translateID,
+                AIClipboardSkillCatalog.translateToTargetID,
+                AIClipboardSkillCatalog.polishOriginalID
+            ]
         )
         XCTAssertEqual(
             defaults.integer(
                 forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
             ),
-            11
+            12
         )
     }
 
@@ -400,7 +433,11 @@ final class AIAgentSkillLayoutTests: XCTestCase {
 
         XCTAssertEqual(
             AppGroupStore(defaults: enabledDefaults).agentSkillLayout.enabledIDs,
-            [AIClipboardSkillCatalog.replyID]
+            [
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.translateToTargetID,
+                AIClipboardSkillCatalog.polishOriginalID
+            ]
         )
 
         let disabledDefaults = makeDefaults()
@@ -419,7 +456,11 @@ final class AIAgentSkillLayoutTests: XCTestCase {
         )
         XCTAssertEqual(
             AppGroupStore(defaults: disabledDefaults).agentSkillLayout.enabledIDs,
-            [AIClipboardSkillCatalog.translateID]
+            [
+                AIClipboardSkillCatalog.translateID,
+                AIClipboardSkillCatalog.translateToTargetID,
+                AIClipboardSkillCatalog.polishOriginalID
+            ]
         )
     }
 

@@ -210,6 +210,7 @@
 "keyboard.clipboard.guide.cta" = "去设置开启";
 "keyboard.clipboard.panel.title" = "剪贴板";
 "keyboard.clipboard.panel.empty" = "暂无历史记录";
+"keyboard.clipboard.panel.emptyHint" = "复制的文字会出现在这里。";
 "keyboard.clipboard.panel.fullAccessHint" = "「允许完全访问」已关闭，新复制内容将暂停采集，已有历史仍可使用。";
 "keyboard.clipboard.panel.delete" = "删除";
 "keyboard.clipboard.panel.close" = "关闭剪贴板";
@@ -370,6 +371,8 @@
 "keyboard.ai.skill.createContact" = "新建联系人";
 "keyboard.ai.skill.extractConclusions" = "提取结论";
 "keyboard.ai.skill.translate" = "翻译";
+"keyboard.ai.skill.translateToTarget" = "翻译";
+"keyboard.ai.skill.polishOriginal" = "优化";
 "keyboard.ai.skill.acceptInvitation" = "接受邀约";
 "keyboard.ai.skill.declineInvitation" = "委婉拒绝";
 "keyboard.ai.skill.acceptTask" = "确认任务";
